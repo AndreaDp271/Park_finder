@@ -90,7 +90,8 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        const map = L.map('map', { zoomControl: false }).setView([45.4642, 9.1900], 16); 
+        // Zoom iniziale aumentato a 17 per maggior dettaglio
+        const map = L.map('map', { zoomControl: false }).setView([45.4642, 9.1900], 17); 
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -248,7 +249,6 @@
             });
         }
 
-        // --- Funzioni di Ricerca Geocoding ---
         async function searchLocation() {
             const query = searchInput.value;
             if (query.length < 3) return;
@@ -274,7 +274,7 @@
                 div.className = 'p-3 border-b hover:bg-gray-100 cursor-pointer text-sm';
                 div.textContent = res.display_name;
                 div.onclick = () => {
-                    map.setView([res.lat, res.lon], 16);
+                    map.setView([res.lat, res.lon], 18); // Zoom 18 dopo ricerca
                     searchResults.style.display = 'none';
                     searchInput.value = res.display_name;
                     fetchParking(true);
@@ -284,18 +284,15 @@
             searchResults.style.display = 'block';
         }
 
-        // Listener ricerca
         document.getElementById('search-btn').onclick = searchLocation;
         searchInput.onkeypress = (e) => { if (e.key === 'Enter') searchLocation(); };
 
-        // Chiudi risultati se clicchi fuori
         document.addEventListener('click', (e) => {
             if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
                 searchResults.style.display = 'none';
             }
         });
 
-        // Geolocalizzazione
         document.getElementById('locate-btn').onclick = () => {
             map.locate({setView: true, maxZoom: 18, enableHighAccuracy: true});
         };
@@ -316,7 +313,8 @@
         document.getElementById('refresh-btn').onclick = () => fetchParking(true);
 
         map.on('moveend', () => {
-            if (map.getZoom() >= 15) fetchParking();
+            // Abbassata soglia a 14 per vedere i parcheggi anche più da lontano
+            if (map.getZoom() >= 14) fetchParking();
         });
 
         fetchParking();
