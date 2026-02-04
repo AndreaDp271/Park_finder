@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Trova Parcheggio - Dati OSM</title>
     
     <!-- Tailwind CSS -->
@@ -12,47 +12,59 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
+        /* Blocco totale dello scroll del corpo per evitare sparizioni di barre su mobile */
         html, body { 
             margin: 0; 
             padding: 0; 
             height: 100%; 
             width: 100%; 
             overflow: hidden;
+            position: fixed;
             background-color: #f3f4f6;
+            touch-action: manipulation;
         }
 
         #app-container { 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
+            position: relative;
+            height: 100%; 
             width: 100%; 
         }
 
-        /* Dimensioni fisse per i blocchi superiori per evitare calcoli errati */
-        header { height: 60px; }
-        #search-bar { height: 55px; }
-        #legend-bar { height: 35px; }
+        /* Barre superiori fissate con z-index alto */
+        #top-ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 2000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
 
-        /* Mappa con altezza calcolata per sicurezza */
+        header { height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; }
+        #search-bar { height: 55px; display: flex; align-items: center; padding: 0 8px; }
+        #legend-bar { height: 35px; display: flex; align-items: center; justify-content: center; }
+
+        /* Mappa a tutto schermo con padding per le barre */
         #map-container {
-            position: relative;
-            flex-grow: 1;
-            width: 100%;
-            height: calc(100vh - 150px); /* 60+55+35 = 150 */
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding-top: 150px; /* Somma di 60+55+35 */
+            z-index: 1;
         }
 
         #map { 
             height: 100%; 
             width: 100%; 
-            z-index: 1; 
         }
         
         .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 3px; border: 1px solid #666; }
         
         .loading-overlay {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(255, 255, 255, 0.8);
-            z-index: 1000; display: none; align-items: center; justify-content: center;
+            position: absolute; top: 160px; left: 50%; transform: translateX(-50%);
+            z-index: 1500; display: none;
         }
 
         .leaflet-popup-content { font-size: 14px; min-width: 180px; }
@@ -72,7 +84,7 @@
 
         .search-results {
             position: absolute; top: 100%; left: 0; right: 0;
-            background: white; z-index: 2000; max-height: 250px;
+            background: white; z-index: 2100; max-height: 250px;
             overflow-y: auto; border: 1px solid #ccc; border-top: none;
             display: none;
         }
@@ -81,53 +93,56 @@
 <body class="font-sans">
 
     <div id="app-container">
-        <!-- Header -->
-        <header class="bg-blue-700 text-white p-3 shadow-md flex justify-between items-center shrink-0">
-            <h1 class="text-lg font-bold flex items-center gap-2 truncate">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                </svg>
-                ParkMap
-            </h1>
-            <div class="flex gap-2">
-                <button id="locate-btn" class="bg-white text-blue-700 p-2 rounded-full shadow-sm active:bg-gray-200" title="Mia Posizione">
+        <!-- Blocco UI Superiore Fissato -->
+        <div id="top-ui">
+            <!-- Header -->
+            <header class="bg-blue-700 text-white">
+                <h1 class="text-lg font-bold flex items-center gap-2 truncate">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     </svg>
-                </button>
-                <button id="refresh-btn" class="bg-blue-500 text-white p-2 rounded-full shadow-sm active:bg-blue-600" title="Aggiorna">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                </button>
-            </div>
-        </header>
+                    ParkMap
+                </h1>
+                <div class="flex gap-2">
+                    <button id="locate-btn" class="bg-white text-blue-700 p-2 rounded-full shadow-sm active:bg-gray-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+                        </svg>
+                    </button>
+                    <button id="refresh-btn" class="bg-blue-500 text-white p-2 rounded-full shadow-sm active:bg-blue-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                    </button>
+                </div>
+            </header>
 
-        <!-- Ricerca -->
-        <div id="search-bar" class="bg-white p-2 border-b flex relative shrink-0 z-[1001]">
-            <div class="w-full flex gap-1 relative">
-                <input type="text" id="search-input" placeholder="Cerca città o CAP..." class="flex-grow p-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <button id="search-btn" class="bg-blue-700 text-white px-3 py-2 rounded-md text-sm font-bold">Cerca</button>
-                <div id="search-results" class="search-results shadow-xl rounded-b-md"></div>
+            <!-- Ricerca -->
+            <div id="search-bar" class="bg-white border-b">
+                <div class="w-full flex gap-1 relative">
+                    <input type="text" id="search-input" placeholder="Cerca città o CAP..." class="flex-grow p-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="search-btn" class="bg-blue-700 text-white px-3 py-2 rounded-md text-sm font-bold">Cerca</button>
+                    <div id="search-results" class="search-results shadow-xl"></div>
+                </div>
             </div>
-        </div>
 
-        <!-- Legenda -->
-        <div id="legend-bar" class="bg-white px-2 py-1 text-[10px] sm:text-xs flex flex-wrap gap-x-3 gap-y-1 justify-center border-b shadow-sm shrink-0 items-center">
-            <div class="flex items-center"><span class="legend-dot bg-green-500"></span> Gratis</div>
-            <div class="flex items-center"><span class="legend-dot bg-blue-600"></span> Pagam.</div>
-            <div class="flex items-center"><span class="legend-dot bg-purple-500"></span> Disco</div>
-            <div class="flex items-center"><span class="legend-dot bg-orange-500"></span> Privato</div>
-            <div class="flex items-center"><span class="legend-dot bg-yellow-400 flex items-center justify-center text-[7px]">♿</span> Disab.</div>
+            <!-- Legenda -->
+            <div id="legend-bar" class="bg-white px-2 text-[10px] sm:text-xs flex flex-wrap gap-x-3 gap-y-1 border-b">
+                <div class="flex items-center"><span class="legend-dot bg-green-500"></span> Gratis</div>
+                <div class="flex items-center"><span class="legend-dot bg-blue-600"></span> Pagam.</div>
+                <div class="flex items-center"><span class="legend-dot bg-purple-500"></span> Disco</div>
+                <div class="flex items-center"><span class="legend-dot bg-orange-500"></span> Privato</div>
+                <div class="flex items-center"><span class="legend-dot bg-yellow-400 flex items-center justify-center text-[7px]">♿</span> Disab.</div>
+            </div>
         </div>
 
         <!-- Mappa Container -->
         <div id="map-container">
             <div id="map"></div>
             <div id="loader" class="loading-overlay">
-                <div class="bg-white p-3 rounded-lg shadow-xl flex items-center gap-3">
-                    <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-700"></div>
-                    <span class="text-sm font-medium">Caricamento mappa...</span>
+                <div class="bg-white p-3 rounded-full shadow-2xl flex items-center gap-3 border border-blue-100">
+                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-700"></div>
+                    <span class="text-xs font-bold text-blue-800">Aggiornamento...</span>
                 </div>
             </div>
         </div>
@@ -137,10 +152,11 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        // Inizializzazione mappa
         const map = L.map('map', { 
             zoomControl: false,
-            tap: false // Disabilita tap di Leaflet che a volte crea problemi su mobile
+            tap: false,
+            dragging: true,
+            touchZoom: true
         }).setView([45.4642, 9.1900], 17); 
         
         if (window.innerWidth > 768) {
@@ -232,7 +248,7 @@
             const bbox = `${south},${west},${north},${east}`;
 
             isFetching = true;
-            loader.style.display = 'flex';
+            loader.style.display = 'block';
             
             const query = `[out:json][timeout:25];(nwr["amenity"="parking"](${bbox});nwr["amenity"="parking_space"](${bbox}););out center body;>;out skel qt;`;
 
@@ -319,12 +335,11 @@
         document.getElementById('refresh-btn').onclick = () => fetchParking(true);
         map.on('moveend', () => { if (map.getZoom() >= 14) fetchParking(); });
 
-        // Inizializzazione corretta con timeout per garantire il rendering del DOM
         window.addEventListener('load', () => {
             setTimeout(() => {
                 map.invalidateSize();
                 fetchParking();
-            }, 200);
+            }, 300);
         });
     </script>
 </body>
