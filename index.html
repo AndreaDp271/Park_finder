@@ -47,7 +47,7 @@
         }
 
         #search-container {
-            height: 56px; display: flex; align-items: center; padding: 0 6px;
+            height: 56px; display: flex; align-items: center; padding: 0 4px;
         }
 
         #map-container {
@@ -59,6 +59,9 @@
         .logo-gradient {
             background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
             box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .parking-space-icon { 
@@ -87,6 +90,7 @@
             transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
             display: flex; align-items: center; justify-content: center;
             font-weight: 800; text-decoration: none !important;
+            letter-spacing: 0.05em;
             color: white !important;
         }
         .btn-action:active { transform: scale(0.92); }
@@ -110,45 +114,37 @@
         }
         
         .legend-item {
-            display: flex; align-items: center; gap: 8px; font-size: 11px;
-            font-weight: 700; color: #334155; white-space: nowrap;
-            background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px);
-            padding: 8px 14px; border-radius: 100px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            pointer-events: auto;
-            transition: all 0.2s;
+            display: flex; align-items: center; gap: 6px; font-size: 11px;
+            font-weight: 700; color: #475569; white-space: nowrap;
+            background: white; padding: 6px 12px; border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
-        .legend-item:active { background: white; transform: translateY(-2px); }
-        .dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1); }
+        .dot { width: 8px; height: 8px; border-radius: 50%; }
 
         .popup-tag {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            border-radius: 12px;
-            font-size: 12px;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
             font-weight: 700;
-            background: #f8fafc;
-            color: #475569;
-            margin-top: 6px;
+            background: #f1f5f9;
+            color: #334155;
+            margin-top: 4px;
             line-height: 1.2;
             width: 100%;
-            border: 1px solid #f1f5f9;
         }
 
+        /* Pulsante flottante aggiorna */
         .btn-float {
             position: absolute; bottom: 30px; right: 12px; z-index: 1000;
             width: 56px; height: 56px; border-radius: 20px;
-            background: #1e293b; color: white;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 8px 25px rgba(30, 41, 59, 0.3);
-            border: 1px solid rgba(255,255,255,0.1);
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            background: white; color: #1e293b; display: flex; align-items: center;
+            justify-content: center; box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            border: 1px solid rgba(255,255,255,0.8); transition: all 0.2s;
         }
-        .btn-float:active { transform: scale(0.85) rotate(45deg); }
-        .btn-float svg { width: 24px; height: 24px; }
+        .btn-float:active { transform: scale(0.9); }
     </style>
 </head>
 <body class="font-sans antialiased text-slate-800">
@@ -157,12 +153,10 @@
         <div id="top-ui">
             <header class="glass-card">
                 <div class="flex items-center gap-3">
-                    <div class="logo-gradient p-2.5 rounded-2xl text-white">
-                        <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z"></path>
-                            <path d="M12 22V12"></path>
-                            <path d="M21 7l-9 5-9-5"></path>
-                            <circle cx="12" cy="12" r="3" fill="currentColor" fill-opacity="0.3"></circle>
+                    <!-- Logo "P" Generale -->
+                    <div class="logo-gradient w-10 h-10 rounded-2xl text-white">
+                        <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21V3h4.5a5.5 5.5 0 0 1 0 11H9"></path>
                         </svg>
                     </div>
                     <div class="flex flex-col">
@@ -172,22 +166,15 @@
                 </div>
                 <div class="flex gap-1.5">
                     <button id="locate-btn" title="La mia posizione" class="p-3 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-2xl transition-all active:scale-90">
-                        <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                            <circle cx="12" cy="10" r="3"></circle>
-                        </svg>
+                        <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3m0 14v3m10-10h-3M5 12H2"></path></svg>
                     </button>
                     <button id="info-btn" title="Legenda" class="p-3 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-2xl transition-all active:scale-90">
-                        <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                        </svg>
+                        <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                     </button>
                 </div>
             </header>
 
-            <div id="search-container" class="glass-card">
+            <div id="search-container" class="glass-card px-2">
                 <div class="relative flex w-full items-center">
                     <div class="absolute left-4 text-slate-400">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -210,7 +197,7 @@
             </div>
 
             <button id="refresh-btn" class="btn-float" title="Aggiorna dati">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"></path>
                 </svg>
             </button>
@@ -228,9 +215,11 @@
         <div class="bg-white rounded-[48px] shadow-2xl p-10 w-full max-w-sm max-h-[85vh] overflow-y-auto border border-white relative">
             <div class="flex flex-col items-center mb-8 text-center">
                 <div class="bg-blue-600/10 p-5 rounded-[32px] mb-4">
-                    <svg viewBox="0 0 24 24" class="h-10 w-10 text-blue-600" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    <svg viewBox="0 0 24 24" class="h-10 w-10 text-blue-600" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M9 21V3h4.5a5.5 5.5 0 0 1 0 11H9" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
                 </div>
-                <h2 class="text-3xl font-black text-slate-900 leading-tight">Guida Mappa</h2>
+                <h2 class="text-3xl font-black text-slate-900 leading-tight">Guida ParkMap</h2>
                 <p class="text-slate-400 text-sm font-bold mt-1">Legenda colori e simboli</p>
             </div>
             <div class="space-y-3.5">
@@ -250,16 +239,8 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        const map = L.map('map', { 
-            zoomControl: false, 
-            tap: false, 
-            preferCanvas: true, 
-            attributionControl: false 
-        }).setView([45.4642, 9.1900], 19);
-        
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { 
-            maxZoom: 20 
-        }).addTo(map);
+        const map = L.map('map', { zoomControl: false, tap: false, preferCanvas: true, attributionControl: false }).setView([45.4642, 9.1900], 19);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(map);
 
         let dataLayer = L.layerGroup().addTo(map);
         let isFetching = false;
@@ -277,6 +258,35 @@
             hgv: '#1e293b', parent: '#fb923c', taxi: '#9333ea', 
             car_sharing: '#6366f1', default: '#64748b' 
         };
+
+        const translations = {
+            'yes': 'Sì', 'public': 'Libero', 'permissive': 'Permesso temporaneo',
+            'private': 'Privato', 'residents': 'Residenti', 'customers': 'Clienti',
+            'employees': 'Dipendenti', 'permit': 'Solo autorizzati', 'destination': 'Solo destinazione',
+            'delivery': 'Carico/Scarico', 'disabled': 'Disabili', 'emergency': 'Solo emergenze',
+            'police': 'Forze dell\'ordine', 'no': 'Vietato', 'disc': 'Disco orario',
+            'mo': 'Lun', 'tu': 'Mar', 'we': 'Mer', 'th': 'Gio', 'fr': 'Ven', 'sa': 'Sab', 'su': 'Dom',
+            'mo-fr': 'Lun-Ven', 'mo-sa': 'Lun-Sab', 'sa-su': 'Sab-Dom', 'off': 'Festivi', 'ph': 'Festivi'
+        };
+
+        function humanizeOSM(text) {
+            if (!text) return '';
+            let t = text.toLowerCase();
+            if (t.startsWith('no @')) {
+                let giorni = t.split('@')[1].trim().replace(/[()]/g, ''); 
+                Object.keys(translations).forEach(key => {
+                    const regex = new RegExp(`\\b${key}\\b`, 'g');
+                    giorni = giorni.replace(regex, translations[key]);
+                });
+                return `Accesso vietato: ${giorni.toUpperCase()}`;
+            }
+            t = t.replace(/(yes|no)\s*@\s*/g, '');
+            Object.keys(translations).forEach(key => {
+                const regex = new RegExp(`\\b${key}\\b`, 'g');
+                t = t.replace(regex, translations[key]);
+            });
+            return t.replace(/[()]/g, '').replace(/;/g, ', ').replace(/\s*,\s*/g, ', ').trim().charAt(0).toUpperCase() + t.slice(1);
+        }
 
         function getParkingType(tags) {
             const acc = tags.access || '';
@@ -299,7 +309,9 @@
             }
             
             if (amenity === 'taxi_rank') return 'taxi';
-            if (['permit', 'residents', 'employees', 'customers', 'private', 'destination'].includes(acc)) return 'private';
+            
+            const privateTerms = ['permit', 'residents', 'employees', 'customers', 'private', 'destination', 'no'];
+            if (privateTerms.includes(acc)) return 'private';
             
             const fee = tags.fee || '';
             if (fee === 'yes' || tags['fee:conditional']) return 'paid';
@@ -340,9 +352,44 @@
             };
             
             let details = [];
-            if (t.fee === 'yes') details.push(`<div class="popup-tag">💰 Pagamento${t.charge ? ': ' + t.charge : ''}</div>`);
-            if (t.maxstay) details.push(`<div class="popup-tag">⌛ Max: ${t.maxstay}</div>`);
-            if (t.capacity) details.push(`<div class="popup-tag">📍 Posti totali: ${t.capacity}</div>`);
+            
+            // Accesso
+            const access = t.access || '';
+            const accessCond = t['access:conditional'] || '';
+            if (accessCond) {
+                details.push(`<div class="popup-tag text-red-700 bg-red-50 border-red-100">🔒 ${humanizeOSM(accessCond)}</div>`);
+            } else if (access && access !== 'yes' && access !== 'public') {
+                const motivo = translations[access] || access;
+                details.push(`<div class="popup-tag text-orange-700 bg-orange-50 border-orange-100">🔒 Riservato: ${humanizeOSM(motivo)}</div>`);
+            }
+            
+            // Tariffa
+            if (t.fee === 'yes' && !t['fee:conditional']) {
+                const charge = t.charge || t['fee:amount'] || '';
+                details.push(`<div class="popup-tag text-blue-700 bg-blue-50 border-blue-100">💰 Pagamento${charge ? ': ' + charge : ''}</div>`);
+            }
+            
+            if (t['fee:conditional']) {
+                const rawCond = t['fee:conditional'].toLowerCase();
+                const readableCond = humanizeOSM(t['fee:conditional']);
+                if (rawCond.includes('yes')) {
+                    details.push(`<div class="popup-tag text-blue-700 bg-blue-50 border-blue-100">💰 Pagamento: ${readableCond}</div>`);
+                    details.push(`<div class="popup-tag text-emerald-700 bg-emerald-50 border-emerald-100">✅ Gratis: orari restanti</div>`);
+                } else if (rawCond.includes('no')) {
+                    details.push(`<div class="popup-tag text-emerald-700 bg-emerald-50 border-emerald-100">✅ Gratis: ${readableCond}</div>`);
+                    details.push(`<div class="popup-tag text-blue-700 bg-blue-50 border-blue-100">💰 Pagamento: orari restanti</div>`);
+                }
+            }
+            
+            // Disco orario e maxstay
+            if (t.maxstay) details.push(`<div class="popup-tag text-purple-700 bg-purple-50 border-purple-100">⌛ Max: ${t.maxstay.replace('mins', 'min')}</div>`);
+            const cond = t['parking:condition'] || t['parking:condition:both'];
+            if (cond && cond.includes('disc') && !type === 'timed') {
+                 details.push(`<div class="popup-tag text-purple-700 bg-purple-50 border-purple-100">🅿️ Disco Orario</div>`);
+            }
+
+            if (t.capacity) details.push(`<div class="popup-tag text-slate-500 border border-slate-100">📍 Posti totali: ${t.capacity}</div>`);
+            if (t.operator) details.push(`<div class="popup-tag text-slate-500 border border-slate-100">🏢 Gestore: ${t.operator}</div>`);
             
             return `
                 <div class="flex flex-col gap-3">
@@ -350,9 +397,11 @@
                     <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 font-bold text-xs">
                         <div class="flex items-center text-slate-400 uppercase tracking-widest text-[9px] mb-2">
                             <span class="w-2.5 h-2.5 rounded-full mr-2" style="background: ${colors[type]}"></span>
-                            ${labels[type] || "Area"}
+                            ${labels[type] || "Area Parcheggio"}
                         </div>
-                        ${details.join('')}
+                        <div class="flex flex-col gap-1.5">
+                            ${details.join('')}
+                        </div>
                     </div>
                     <a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}" target="_blank" class="btn-action bg-blue-600 py-3.5 rounded-2xl text-[11px] font-black tracking-widest shadow-lg shadow-blue-100">NAVIGA ORA</a>
                 </div>`;
@@ -449,10 +498,10 @@
         });
 
         document.getElementById('refresh-btn').onclick = () => {
-            const btn = document.getElementById('refresh-btn');
-            btn.classList.add('animate-spin');
+            const btn = document.querySelector('#refresh-btn svg');
+            btn.parentElement.classList.add('animate-spin');
             fetchParking().finally(() => {
-                setTimeout(() => btn.classList.remove('animate-spin'), 1000);
+                setTimeout(() => btn.parentElement.classList.remove('animate-spin'), 1000);
             });
         };
 
