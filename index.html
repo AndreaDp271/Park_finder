@@ -426,6 +426,10 @@
         function renderData(elements) {
             dataLayer.clearLayers();
             elements.forEach(el => {
+                const isParkingSpace = el.tags?.amenity === 'parking_space';
+                const isNormalParkingSpace = isParkingSpace && el.tags?.parking_space === 'normal';
+                if (isNormalParkingSpace) return;
+                const isHighlightedParkingSpace = isParkingSpace && el.tags?.parking_space && el.tags?.parking_space !== 'normal';
                 const type = getParkingType(el.tags);
                 const char = getIconChar(el.tags);
                 let coords = el.geometry ? el.geometry.map(p => [p.lat, p.lon]) : [];
@@ -436,11 +440,23 @@
 
                 let layer;
                 if (isPolygon) {
-                    layer = L.polygon(coords, { fillColor: colors[type], color: 'white', weight: 1, fillOpacity: 0.6 }).addTo(dataLayer);
+                    layer = L.polygon(coords, {
+                        fillColor: colors[type],
+                        color: isHighlightedParkingSpace ? '#0f172a' : 'white',
+                        weight: isHighlightedParkingSpace ? 2 : 1,
+                        fillOpacity: isHighlightedParkingSpace ? 0.75 : 0.6
+                    }).addTo(dataLayer);
                 } else {
-                    layer = L.circle(center, { radius: 5, fillColor: colors[type], color: 'white', weight: 2, fillOpacity: 0.9 }).addTo(dataLayer);
+                    layer = L.circle(center, {
+                        radius: isHighlightedParkingSpace ? 6 : 5,
+                        fillColor: colors[type],
+                        color: isHighlightedParkingSpace ? '#0f172a' : 'white',
+                        weight: isHighlightedParkingSpace ? 3 : 2,
+                        fillOpacity: isHighlightedParkingSpace ? 1 : 0.9
+                    }).addTo(dataLayer);
                 }
                 if (layer) layer.bindPopup(getPopupContent(el, center[0], center[1]));
+                if (layer && isHighlightedParkingSpace) layer.bringToFront();
                 if (char && type !== 'free') {
                     L.marker(center, { icon: L.divIcon({ html: char, className: type === 'charging' ? 'charging-icon' : 'parking-space-icon', iconSize: [22, 22] }), interactive: false }).addTo(dataLayer);
                 }
