@@ -64,7 +64,7 @@
             z-index: 1500; display: none;
         }
 
-        .leaflet-popup-content { font-size: 14px; min-width: 200px; }
+        .leaflet-popup-content { font-size: 14px; min-width: 230px; }
         
         .button-group {
             display: flex;
@@ -120,8 +120,7 @@
                     ParkMap
                 </h1>
                 <div class="flex gap-2">
-                    <!-- Pulsante Posizione Standard -->
-                    <button id="locate-btn" class="bg-white text-blue-700 p-2 rounded-full shadow-sm active:bg-gray-200" title="Trova la mia posizione">
+                    <button id="locate-btn" class="bg-white text-blue-700 p-2 rounded-full shadow-sm active:bg-gray-200" title="Mia posizione">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 0v4m0-4h4m-4 0H8m12 0a8 8 0 11-16 0 8 8 0 0116 0z" />
                             <circle cx="12" cy="12" r="2" fill="currentColor" />
@@ -145,10 +144,10 @@
             </div>
 
             <!-- Legenda -->
-            <div id="legend-bar" class="bg-white px-2 text-[10px] sm:text-xs flex flex-wrap gap-x-3 gap-y-1 border-b">
+            <div id="legend-bar" class="bg-white px-2 text-[9px] sm:text-xs flex flex-wrap gap-x-2 gap-y-1 border-b overflow-x-auto whitespace-nowrap">
                 <div class="flex items-center"><span class="legend-dot bg-green-500"></span> Gratis</div>
                 <div class="flex items-center"><span class="legend-dot bg-blue-600"></span> Pagam.</div>
-                <div class="flex items-center"><span class="legend-dot bg-purple-500"></span> Disco</div>
+                <div class="flex items-center"><span class="legend-dot bg-purple-500"></span> Disco Orario</div>
                 <div class="flex items-center"><span class="legend-dot bg-orange-500"></span> Privato</div>
                 <div class="flex items-center"><span class="legend-dot bg-yellow-400 flex items-center justify-center text-[7px]">♿</span> Disab.</div>
             </div>
@@ -204,14 +203,76 @@
             default: '#94a3b8'
         };
 
+        /**
+         * Traduce i tag condizionali di OSM in frasi leggibili.
+         */
+        function humanizeCondition(str, isFee = false) {
+            if (!str) return '';
+            
+            let human = str
+                // Gestione dei prefissi di stato
+                .replace(/^no\s*@\s*/gi, 'Vietato ')
+                // Se è una condizione di pagamento, "yes" significa "A pagamento"
+                .replace(/^yes\s*@\s*/gi, isFee ? 'A pagamento ' : 'Consentito ')
+                .replace(/^private\s*@\s*/gi, 'Solo privati ')
+                .replace(/^customers\s*@\s*/gi, 'Solo clienti ')
+                .replace(/^permit\s*@\s*/gi, 'Solo con permesso ')
+                .replace(/^residents\s*@\s*/gi, 'Solo residenti ')
+                .replace(/^disabled\s*@\s*/gi, 'Solo disabili ')
+                // Gestione punto e virgola
+                .replace(/;\s*no\s*@\s*/gi, ' e Vietato ')
+                .replace(/;\s*yes\s*@\s*/gi, isFee ? ' e A pagamento ' : ' e Consentito ')
+                
+                // Giorni della settimana
+                .replace(/Mo/g, 'lun')
+                .replace(/Tu/g, 'mar')
+                .replace(/We/g, 'mer')
+                .replace(/Th/g, 'gio')
+                .replace(/Fr/g, 'ven')
+                .replace(/Sa/g, 'sab')
+                .replace(/Su/g, 'dom')
+                .replace(/PH/g, 'festivi')
+                
+                // Intervalli orari
+                .replace(/00:00-24:00/g, 'tutto il giorno')
+                .replace(/-/g, ' alle ')
+                .replace(/;/g, ' | ')
+                .replace(/\(/g, '')
+                .replace(/\)/g, '')
+                .trim();
+
+            // Formattazione orari
+            human = human.replace(/(\d{2}:\d{2})\salle\s(\d{2}:\d{2})/g, 'dalle $1 alle $2');
+            
+            // Aggiunta nota per parcheggio gratuito fuori orario se è una fee:conditional
+            if (isFee && str.includes('yes')) {
+                human += " (gratis fuori orario)";
+            }
+            
+            return human.charAt(0).toUpperCase() + human.slice(1);
+        }
+
         function getParkingType(tags) {
-            if (tags.disabled === 'yes' || tags['parking_space'] === 'disabled' || tags['capacity:disabled'] > 0) return 'disabled';
+            const amenity = tags.amenity;
+            const isSpace = amenity === 'parking_space';
+
+            if (isSpace && (tags.disabled === 'yes' || tags['parking_space'] === 'disabled' || tags['capacity:disabled'] > 0)) {
+                return 'disabled';
+            }
+
+            const fee = tags.fee || '';
+            const feeCond = tags['fee:conditional'] || '';
+            if (fee === 'yes' || feeCond !== '') return 'paid';
+
+            const condition = tags['parking:condition'] || '';
+            const conditionBoth = tags['parking:condition:both'] || '';
+            const hasDisc = condition.includes('disc') || conditionBoth.includes('disc');
+            const hasMaxStay = tags['maxstay'] || tags['maxstay:conditional'];
+            if (hasDisc || hasMaxStay || condition === 'limited_wait') return 'timed';
+
             const access = tags.access || '';
             if (access === 'private' || access === 'customers' || access === 'permit' || access === 'residents') return 'private';
-            const fee = tags.fee || '';
-            if (fee === 'yes') return 'paid';
-            const condition = tags['parking:condition'] || '';
-            if (condition.includes('disc') || tags['maxstay'] || tags['parking:condition'] === 'limited_wait') return 'timed';
+
             return 'free';
         }
 
@@ -230,29 +291,74 @@
             const type = getParkingType(tags);
             const color = colors[type];
             const isDis = type === 'disabled';
-            const html = `<div style="background-color: ${color}; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid white; box-shadow: 0 0 3px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 8px; color: black; font-weight: bold;">${isDis ? '♿' : ''}</div>`;
+            const isTimed = type === 'timed';
+            
+            let iconInner = '';
+            if (isDis) iconInner = '♿';
+            else if (isTimed) iconInner = '<svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="black" stroke-width="3"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6h4"></path></svg>';
+
+            const html = `<div style="background-color: ${color}; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid white; box-shadow: 0 0 3px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 8px; color: black; font-weight: bold;">${iconInner}</div>`;
             return L.divIcon({ html: html, className: 'parking-dot', iconSize: [14, 14] });
         }
 
         function getPopupContent(el, lat, lon) {
             const tags = el.tags;
             const type = getParkingType(tags);
-            const isSpace = tags.amenity === 'parking_space';
-            let title = tags.name || (isSpace ? "Posto Auto" : "Parcheggio");
             
+            let title = tags.name || (tags.amenity === 'parking_space' ? "Posto Auto" : "Parcheggio");
             const navLink = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
             
-            // Link per l'editor iD di OSM
             const osmType = el.type === 'node' ? 'node' : (el.type === 'way' ? 'way' : 'relation');
             const editLink = `https://www.openstreetmap.org/edit?editor=id&${osmType}=${el.id}#map=19/${lat}/${lon}`;
+
+            let detailHtml = '';
+            
+            // Dettagli Accesso
+            if (tags['access:conditional']) {
+                const humanAccess = humanizeCondition(tags['access:conditional'], false);
+                const isNo = tags['access:conditional'].toLowerCase().startsWith('no');
+                detailHtml += `<div class="${isNo ? 'bg-red-100 text-red-900 border-red-200' : 'bg-orange-100 text-orange-900 border-orange-200'} px-2 py-1.5 rounded mt-2 border">
+                    <b class="text-[10px] block uppercase opacity-70">Limitazioni Accesso</b>
+                    <span class="text-[11px] leading-tight font-semibold">${humanAccess}</span>
+                </div>`;
+            } else if (tags.access && tags.access !== 'yes') {
+                detailHtml += `<div class="bg-gray-100 text-gray-700 px-2 py-1.5 rounded mt-2 border border-gray-200 text-[11px]">
+                    <b>Nota accesso:</b> ${tags.access}
+                </div>`;
+            }
+
+            // Dettagli Pagamento
+            if (tags['fee:conditional']) {
+                const humanFee = humanizeCondition(tags['fee:conditional'], true);
+                detailHtml += `<div class="bg-blue-100 text-blue-900 px-2 py-1.5 rounded mt-2 border border-blue-200">
+                    <b class="text-[10px] block uppercase opacity-70">Dettagli Pagamento</b>
+                    <span class="text-[11px] leading-tight font-semibold">${humanFee}</span>
+                </div>`;
+            }
+
+            // Dettagli Tempo (Disco Orario)
+            if (type === 'timed') {
+                const stayRaw = tags.maxstay || tags['maxstay:conditional'] || "Limite tempo";
+                const humanStay = stayRaw.replace(/mins/g, ' minuti').replace(/hours/g, ' ore');
+                detailHtml += `<div class="bg-purple-100 text-purple-900 px-2 py-1.5 rounded mt-2 border border-purple-200 font-bold flex flex-col gap-0.5">
+                    <span class="flex items-center gap-1 text-[10px] uppercase opacity-70">
+                        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6h4"></path></svg>
+                        Disco Orario
+                    </span>
+                    <span class="text-[11px]">${humanStay}</span>
+                </div>`;
+            }
+
+            const accessDisplay = tags.access === 'yes' ? 'Pubblico' : (tags.access || 'Pubblico');
 
             return `
                 <div class="text-xs font-sans">
                     <b class="text-sm block border-b pb-1 mb-1 text-blue-800">${title}</b>
-                    <div class="mb-2">
-                        <b>Tipo:</b> ${type.toUpperCase()}<br>
-                        <b>Accesso:</b> ${tags.access || 'pubblico'}<br>
-                        ${tags.capacity ? `<b>Posti:</b> ${tags.capacity}<br>` : ''}
+                    <div class="mb-2 space-y-1">
+                        <div><b>Tariffa:</b> ${type === 'paid' ? '<span class="text-blue-700 font-bold">PAGAMENTO</span>' : (type === 'free' ? 'GRATIS' : type.toUpperCase())}</div>
+                        <div><b>Accesso base:</b> ${accessDisplay}</div>
+                        ${tags.capacity ? `<div><b>Posti totali:</b> ${tags.capacity}</div>` : ''}
+                        ${detailHtml}
                     </div>
                     <div class="button-group">
                         <a href="${navLink}" target="_blank" class="nav-button">VAI QUI</a>
