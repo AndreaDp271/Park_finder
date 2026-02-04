@@ -3,140 +3,267 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Trova Parcheggio - Dati OSM</title>
+    <title>ParkMap - Trova il tuo posto</title>
     
-    <!-- Tailwind CSS -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ParkMap">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2991/2991231.png">
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2991/2991231.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #1d4ed8;
+            --bg-main: #f8fafc;
+        }
+
         html, body { 
             margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden;
-            position: fixed; background-color: #f3f4f6; touch-action: manipulation;
+            position: fixed; background-color: var(--bg-main); touch-action: manipulation;
         }
-        #app-container { position: relative; height: 100%; width: 100%; }
-        #top-ui {
-            position: absolute; top: 0; left: 0; right: 0; z-index: 2000;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        header { height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; }
-        #search-bar { height: 55px; display: flex; align-items: center; padding: 0 8px; }
-        #legend-bar { height: 35px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; }
-        #map-container {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            padding-top: 150px; z-index: 1;
-        }
-        #map { height: 100%; width: 100%; }
-        .legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 4px; border: 1px solid #666; }
         
-        .loading-overlay {
-            position: absolute; top: 160px; left: 50%; transform: translateX(-50%);
-            z-index: 1500; display: none;
+        #app-container { position: relative; height: 100%; width: 100%; display: flex; flex-direction: column; }
+        
+        #top-ui {
+            position: absolute; top: 12px; left: 12px; right: 12px; z-index: 2000;
+            display: flex; flex-direction: column; gap: 10px;
         }
 
-        .parking-dot { display: flex !important; align-items: center; justify-content: center; }
-
-        #info-modal {
-            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-            z-index: 3000; align-items: center; justify-content: center; padding: 20px;
+        .glass-card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(16px);
+            border-radius: 24px;
+            box-shadow: 0 10px 40px rgba(15, 23, 42, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.6);
         }
 
-        .leaflet-popup-content { font-size: 14px; min-width: 230px; }
-        .button-group { display: flex; gap: 8px; margin-top: 10px; }
-        .nav-button {
-            flex: 1; display: flex !important; align-items: center; justify-content: center;
-            background-color: #1d4ed8 !important; color: #ffffff !important; 
-            padding: 10px !important; border-radius: 6px !important; font-weight: bold !important; 
-            text-decoration: none !important; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        header { 
+            height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px;
         }
-        .edit-button {
-            width: 42px; display: flex !important; align-items: center; justify-content: center;
-            background-color: #4b5563 !important; color: #ffffff !important; 
-            padding: 10px !important; border-radius: 6px !important; 
-            text-decoration: none !important; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+
+        #search-container {
+            height: 56px; display: flex; align-items: center; padding: 0 6px;
         }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        #map-container {
+            flex-grow: 1; position: relative; z-index: 1;
+        }
+        
+        #map { height: 100%; width: 100%; background: #e5e7eb; }
+
+        .logo-gradient {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+        }
+
+        .parking-space-icon { 
+            display: flex !important; 
+            align-items: center; 
+            justify-content: center; 
+            background: white;
+            border: 2px solid #1e293b;
+            border-radius: 50%;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            font-size: 11px;
+        }
+
+        .charging-icon {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            filter: drop-shadow(0 0 4px rgba(255,255,255,0.8));
+        }
+
+        .leaflet-popup-content-wrapper { border-radius: 24px; padding: 4px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); }
+        .leaflet-popup-content { margin: 16px; font-size: 14px; min-width: 250px; }
+
+        .btn-action {
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; text-decoration: none !important;
+            color: white !important;
+        }
+        .btn-action:active { transform: scale(0.92); }
+
+        .loading-dots:after {
+            content: '.';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60% { content: '...'; }
+            80%, 100% { content: ''; }
+        }
+
+        #legend-floating {
+            position: absolute; bottom: 30px; left: 12px; right: 80px;
+            z-index: 1000; padding: 0;
+            display: flex; gap: 8px; flex-wrap: wrap;
+            pointer-events: none;
+        }
+        
+        .legend-item {
+            display: flex; align-items: center; gap: 8px; font-size: 11px;
+            font-weight: 700; color: #334155; white-space: nowrap;
+            background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px);
+            padding: 8px 14px; border-radius: 100px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            pointer-events: auto;
+            transition: all 0.2s;
+        }
+        .legend-item:active { background: white; transform: translateY(-2px); }
+        .dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1); }
+
+        .popup-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            background: #f8fafc;
+            color: #475569;
+            margin-top: 6px;
+            line-height: 1.2;
+            width: 100%;
+            border: 1px solid #f1f5f9;
+        }
+
+        .btn-float {
+            position: absolute; bottom: 30px; right: 12px; z-index: 1000;
+            width: 56px; height: 56px; border-radius: 20px;
+            background: #1e293b; color: white;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 8px 25px rgba(30, 41, 59, 0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .btn-float:active { transform: scale(0.85) rotate(45deg); }
+        .btn-float svg { width: 24px; height: 24px; }
     </style>
 </head>
-<body class="font-sans">
+<body class="font-sans antialiased text-slate-800">
 
     <div id="app-container">
         <div id="top-ui">
-            <header class="bg-blue-700 text-white">
-                <h1 class="text-lg font-bold flex items-center gap-2 truncate">
-                    <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 20l-5-2V4l5 2m0 14l5-2m-5 2v-14m5 14l5-2V4l-5 2m0 14v-14"></path></svg>
-                    ParkMap
-                </h1>
-                <div class="flex gap-2">
-                    <button id="locate-btn" class="bg-white text-blue-700 p-2 rounded-full shadow-sm">
-                        <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3m0 14v3m10-10h-3M5 12H2"></path></svg>
+            <header class="glass-card">
+                <div class="flex items-center gap-3">
+                    <div class="logo-gradient p-2.5 rounded-2xl text-white">
+                        <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z"></path>
+                            <path d="M12 22V12"></path>
+                            <path d="M21 7l-9 5-9-5"></path>
+                            <circle cx="12" cy="12" r="3" fill="currentColor" fill-opacity="0.3"></circle>
+                        </svg>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-xl font-black tracking-tight text-slate-900 leading-none">ParkMap</span>
+                        <span class="text-[10px] font-bold text-blue-600 uppercase tracking-widest mt-0.5">Smart Parking</span>
+                    </div>
+                </div>
+                <div class="flex gap-1.5">
+                    <button id="locate-btn" title="La mia posizione" class="p-3 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-2xl transition-all active:scale-90">
+                        <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
                     </button>
-                    <button id="refresh-btn" class="bg-blue-500 text-white p-2 rounded-full shadow-sm">
-                        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    <button id="info-btn" title="Legenda" class="p-3 text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-2xl transition-all active:scale-90">
+                        <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
                     </button>
                 </div>
             </header>
 
-            <div id="search-bar" class="bg-white border-b">
-                <div class="w-full flex gap-1 relative">
-                    <input type="text" id="search-input" placeholder="Cerca città o CAP..." class="flex-grow p-2 text-sm border rounded-md">
-                    <button id="search-btn" class="bg-blue-700 text-white px-3 py-2 rounded-md text-sm font-bold">Cerca</button>
-                    <div id="search-results" class="absolute top-full left-0 right-0 bg-white z-[2100] max-h-[250px] overflow-y-auto border hidden shadow-xl"></div>
+            <div id="search-container" class="glass-card">
+                <div class="relative flex w-full items-center">
+                    <div class="absolute left-4 text-slate-400">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <input type="text" id="search-input" placeholder="Cerca una via o piazza..." class="w-full bg-transparent py-4 pl-12 pr-4 text-sm font-bold focus:outline-none placeholder:text-slate-400">
+                    <button id="search-btn" class="mr-2 bg-blue-600 text-white px-6 py-2.5 rounded-xl text-[11px] font-black shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all uppercase tracking-wider">Vai</button>
                 </div>
-            </div>
-
-            <div id="legend-bar" class="bg-white border-b">
-                <div class="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
-                    <div class="flex items-center text-[10px] font-bold"><span class="legend-dot bg-green-500"></span> Gratis</div>
-                    <div class="flex items-center text-[10px] font-bold"><span class="legend-dot bg-blue-600"></span> Pagamento</div>
-                    <div class="flex items-center text-[10px] font-bold"><span class="legend-dot bg-purple-500"></span> Disco Orario</div>
-                    <div class="flex items-center text-[10px] font-bold"><span class="legend-dot bg-orange-500"></span> Privato</div>
-                </div>
-                <button id="info-btn" class="bg-gray-100 hover:bg-gray-200 text-blue-700 w-7 h-7 rounded-full flex items-center justify-center border font-serif font-bold italic">i</button>
+                <div id="search-results" class="absolute top-full left-0 right-0 mt-3 bg-white/98 backdrop-blur-xl z-[2100] max-h-[350px] overflow-y-auto rounded-[32px] hidden shadow-2xl border border-slate-100 p-2 mx-1"></div>
             </div>
         </div>
 
         <div id="map-container">
             <div id="map"></div>
-            <div id="loader" class="loading-overlay">
-                <div class="bg-white p-3 rounded-full shadow-2xl flex items-center gap-3 border border-blue-100">
-                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-700"></div>
-                    <span class="text-xs font-bold text-blue-800">Aggiornamento...</span>
+            
+            <div id="legend-floating">
+                <div class="legend-item"><span class="dot bg-emerald-500"></span> Gratis</div>
+                <div class="legend-item"><span class="dot bg-blue-600"></span> Blu</div>
+                <div class="legend-item"><span class="dot bg-purple-500"></span> Disco</div>
+                <div class="legend-item"><span class="dot bg-yellow-400"></span> Disabili</div>
+            </div>
+
+            <button id="refresh-btn" class="btn-float" title="Aggiorna dati">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"></path>
+                </svg>
+            </button>
+
+            <div id="loader" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1500] hidden">
+                <div class="bg-white/95 backdrop-blur-xl px-7 py-5 rounded-[32px] shadow-2xl border border-white flex items-center gap-4">
+                    <div class="w-6 h-6 border-[3px] border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span class="text-sm font-black text-slate-800 tracking-tight">Caricamento posti<span class="loading-dots"></span></span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal Info Simboli -->
-    <div id="info-modal">
-        <div class="bg-white rounded-xl shadow-2xl p-5 w-full max-w-sm">
-            <h2 class="text-lg font-bold border-b pb-2 mb-4">Legenda Stalli</h2>
-            <div class="space-y-3 text-sm">
-                <div class="flex items-center gap-3"><span class="w-5 h-5 rounded-full bg-white border border-gray-400"></span> Normale / Generico</div>
-                <div class="flex items-center gap-3"><span class="w-5 h-5 rounded-full bg-yellow-400 border border-gray-600 flex items-center justify-center text-[10px]">🚚</span> Carico/Scarico (Delivery)</div>
-                <div class="flex items-center gap-3"><span class="w-5 h-5 rounded-full bg-yellow-400 border border-gray-600 flex items-center justify-center text-[10px]">♿</span> Disabili</div>
-                <div class="flex items-center gap-3"><span class="w-5 h-5 rounded-full bg-pink-300 border border-gray-600 flex items-center justify-center text-[10px]">♀</span> Parcheggio Rosa (Women)</div>
-                <div class="flex items-center gap-3"><span class="w-5 h-5 rounded-full bg-yellow-400 border border-gray-600 flex items-center justify-center text-[10px]">🚖</span> Taxi</div>
-                <div class="flex items-center gap-3"><span class="w-5 h-5 rounded-full bg-yellow-400 border border-gray-600 flex items-center justify-center text-[10px]">🚓</span> Polizia</div>
+    <div id="info-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-[3000] flex items-center justify-center p-6 transition-opacity duration-300" style="display:none">
+        <div class="bg-white rounded-[48px] shadow-2xl p-10 w-full max-w-sm max-h-[85vh] overflow-y-auto border border-white relative">
+            <div class="flex flex-col items-center mb-8 text-center">
+                <div class="bg-blue-600/10 p-5 rounded-[32px] mb-4">
+                    <svg viewBox="0 0 24 24" class="h-10 w-10 text-blue-600" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </div>
+                <h2 class="text-3xl font-black text-slate-900 leading-tight">Guida Mappa</h2>
+                <p class="text-slate-400 text-sm font-bold mt-1">Legenda colori e simboli</p>
             </div>
-            <button id="close-info" class="w-full mt-6 bg-blue-700 text-white py-2 rounded-lg font-bold">Chiudi</button>
+            <div class="space-y-3.5">
+                <div class="flex items-center gap-4 bg-emerald-50/50 p-4 rounded-3xl border border-emerald-100/50 font-black text-slate-700 text-xs"><span class="w-4 h-4 bg-emerald-500 rounded-full shadow-[0_0_12px_rgba(16,185,129,0.4)]"></span> GRATUITO / LIBERO</div>
+                <div class="flex items-center gap-4 bg-blue-50/50 p-4 rounded-3xl border border-blue-100/50 font-black text-slate-700 text-xs"><span class="w-4 h-4 bg-blue-600 rounded-full shadow-[0_0_12px_rgba(37,99,235,0.4)]"></span> PAGAMENTO / STRISCE BLU</div>
+                <div class="flex items-center gap-4 bg-purple-50/50 p-4 rounded-3xl border border-purple-100/50 font-black text-slate-700 text-xs"><span class="w-4 h-4 bg-purple-500 rounded-full shadow-[0_0_12px_rgba(168,85,247,0.4)]"></span> DISCO ORARIO / TEMPO</div>
+                <div class="flex items-center gap-4 bg-yellow-50/50 p-4 rounded-3xl border border-yellow-100/50 font-black text-slate-700 text-xs"><span class="w-4 h-4 bg-yellow-400 rounded-full shadow-[0_0_12px_rgba(250,204,21,0.4)]"></span> DISABILI (H)</div>
+                <div class="flex items-center gap-4 bg-slate-50 p-4 rounded-3xl border border-slate-100 font-black text-slate-700 text-xs"><span class="text-xl">⚡</span> RICARICA ELETTRICA</div>
+                <div class="flex items-center gap-4 bg-red-50 p-4 rounded-3xl border border-red-100 font-black text-slate-700 text-xs"><span class="w-4 h-4 bg-red-500 rounded-full"></span> BUS / MEZZI PUBBLICI</div>
+                <div class="flex items-center gap-4 bg-orange-50 p-4 rounded-3xl border border-orange-100 font-black text-slate-700 text-xs"><span class="w-4 h-4 rounded-full" style="background: #78350f"></span> CARICO / SCARICO</div>
+                <div class="flex items-center gap-4 bg-pink-50 p-4 rounded-3xl border border-pink-100 font-black text-slate-700 text-xs"><span class="w-4 h-4 bg-pink-500 rounded-full"></span> POSTI ROSA</div>
+            </div>
+            <button id="close-info" class="w-full mt-10 bg-slate-900 text-white py-5 rounded-[24px] font-black hover:bg-black transition-all shadow-2xl shadow-slate-300 tracking-widest text-xs uppercase">Chiudi</button>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        const map = L.map('map', { zoomControl: false, tap: false }).setView([45.4642, 9.1900], 17);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-            attribution: '© OSM',
-            maxZoom: 19 
+        const map = L.map('map', { 
+            zoomControl: false, 
+            tap: false, 
+            preferCanvas: true, 
+            attributionControl: false 
+        }).setView([45.4642, 9.1900], 19);
+        
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { 
+            maxZoom: 20 
         }).addTo(map);
 
         let dataLayer = L.layerGroup().addTo(map);
         let isFetching = false;
+        let fetchTimeout = null;
         
         const loader = document.getElementById('loader');
         const searchInput = document.getElementById('search-input');
@@ -144,214 +271,222 @@
         const infoModal = document.getElementById('info-modal');
 
         const colors = {
-            free: '#22c55e', 
-            paid: '#2563eb', 
-            timed: '#a855f7',
-            private: '#f97316', 
-            disabled: '#facc15',
-            delivery: '#facc15',
-            women: '#f9a8d4',
-            special: '#facc15',
-            default: '#ffffff'
+            free: '#10b981', paid: '#2563eb', timed: '#a855f7', private: '#f97316', 
+            disabled: '#facc15', delivery: '#78350f', women: '#ec4899', 
+            police: '#1e1b4b', charging: 'transparent', bus: '#ef4444', 
+            hgv: '#1e293b', parent: '#fb923c', taxi: '#9333ea', 
+            car_sharing: '#6366f1', default: '#64748b' 
         };
 
-        // Funzione migliorata per la traduzione dei tag OSM
-        function humanizeCondition(str, isFee = false) {
-            if (!str) return '';
-            
-            let human = str
-                .replace(/^no\s*@\s*/gi, 'Vietato ')
-                .replace(/^yes\s*@\s*/gi, isFee ? 'Pagamento ' : 'Consentito ')
-                .replace(/^private\s*@\s*/gi, 'Solo privati ')
-                .replace(/^customers\s*@\s*/gi, 'Solo clienti ')
-                .replace(/^permit\s*@\s*/gi, 'Solo con permesso ')
-                .replace(/^residents\s*@\s*/gi, 'Solo residenti ')
-                .replace(/Mo/g, 'lun').replace(/Tu/g, 'mar').replace(/We/g, 'mer')
-                .replace(/Th/g, 'gio').replace(/Fr/g, 'ven').replace(/Sa/g, 'sab')
-                .replace(/Su/g, 'dom').replace(/PH/g, 'festivi')
-                .replace(/00:00-24:00/g, 'tutto il giorno')
-                .replace(/;/g, ' | ')
-                .replace(/\(/g, '').replace(/\)/g, '')
-                .trim();
-
-            // Trasforma intervalli orari
-            human = human.replace(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/g, 'dalle $1 alle $2');
-            
-            // Pulisce doppioni
-            human = human.replace(/dalle\s+dalle/gi, 'dalle');
-            
-            return human.charAt(0).toUpperCase() + human.slice(1);
-        }
-
         function getParkingType(tags) {
-            // 1. Logica specifica per stalli singoli (punti)
-            if (tags.amenity === 'parking_space') {
-                const space = tags.parking_space || '';
+            const acc = tags.access || '';
+            const space = tags.parking_space || '';
+            const operator = tags.operator || '';
+            const amenity = tags.amenity || '';
+            
+            if (acc === 'police' || tags.designated === 'police' || tags.service === 'police' || space === 'police' || operator.toLowerCase().includes('polizia')) return 'police';
+            if (space === 'charging' || tags.charging === 'yes') return 'charging';
+            
+            if (amenity === 'parking_space') {
                 if (tags.disabled === 'yes' || space === 'disabled') return 'disabled';
                 if (space === 'delivery') return 'delivery';
                 if (space === 'women') return 'women';
-                if (['taxi', 'police', 'emergency'].includes(space)) return 'special';
-                return 'default';
+                if (space === 'bus') return 'bus';
+                if (space === 'hgv') return 'hgv';
+                if (space === 'parent') return 'parent';
+                if (space === 'taxi') return 'taxi';
+                if (space === 'car_sharing') return 'car_sharing';
             }
-
-            // 2. Logica per aree e accessi (poligoni o nodi generici)
-            const acc = tags.access || '';
-            if (['private', 'customers', 'permit', 'residents', 'employees'].includes(acc)) return 'private';
-
+            
+            if (amenity === 'taxi_rank') return 'taxi';
+            if (['permit', 'residents', 'employees', 'customers', 'private', 'destination'].includes(acc)) return 'private';
+            
             const fee = tags.fee || '';
-            if (fee === 'yes' || tags['fee:conditional'] || tags['fee:amount']) return 'paid';
-
+            if (fee === 'yes' || tags['fee:conditional']) return 'paid';
+            
             const cond = tags['parking:condition'] || tags['parking:condition:both'] || '';
-            if (cond.includes('disc') || tags['maxstay'] || tags['maxstay:conditional']) return 'timed';
-
+            if (cond.includes('disc') || tags['maxstay']) return 'timed';
+            
             return 'free';
         }
 
         function getIconChar(tags) {
-            const space = tags.parking_space || '';
-            if (tags.disabled === 'yes' || space === 'disabled') return '♿';
-            if (space === 'delivery') return '🚚';
-            if (space === 'women') return '♀';
-            if (space === 'taxi') return '🚖';
-            if (space === 'police') return '🚓';
+            const s = tags.parking_space || '';
+            const acc = tags.access || '';
+            if (tags.disabled === 'yes' || s === 'disabled') return '♿';
+            if (s === 'delivery') return '🚚';
+            if (s === 'women') return '♀';
+            if (s === 'police' || acc === 'police' || tags.service === 'police') return '🚔';
+            if (s === 'charging' || tags.charging === 'yes') return '⚡';
+            if (s === 'bus') return '🚌';
+            if (s === 'hgv') return '🚛';
+            if (s === 'parent') return '👨‍👩‍👧‍👦';
+            if (s === 'taxi' || tags.amenity === 'taxi_rank') return '🚕';
+            if (s === 'car_sharing') return '🚗';
             return '';
         }
 
-        function getMarkerIcon(tags) {
-            const type = getParkingType(tags);
-            const iconChar = getIconChar(tags);
-            const bgColor = colors[type];
-            const html = `<div style="background-color: ${bgColor}; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #666; display: flex; align-items: center; justify-content: center; font-size: 8px; color: black; font-weight: bold;">${iconChar}</div>`;
-            return L.divIcon({ html: html, className: 'parking-dot', iconSize: [14, 14] });
-        }
-
         function getPopupContent(el, lat, lon) {
-            const tags = el.tags;
-            const type = getParkingType(tags);
-            const isSpace = tags.amenity === 'parking_space';
+            const t = el.tags;
+            const type = getParkingType(t);
+            const isS = t.amenity === 'parking_space';
+            let title = t.name || (isS ? "Posto Singolo" : "Area Parcheggio");
+            const labels = {
+                paid: "Pagamento", timed: "Disco Orario", disabled: "Disabili",
+                delivery: "Carico/Scarico", women: "Posto Rosa", police: "Forze dell'Ordine",
+                private: "Riservato", charging: "Ricarica Elettrica", bus: "Bus/Pullman",
+                hgv: "Mezzi Pesanti", parent: "Famiglie", taxi: "Taxi",
+                car_sharing: "Car Sharing", free: "Gratis"
+            };
             
-            let title = tags.name || (isSpace ? `Posto ${tags.parking_space || 'Auto'}` : "Parcheggio");
-            let body = `<div class="mb-2 space-y-1">`;
+            let details = [];
+            if (t.fee === 'yes') details.push(`<div class="popup-tag">💰 Pagamento${t.charge ? ': ' + t.charge : ''}</div>`);
+            if (t.maxstay) details.push(`<div class="popup-tag">⌛ Max: ${t.maxstay}</div>`);
+            if (t.capacity) details.push(`<div class="popup-tag">📍 Posti totali: ${t.capacity}</div>`);
             
-            if (isSpace) {
-                const spaceType = tags.parking_space || 'standard';
-                body += `<div class="font-bold text-gray-600 uppercase text-[10px]">Stallo: ${spaceType}</div>`;
-            }
-
-            // Stato Accesso
-            if (tags.access && tags.access !== 'yes') {
-                body += `<div class="text-orange-700 font-bold">Accesso: ${tags.access.toUpperCase()}</div>`;
-            }
-
-            // Stato Tariffa
-            let tariffaLabel = "Gratis";
-            if (type === 'paid') tariffaLabel = '<span class="text-blue-700 font-bold">A PAGAMENTO</span>';
-            if (type === 'timed') tariffaLabel = '<span class="text-purple-700 font-bold">DISCO ORARIO</span>';
-            body += `<div><b>Tariffa:</b> ${tariffaLabel}</div>`;
-
-            // Condizioni complesse (Fee Conditional)
-            if (tags['fee:conditional']) {
-                body += `<div class="bg-blue-50 p-1.5 rounded text-[11px] border border-blue-100 mt-1">
-                    <b>Regole Pagamento:</b><br>${humanizeCondition(tags['fee:conditional'], true)}
+            return `
+                <div class="flex flex-col gap-3">
+                    <h3 class="text-base font-black text-slate-900">${title}</h3>
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 font-bold text-xs">
+                        <div class="flex items-center text-slate-400 uppercase tracking-widest text-[9px] mb-2">
+                            <span class="w-2.5 h-2.5 rounded-full mr-2" style="background: ${colors[type]}"></span>
+                            ${labels[type] || "Area"}
+                        </div>
+                        ${details.join('')}
+                    </div>
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}" target="_blank" class="btn-action bg-blue-600 py-3.5 rounded-2xl text-[11px] font-black tracking-widest shadow-lg shadow-blue-100">NAVIGA ORA</a>
                 </div>`;
-            }
-
-            // Condizioni Sosta (Parking Condition)
-            if (tags['parking:condition'] || tags['parking:condition:both']) {
-                const condStr = tags['parking:condition'] || tags['parking:condition:both'];
-                body += `<div class="bg-gray-50 p-1.5 rounded text-[11px] border border-gray-200 mt-1">
-                    <b>Limitazioni:</b><br>${humanizeCondition(condStr)}
-                </div>`;
-            }
-
-            // Tempo Massimo
-            if (tags.maxstay) {
-                body += `<div class="font-bold text-purple-700 text-[11px] mt-1">
-                    ⏱ Limite: ${tags.maxstay.replace('mins', 'min')}
-                </div>`;
-            }
-
-            body += `</div>`;
-            const navLink = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
-            const editLink = `https://www.openstreetmap.org/edit?editor=id&${el.type}=${el.id}#map=19/${lat}/${lon}`;
-
-            return `<div class="text-xs">
-                <b class="text-sm block border-b pb-1 mb-1 text-blue-800">${title}</b>
-                ${body}
-                <div class="button-group">
-                    <a href="${navLink}" target="_blank" class="nav-button">VAI QUI</a>
-                    <a href="${editLink}" target="_blank" class="edit-button">✏️</a>
-                </div>
-            </div>`;
         }
 
         async function fetchParking() {
             if (isFetching || map.getZoom() < 15) return;
-            const b = map.getBounds();
-            const bbox = `${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()}`;
             isFetching = true;
             loader.style.display = 'block';
             
-            const q = `[out:json][timeout:25];(nwr["amenity"~"parking|parking_space"](${bbox}););out center body;>;out skel qt;`;
+            const b = map.getBounds();
+            const bbox = `${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()}`;
+            
+            const q = `[out:json][timeout:25];(
+                nwr["amenity"="parking"](${bbox});
+                nwr["amenity"="parking_space"](${bbox});
+                nwr["amenity"="taxi_rank"](${bbox});
+            );out geom;`;
+            
             try {
                 const r = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: q });
-                const d = await r.json();
-                processData(d);
+                if (r.ok) {
+                    const d = await r.json();
+                    renderData(d.elements);
+                }
             } catch (e) { console.error(e); }
-            finally { isFetching = false; loader.style.display = 'none'; }
+            isFetching = false; 
+            loader.style.display = 'none';
         }
 
-        function processData(data) {
+        function renderData(elements) {
             dataLayer.clearLayers();
-            const nodes = {};
-            data.elements.forEach(el => { if (el.type === 'node') nodes[el.id] = [el.lat, el.lon]; });
-            data.elements.forEach(el => {
-                if (!el.tags) return;
-                const lat = el.lat || (el.center ? el.center.lat : null);
-                const lon = el.lon || (el.center ? el.center.lon : null);
-                if (!lat || !lon) return;
+            
+            elements.sort((a, b) => {
+                const scoreA = a.tags.amenity === 'parking_space' ? 10 : 0;
+                const scoreB = b.tags.amenity === 'parking_space' ? 10 : 0;
+                return scoreA - scoreB;
+            }).forEach(el => {
+                const isSpace = el.tags.amenity === 'parking_space';
+                
+                if (isSpace && el.tags.parking_space === 'normal') {
+                    return;
+                }
 
                 const type = getParkingType(el.tags);
+                const char = getIconChar(el.tags);
+                
+                let coords = el.geometry ? el.geometry.map(p => [p.lat, p.lon]) : [];
+                const isPolygon = coords.length > 2;
+                
+                let center = isPolygon ? [coords.reduce((a,b)=>a+b[0],0)/coords.length, coords.reduce((a,b)=>a+b[1],0)/coords.length] : (el.center ? [el.center.lat, el.center.lon] : (el.lat ? [el.lat, el.lon] : (coords[0] || null)));
+                if (!center) return;
 
-                if (el.tags.amenity === 'parking' && el.type === 'way') {
-                    const coords = el.nodes.map(id => nodes[id]).filter(c => c);
-                    if (coords.length > 2) {
-                        L.polygon(coords, { 
-                            fillColor: colors[type], 
-                            weight: 2, color: 'white', fillOpacity: 0.5 
-                        }).bindPopup(getPopupContent(el, lat, lon)).addTo(dataLayer);
-                    }
+                if (type === 'free' && !isPolygon) return;
+
+                let layer;
+                if (isPolygon) {
+                    layer = L.polygon(coords, { 
+                        fillColor: colors[type], 
+                        color: (isSpace && type !== 'free') ? 'white' : colors[type], 
+                        weight: (isSpace && type !== 'free') ? 2 : 1, 
+                        fillOpacity: (isSpace && type !== 'free') ? 0.9 : 0.3 
+                    }).addTo(dataLayer);
                 } else {
-                    L.marker([lat, lon], { icon: getMarkerIcon(el.tags) })
-                    .bindPopup(getPopupContent(el, lat, lon)).addTo(dataLayer);
+                    layer = L.circle(center, { 
+                        radius: isSpace ? 3.5 : 5, 
+                        fillColor: colors[type], 
+                        color: 'white', 
+                        weight: 2, 
+                        fillOpacity: 0.9 
+                    }).addTo(dataLayer);
+                }
+
+                if (layer) layer.bindPopup(getPopupContent(el, center[0], center[1]));
+
+                if (char && type !== 'free') {
+                    L.marker(center, { 
+                        icon: L.divIcon({ 
+                            html: char, 
+                            className: type === 'charging' ? 'charging-icon' : 'parking-space-icon', 
+                            iconSize: type === 'charging' ? [28, 28] : [22, 22], 
+                            iconAnchor: type === 'charging' ? [14, 14] : [11, 11] 
+                        }), 
+                        interactive: false, 
+                        zIndexOffset: 3000 
+                    }).addTo(dataLayer);
                 }
             });
         }
 
-        // UI Helpers
+        map.on('moveend', () => { 
+            clearTimeout(fetchTimeout); 
+            fetchTimeout = setTimeout(fetchParking, 800); 
+        });
+
+        document.getElementById('refresh-btn').onclick = () => {
+            const btn = document.getElementById('refresh-btn');
+            btn.classList.add('animate-spin');
+            fetchParking().finally(() => {
+                setTimeout(() => btn.classList.remove('animate-spin'), 1000);
+            });
+        };
+
         document.getElementById('info-btn').onclick = () => infoModal.style.display = 'flex';
         document.getElementById('close-info').onclick = () => infoModal.style.display = 'none';
-        document.getElementById('locate-btn').onclick = () => map.locate({setView: true, maxZoom: 18});
-        document.getElementById('refresh-btn').onclick = fetchParking;
-        map.on('moveend', fetchParking);
-
-        async function search() {
+        document.getElementById('locate-btn').onclick = () => map.locate({setView: true, maxZoom: 19});
+        
+        document.getElementById('search-btn').onclick = async () => {
             const v = searchInput.value;
             if (v.length < 3) return;
-            const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(v)}&countrycodes=it&limit=5`);
-            const json = await r.json();
-            searchResults.innerHTML = '';
-            json.forEach(res => {
-                const d = document.createElement('div');
-                d.className = 'p-3 border-b hover:bg-gray-100 cursor-pointer text-sm';
-                d.textContent = res.display_name;
-                d.onclick = () => { map.setView([res.lat, res.lon], 18); searchResults.style.display = 'none'; fetchParking(); };
-                searchResults.appendChild(d);
-            });
-            searchResults.style.display = 'block';
-        }
-        document.getElementById('search-btn').onclick = search;
-        
+            const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(v)}&countrycodes=it&limit=5`, { headers: { 'Accept-Language': 'it' } });
+            if (r.ok) {
+                const json = await r.json();
+                searchResults.innerHTML = '';
+                if (json.length === 0) {
+                    searchResults.innerHTML = '<div class="p-6 text-sm text-slate-400 font-bold text-center">Nessun risultato trovato</div>';
+                } else {
+                    json.forEach(res => {
+                        const d = document.createElement('div');
+                        d.className = 'p-4 hover:bg-blue-50 cursor-pointer text-sm font-black border-b border-slate-50 last:border-0 rounded-2xl transition-colors text-slate-700';
+                        d.textContent = res.display_name;
+                        d.onclick = () => { 
+                            map.setView([res.lat, res.lon], 19); 
+                            searchResults.style.display = 'none'; 
+                            fetchParking(); 
+                        };
+                        searchResults.appendChild(d);
+                    });
+                }
+                searchResults.style.display = 'block';
+            }
+        };
+
+        window.onclick = (e) => { if (e.target == infoModal) infoModal.style.display = "none"; };
         window.onload = fetchParking;
     </script>
 </body>
