@@ -426,6 +426,8 @@
         function renderData(elements) {
             dataLayer.clearLayers();
             elements.forEach(el => {
+                const isNormalParkingSpace = el.tags?.amenity === 'parking_space' && el.tags?.parking_space === 'normal';
+                if (isNormalParkingSpace) return;
                 const type = getParkingType(el.tags);
                 const char = getIconChar(el.tags);
                 let coords = el.geometry ? el.geometry.map(p => [p.lat, p.lon]) : [];
