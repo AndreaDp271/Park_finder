@@ -12,7 +12,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
-        /* Blocco totale dello scroll del corpo per evitare sparizioni di barre su mobile */
         html, body { 
             margin: 0; 
             padding: 0; 
@@ -30,7 +29,6 @@
             width: 100%; 
         }
 
-        /* Barre superiori fissate con z-index alto */
         #top-ui {
             position: absolute;
             top: 0;
@@ -44,14 +42,13 @@
         #search-bar { height: 55px; display: flex; align-items: center; padding: 0 8px; }
         #legend-bar { height: 35px; display: flex; align-items: center; justify-content: center; }
 
-        /* Mappa a tutto schermo con padding per le barre */
         #map-container {
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            padding-top: 150px; /* Somma di 60+55+35 */
+            padding-top: 150px; 
             z-index: 1;
         }
 
@@ -67,18 +64,38 @@
             z-index: 1500; display: none;
         }
 
-        .leaflet-popup-content { font-size: 14px; min-width: 180px; }
+        .leaflet-popup-content { font-size: 14px; min-width: 200px; }
+        
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
         .nav-button {
-            display: block !important; 
-            width: 100% !important; 
-            text-align: center !important; 
+            flex: 1;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
             background-color: #1d4ed8 !important; 
             color: #ffffff !important; 
             padding: 10px !important; 
             border-radius: 6px !important; 
             font-weight: bold !important; 
             text-decoration: none !important; 
-            margin-top: 8px !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .edit-button {
+            width: 42px;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            background-color: #4b5563 !important; 
+            color: #ffffff !important; 
+            padding: 10px !important; 
+            border-radius: 6px !important; 
+            text-decoration: none !important;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
@@ -93,7 +110,6 @@
 <body class="font-sans">
 
     <div id="app-container">
-        <!-- Blocco UI Superiore Fissato -->
         <div id="top-ui">
             <!-- Header -->
             <header class="bg-blue-700 text-white">
@@ -104,9 +120,11 @@
                     ParkMap
                 </h1>
                 <div class="flex gap-2">
-                    <button id="locate-btn" class="bg-white text-blue-700 p-2 rounded-full shadow-sm active:bg-gray-200">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+                    <!-- Pulsante Posizione Standard -->
+                    <button id="locate-btn" class="bg-white text-blue-700 p-2 rounded-full shadow-sm active:bg-gray-200" title="Trova la mia posizione">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 0v4m0-4h4m-4 0H8m12 0a8 8 0 11-16 0 8 8 0 0116 0z" />
+                            <circle cx="12" cy="12" r="2" fill="currentColor" />
                         </svg>
                     </button>
                     <button id="refresh-btn" class="bg-blue-500 text-white p-2 rounded-full shadow-sm active:bg-blue-600">
@@ -216,11 +234,17 @@
             return L.divIcon({ html: html, className: 'parking-dot', iconSize: [14, 14] });
         }
 
-        function getPopupContent(tags, lat, lon) {
+        function getPopupContent(el, lat, lon) {
+            const tags = el.tags;
             const type = getParkingType(tags);
             const isSpace = tags.amenity === 'parking_space';
             let title = tags.name || (isSpace ? "Posto Auto" : "Parcheggio");
+            
             const navLink = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
+            
+            // Link per l'editor iD di OSM
+            const osmType = el.type === 'node' ? 'node' : (el.type === 'way' ? 'way' : 'relation');
+            const editLink = `https://www.openstreetmap.org/edit?editor=id&${osmType}=${el.id}#map=19/${lat}/${lon}`;
 
             return `
                 <div class="text-xs font-sans">
@@ -230,7 +254,14 @@
                         <b>Accesso:</b> ${tags.access || 'pubblico'}<br>
                         ${tags.capacity ? `<b>Posti:</b> ${tags.capacity}<br>` : ''}
                     </div>
-                    <a href="${navLink}" target="_blank" class="nav-button">VAI QUI</a>
+                    <div class="button-group">
+                        <a href="${navLink}" target="_blank" class="nav-button">VAI QUI</a>
+                        <a href="${editLink}" target="_blank" class="edit-button" title="Modifica su OSM">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                        </a>
+                    </div>
                 </div>
             `;
         }
@@ -278,13 +309,13 @@
                 if (el.tags.amenity === 'parking' && el.type === 'way' && el.nodes) {
                     const coords = el.nodes.map(id => nodes[id]).filter(c => c);
                     if (coords.length > 2) {
-                        L.polygon(coords, getAreaStyle(el.tags)).bindPopup(getPopupContent(el.tags, lat, lon)).addTo(dataLayer);
+                        L.polygon(coords, getAreaStyle(el.tags)).bindPopup(getPopupContent(el, lat, lon)).addTo(dataLayer);
                         return;
                     }
                 }
                 if (el.tags.amenity === 'parking_space' || (el.tags.amenity === 'parking' && el.type === 'node')) {
                     if (lat && lon) {
-                        L.marker([lat, lon], { icon: getMarkerIcon(el.tags) }).bindPopup(getPopupContent(el.tags, lat, lon)).addTo(dataLayer);
+                        L.marker([lat, lon], { icon: getMarkerIcon(el.tags) }).bindPopup(getPopupContent(el, lat, lon)).addTo(dataLayer);
                     }
                 }
             });
