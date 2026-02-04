@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ParkMap - Trova il tuo posto</title>
     
+    <!-- Meta per Web App e Icone Home Screen (Android/iOS) -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ParkMap">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2991/2991231.png">
-    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2991/2991231.png">
+    
+    <!-- Icona "P" stilizzata per desktop e mobile (Base64 SVG per massima compatibilità) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='120' fill='%232563eb'/%3E%3Cpath d='M160 400V112h112c64 0 112 40 112 100s-48 100-112 100H224v88h-64zm64-244v100h48c32 0 48-20 48-50s-16-50-48-50h-48z' fill='white'/%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='120' fill='%232563eb'/%3E%3Cpath d='M160 400V112h112c64 0 112 40 112 100s-48 100-112 100H224v88h-64zm64-244v100h48c32 0 48-20 48-50s-16-50-48-50h-48z' fill='white'/%3E%3C/svg%3E">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -136,7 +139,6 @@
             width: 100%;
         }
 
-        /* Pulsante flottante aggiorna */
         .btn-float {
             position: absolute; bottom: 30px; right: 12px; z-index: 1000;
             width: 56px; height: 56px; border-radius: 20px;
@@ -153,7 +155,7 @@
         <div id="top-ui">
             <header class="glass-card">
                 <div class="flex items-center gap-3">
-                    <!-- Logo "P" Generale -->
+                    <!-- Logo "P" Grafico nel Header -->
                     <div class="logo-gradient w-10 h-10 rounded-2xl text-white">
                         <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M9 21V3h4.5a5.5 5.5 0 0 1 0 11H9"></path>
@@ -353,17 +355,12 @@
             
             let details = [];
             
-            // Accesso
-            const access = t.access || '';
-            const accessCond = t['access:conditional'] || '';
-            if (accessCond) {
-                details.push(`<div class="popup-tag text-red-700 bg-red-50 border-red-100">🔒 ${humanizeOSM(accessCond)}</div>`);
-            } else if (access && access !== 'yes' && access !== 'public') {
-                const motivo = translations[access] || access;
-                details.push(`<div class="popup-tag text-orange-700 bg-orange-50 border-orange-100">🔒 Riservato: ${humanizeOSM(motivo)}</div>`);
+            if (t['access:conditional']) {
+                details.push(`<div class="popup-tag text-red-700 bg-red-50 border-red-100">🔒 ${humanizeOSM(t['access:conditional'])}</div>`);
+            } else if (t.access && t.access !== 'yes' && t.access !== 'public') {
+                details.push(`<div class="popup-tag text-orange-700 bg-orange-50 border-orange-100">🔒 Riservato: ${humanizeOSM(t.access)}</div>`);
             }
             
-            // Tariffa
             if (t.fee === 'yes' && !t['fee:conditional']) {
                 const charge = t.charge || t['fee:amount'] || '';
                 details.push(`<div class="popup-tag text-blue-700 bg-blue-50 border-blue-100">💰 Pagamento${charge ? ': ' + charge : ''}</div>`);
@@ -381,15 +378,9 @@
                 }
             }
             
-            // Disco orario e maxstay
             if (t.maxstay) details.push(`<div class="popup-tag text-purple-700 bg-purple-50 border-purple-100">⌛ Max: ${t.maxstay.replace('mins', 'min')}</div>`);
-            const cond = t['parking:condition'] || t['parking:condition:both'];
-            if (cond && cond.includes('disc') && !type === 'timed') {
-                 details.push(`<div class="popup-tag text-purple-700 bg-purple-50 border-purple-100">🅿️ Disco Orario</div>`);
-            }
-
+            
             if (t.capacity) details.push(`<div class="popup-tag text-slate-500 border border-slate-100">📍 Posti totali: ${t.capacity}</div>`);
-            if (t.operator) details.push(`<div class="popup-tag text-slate-500 border border-slate-100">🏢 Gestore: ${t.operator}</div>`);
             
             return `
                 <div class="flex flex-col gap-3">
@@ -434,60 +425,24 @@
 
         function renderData(elements) {
             dataLayer.clearLayers();
-            
-            elements.sort((a, b) => {
-                const scoreA = a.tags.amenity === 'parking_space' ? 10 : 0;
-                const scoreB = b.tags.amenity === 'parking_space' ? 10 : 0;
-                return scoreA - scoreB;
-            }).forEach(el => {
-                const isSpace = el.tags.amenity === 'parking_space';
-                
-                if (isSpace && el.tags.parking_space === 'normal') {
-                    return;
-                }
-
+            elements.forEach(el => {
                 const type = getParkingType(el.tags);
                 const char = getIconChar(el.tags);
-                
                 let coords = el.geometry ? el.geometry.map(p => [p.lat, p.lon]) : [];
                 const isPolygon = coords.length > 2;
-                
                 let center = isPolygon ? [coords.reduce((a,b)=>a+b[0],0)/coords.length, coords.reduce((a,b)=>a+b[1],0)/coords.length] : (el.center ? [el.center.lat, el.center.lon] : (el.lat ? [el.lat, el.lon] : (coords[0] || null)));
                 if (!center) return;
-
                 if (type === 'free' && !isPolygon) return;
 
                 let layer;
                 if (isPolygon) {
-                    layer = L.polygon(coords, { 
-                        fillColor: colors[type], 
-                        color: (isSpace && type !== 'free') ? 'white' : colors[type], 
-                        weight: (isSpace && type !== 'free') ? 2 : 1, 
-                        fillOpacity: (isSpace && type !== 'free') ? 0.9 : 0.3 
-                    }).addTo(dataLayer);
+                    layer = L.polygon(coords, { fillColor: colors[type], color: 'white', weight: 1, fillOpacity: 0.6 }).addTo(dataLayer);
                 } else {
-                    layer = L.circle(center, { 
-                        radius: isSpace ? 3.5 : 5, 
-                        fillColor: colors[type], 
-                        color: 'white', 
-                        weight: 2, 
-                        fillOpacity: 0.9 
-                    }).addTo(dataLayer);
+                    layer = L.circle(center, { radius: 5, fillColor: colors[type], color: 'white', weight: 2, fillOpacity: 0.9 }).addTo(dataLayer);
                 }
-
                 if (layer) layer.bindPopup(getPopupContent(el, center[0], center[1]));
-
                 if (char && type !== 'free') {
-                    L.marker(center, { 
-                        icon: L.divIcon({ 
-                            html: char, 
-                            className: type === 'charging' ? 'charging-icon' : 'parking-space-icon', 
-                            iconSize: type === 'charging' ? [28, 28] : [22, 22], 
-                            iconAnchor: type === 'charging' ? [14, 14] : [11, 11] 
-                        }), 
-                        interactive: false, 
-                        zIndexOffset: 3000 
-                    }).addTo(dataLayer);
+                    L.marker(center, { icon: L.divIcon({ html: char, className: type === 'charging' ? 'charging-icon' : 'parking-space-icon', iconSize: [22, 22] }), interactive: false }).addTo(dataLayer);
                 }
             });
         }
@@ -497,14 +452,7 @@
             fetchTimeout = setTimeout(fetchParking, 800); 
         });
 
-        document.getElementById('refresh-btn').onclick = () => {
-            const btn = document.querySelector('#refresh-btn svg');
-            btn.parentElement.classList.add('animate-spin');
-            fetchParking().finally(() => {
-                setTimeout(() => btn.parentElement.classList.remove('animate-spin'), 1000);
-            });
-        };
-
+        document.getElementById('refresh-btn').onclick = fetchParking;
         document.getElementById('info-btn').onclick = () => infoModal.style.display = 'flex';
         document.getElementById('close-info').onclick = () => infoModal.style.display = 'none';
         document.getElementById('locate-btn').onclick = () => map.locate({setView: true, maxZoom: 19});
@@ -512,30 +460,21 @@
         document.getElementById('search-btn').onclick = async () => {
             const v = searchInput.value;
             if (v.length < 3) return;
-            const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(v)}&countrycodes=it&limit=5`, { headers: { 'Accept-Language': 'it' } });
+            const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(v)}&countrycodes=it&limit=5`);
             if (r.ok) {
                 const json = await r.json();
                 searchResults.innerHTML = '';
-                if (json.length === 0) {
-                    searchResults.innerHTML = '<div class="p-6 text-sm text-slate-400 font-bold text-center">Nessun risultato trovato</div>';
-                } else {
-                    json.forEach(res => {
-                        const d = document.createElement('div');
-                        d.className = 'p-4 hover:bg-blue-50 cursor-pointer text-sm font-black border-b border-slate-50 last:border-0 rounded-2xl transition-colors text-slate-700';
-                        d.textContent = res.display_name;
-                        d.onclick = () => { 
-                            map.setView([res.lat, res.lon], 19); 
-                            searchResults.style.display = 'none'; 
-                            fetchParking(); 
-                        };
-                        searchResults.appendChild(d);
-                    });
-                }
+                json.forEach(res => {
+                    const d = document.createElement('div');
+                    d.className = 'p-4 hover:bg-blue-50 cursor-pointer text-sm font-bold border-b border-slate-50 last:border-0 rounded-2xl';
+                    d.textContent = res.display_name;
+                    d.onclick = () => { map.setView([res.lat, res.lon], 19); searchResults.style.display = 'none'; fetchParking(); };
+                    searchResults.appendChild(d);
+                });
                 searchResults.style.display = 'block';
             }
         };
 
-        window.onclick = (e) => { if (e.target == infoModal) infoModal.style.display = "none"; };
         window.onload = fetchParking;
     </script>
 </body>
