@@ -228,41 +228,30 @@
         out skel qt;
       `;
 
-      if (window.location.protocol === "file:") {
-        statusEl.textContent = "Avvia il sito con un server locale per accedere ai dati OSM.";
-        return;
-      }
-
       statusEl.textContent = "Aggiornamento dati parcheggi...";
       try {
         const endpoints = [
           "https://overpass-api.de/api/interpreter",
           "https://overpass.kumi.systems/api/interpreter",
-          "https://overpass.nchc.org.tw/api/interpreter",
         ];
-        const proxyBase = "https://api.allorigins.win/raw?url=";
         let response = null;
         let lastError = null;
-        const queryParam = `?data=${encodeURIComponent(query)}`;
-
         for (const endpoint of endpoints) {
-          const directUrl = `${endpoint}${queryParam}`;
-          const proxyUrl = `${proxyBase}${encodeURIComponent(directUrl)}`;
-          for (const url of [directUrl, proxyUrl]) {
-            try {
-              response = await fetch(url, { method: "GET" });
-              if (response.ok) {
-                break;
-              }
-            } catch (error) {
-              lastError = error;
+          try {
+            response = await fetch(endpoint, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+              },
+              body: new URLSearchParams({ data: query }),
+            });
+            if (response.ok) {
+              break;
             }
-          }
-          if (response && response.ok) {
-            break;
+          } catch (error) {
+            lastError = error;
           }
         }
-
         if (!response || !response.ok) {
           throw lastError || new Error("Errore caricamento Overpass");
         }
