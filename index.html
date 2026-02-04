@@ -1,1 +1,300 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Park Finder - Parcheggi OSM</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f172a;
+      --panel: #111827;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --blue: #2563eb;
+      --green: #16a34a;
+      --violet: #7c3aed;
+      --gray: #64748b;
+    }
 
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      padding: 1rem 1.5rem 0.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.6rem;
+    }
+
+    header p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    #map {
+      height: calc(100vh - 190px);
+      width: 100%;
+    }
+
+    .panel {
+      margin: 1rem 1.5rem;
+      padding: 0.75rem 1rem;
+      background: var(--panel);
+      border-radius: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.9rem;
+    }
+
+    .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .status {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .popup-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .popup-table td {
+      padding: 0.15rem 0.3rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      vertical-align: top;
+    }
+
+    .popup-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .navigate-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.4rem 0.6rem;
+      margin-top: 0.5rem;
+      background: #1f2937;
+      color: var(--text);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 720px) {
+      #map {
+        height: calc(100vh - 230px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Park Finder</h1>
+    <p>Visualizza le aree <strong>amenity=parking</strong> da OpenStreetMap e controlla i costi.</p>
+  </header>
+
+  <section class="panel">
+    <div class="legend">
+      <div class="legend-item"><span class="swatch" style="background: var(--green);"></span>Gratis</div>
+      <div class="legend-item"><span class="swatch" style="background: var(--blue);"></span>A pagamento</div>
+      <div class="legend-item"><span class="swatch" style="background: var(--violet);"></span>Disco orario</div>
+      <div class="legend-item"><span class="swatch" style="background: var(--gray);"></span>Info non disponibili</div>
+    </div>
+    <div class="status" id="status">Caricamento parcheggi...</div>
+  </section>
+
+  <div id="map"></div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script src="https://unpkg.com/osmtogeojson@3.0.0/osmtogeojson.js"></script>
+  <script>
+    const statusEl = document.getElementById("status");
+    const map = L.map("map").setView([41.9028, 12.4964], 13);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    const parkingLayer = L.geoJSON(null, {
+      style: feature => ({
+        color: "#1f2937",
+        weight: 1,
+        fillColor: feature.properties._fill,
+        fillOpacity: 0.6,
+      }),
+      onEachFeature: (feature, layer) => {
+        const tags = feature.properties.tags || {};
+        const coords = feature.properties._center || feature.geometry.coordinates[0][0];
+        const [lon, lat] = coords;
+        const tableRows = Object.entries(tags)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([key, value]) => `<tr><td><strong>${key}</strong></td><td>${value}</td></tr>`)
+          .join("");
+
+        const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
+        const popupHtml = `
+          <div>
+            <strong>Parcheggio</strong>
+            <table class="popup-table">
+              ${tableRows || "<tr><td colspan=\"2\">Nessun tag disponibile</td></tr>"}
+            </table>
+            <a class="navigate-btn" href="${navUrl}" target="_blank" rel="noopener">Apri navigatore</a>
+          </div>
+        `;
+        layer.bindPopup(popupHtml, { maxWidth: 320 });
+      },
+    }).addTo(map);
+
+    const getFeeStatus = tags => {
+      const feeValueRaw = (tags["parking:fee"] || tags.fee || "").toString().toLowerCase();
+      const discValue = (tags["parking:disc"] || tags.disc || "").toString().toLowerCase();
+
+      const discKeywords = ["disc", "disk", "disco", "clock", "ticket", "orario"];
+      if (discValue === "yes" || discKeywords.some(keyword => feeValueRaw.includes(keyword))) {
+        return { label: "disco orario", color: "var(--violet)" };
+      }
+
+      if (["yes", "true", "paid", "customers", "ticket"].includes(feeValueRaw)) {
+        return { label: "a pagamento", color: "var(--blue)" };
+      }
+
+      if (["no", "false", "gratis", "free"].includes(feeValueRaw)) {
+        return { label: "gratuito", color: "var(--green)" };
+      }
+
+      return { label: "non specificato", color: "var(--gray)" };
+    };
+
+    const fetchParking = async () => {
+      const bounds = map.getBounds();
+      const bbox = [bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getEast()].join(",");
+      const query = `
+        [out:json][timeout:25];
+        (
+          way["amenity"="parking"](${bbox});
+          relation["amenity"="parking"](${bbox});
+        );
+        out body;
+        >;
+        out skel qt;
+      `;
+
+      if (window.location.protocol === "file:") {
+        statusEl.textContent = "Avvia il sito con un server locale per accedere ai dati OSM.";
+        return;
+      }
+
+      statusEl.textContent = "Aggiornamento dati parcheggi...";
+      try {
+        const endpoints = [
+          "https://overpass-api.de/api/interpreter",
+          "https://overpass.kumi.systems/api/interpreter",
+          "https://overpass.nchc.org.tw/api/interpreter",
+        ];
+        const proxyBase = "https://api.allorigins.win/raw?url=";
+        let response = null;
+        let lastError = null;
+        const queryParam = `?data=${encodeURIComponent(query)}`;
+
+        for (const endpoint of endpoints) {
+          const directUrl = `${endpoint}${queryParam}`;
+          const proxyUrl = `${proxyBase}${encodeURIComponent(directUrl)}`;
+          for (const url of [directUrl, proxyUrl]) {
+            try {
+              response = await fetch(url, { method: "GET" });
+              if (response.ok) {
+                break;
+              }
+            } catch (error) {
+              lastError = error;
+            }
+          }
+          if (response && response.ok) {
+            break;
+          }
+        }
+
+        if (!response || !response.ok) {
+          throw lastError || new Error("Errore caricamento Overpass");
+        }
+        const data = await response.json();
+        const geojson = osmtogeojson(data);
+        const features = geojson.features.map(feature => {
+          const tags = feature.properties.tags || {};
+          const fee = getFeeStatus(tags);
+
+          feature.properties._fill = fee.color;
+          if (feature.geometry.type === "Polygon") {
+            feature.properties._center = feature.geometry.coordinates[0][0];
+          }
+          if (feature.geometry.type === "MultiPolygon") {
+            feature.properties._center = feature.geometry.coordinates[0][0][0];
+          }
+          return feature;
+        });
+
+        parkingLayer.clearLayers();
+        parkingLayer.addData(features);
+        statusEl.textContent = `Trovati ${features.length} parcheggi nella vista.`;
+      } catch (error) {
+        statusEl.textContent = "Errore durante il caricamento dei dati.";
+        console.error(error);
+      }
+    };
+
+    map.whenReady(fetchParking);
+    map.on("moveend", () => {
+      fetchParking();
+    });
+  </script>
+</body>
+</html>
