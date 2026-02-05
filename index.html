@@ -284,6 +284,8 @@
         }
 
         function renderData(elements) {
+			const isParkingSpace = tags.amenity === 'parking_space';
+			const isParkingArea = tags.amenity === 'parking';
             const filter = document.getElementById('filterType').value;
             elements.forEach(el => {
                 if (renderedIds.has(el.id)) return;
@@ -326,7 +328,8 @@
                     fillColor: style.fill,
                     fillOpacity: (type === 'pink' || type === 'heavy') ? 0.8 : 0.5,
                     weight: (type === 'pink' || type === 'heavy') ? 3 : 1,
-                    zIndexOffset: zPriority[type] || 0
+                    zIndexOffset: (zPriority[type] || 0) + (isParkingSpace ? 100 : 0)
+
                 });
 
                 let feeDetails = '';
