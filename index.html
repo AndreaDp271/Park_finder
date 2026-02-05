@@ -18,6 +18,10 @@
         #map { height: calc(100vh - 72px); width: 100%; background: #f1f5f9; }
         @media (min-width: 768px) { #map { height: calc(100vh - 80px); } }
 
+        /* Quando in fullscreen, la mappa occupa tutto lo schermo */
+        :fullscreen #map { height: 100vh; }
+        :-webkit-full-screen #map { height: 100vh; }
+
         .loader { border-top-color: #3b82f6; animation: spinner 0.6s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
@@ -47,7 +51,7 @@
         ::-webkit-scrollbar { width: 0px; background: transparent; }
     </style>
 </head>
-<body class="bg-slate-50 font-sans text-slate-900 overflow-hidden">
+<body class="bg-slate-50 font-sans text-slate-900 overflow-hidden" id="appBody">
 
     <header class="h-[72px] md:h-20 bg-white border-b border-slate-200 flex items-center justify-between px-3 md:px-6 sticky top-0 z-[1001] gap-2 md:gap-4">
         <!-- Logo -->
@@ -77,9 +81,9 @@
             <select id="filterType" class="bg-slate-100 border-none rounded-full px-2 md:px-4 py-2 text-[10px] md:text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
                 <option value="all">Tutti</option>
                 <option value="free">Gratis</option>
-                <option value="paid">€€€</option>
-                <option value="timed">Disco</option>
-                <option value="restricted">Spec.</option>
+                <option value="paid">Pagamento</option>
+                <option value="timed">DiscoOrario</option>
+                <option value="restricted">Speciale</option>
             </select>
             <button id="refreshData" class="bg-white border border-slate-200 hover:bg-slate-50 rounded-full p-2 text-slate-600 shadow-sm active:scale-90 transition-transform">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -89,10 +93,17 @@
         </div>
     </header>
 
-    <main class="relative">
+    <main class="relative" id="mainContainer">
         <div id="map"></div>
         
-        <!-- Legend -->
+        <!-- Pulsante Fullscreen (Solo Mobile/Compact) -->
+        <button id="fullscreenBtn" class="absolute top-3 left-3 z-[1000] bg-white border border-slate-200 p-2.5 rounded-xl shadow-md active:scale-95 transition-all md:hidden">
+            <svg id="fsIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+        </button>
+        
+        <!-- Legenda -->
         <div id="legend" class="absolute top-3 right-3 z-[1000] bg-white/95 backdrop-blur-sm p-2 rounded-xl shadow-lg border border-slate-200 text-[10px] legend-container w-32 md:w-40 cursor-pointer select-none" onclick="this.classList.toggle('expanded')">
             <div class="flex items-center justify-between h-[16px]">
                 <span class="font-black text-slate-700 uppercase tracking-tighter text-[9px]">Legenda</span>
@@ -188,12 +199,38 @@
             
             setupCitySearch();
             setupGPS();
+            setupFullscreen();
             fetchData();
 
             const legend = document.getElementById('legend');
             const arrow = document.getElementById('legendArrow');
             legend.addEventListener('click', () => {
                 arrow.style.transform = legend.classList.contains('expanded') ? 'rotate(180deg)' : 'rotate(0deg)';
+            });
+        }
+
+        function setupFullscreen() {
+            const fsBtn = document.getElementById('fullscreenBtn');
+            const container = document.getElementById('appBody');
+            const icon = document.getElementById('fsIcon');
+
+            fsBtn.addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    container.requestFullscreen().catch(err => {
+                        console.error(`Errore attivazione fullscreen: ${err.message}`);
+                    });
+                } else {
+                    document.exitFullscreen();
+                }
+            });
+
+            document.addEventListener('fullscreenchange', () => {
+                if (document.fullscreenElement) {
+                    icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />'; // Icona X
+                } else {
+                    icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />'; // Icona espandi
+                }
+                setTimeout(() => map.invalidateSize(), 300);
             });
         }
 
@@ -209,7 +246,7 @@
 
         function setupGPS() {
             document.getElementById('gpsBtn').onclick = () => {
-                map.locate({setView: true, maxZoom: 18});
+                map.locate({setView: true, maxZoom: 20});
             };
             map.on('locationfound', (e) => {
                 L.circle(e.latlng, { radius: 10, color: '#3b82f6', weight: 2, fillOpacity: 0.2 }).addTo(map);
@@ -257,7 +294,6 @@
             const bounds = map.getBounds();
             const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
             
-            // CORREZIONE: Query specifica per escludere parking_space=normal
             const query = `[out:json][timeout:25];(way["amenity"="parking"]["parking_space"!="normal"](${bbox});relation["amenity"="parking"]["parking_space"!="normal"](${bbox});node["amenity"="parking"]["parking_space"!="normal"](${bbox}););out body geom;`;
 
             for (let endpoint of overpassEndpoints) {
@@ -280,7 +316,6 @@
                 if (renderedIds.has(el.id)) return;
                 const tags = el.tags || {};
                 
-                // Filtro JS aggiuntivo di sicurezza
                 if (tags.parking_space === 'normal' || tags.amenity === 'bicycle_parking') return;
 
                 let latLngs, center;
@@ -351,7 +386,7 @@
                                 NAVIGA
                             </button>
                             <button onclick="openInID('${el.type}', ${el.id})" class="w-full text-slate-400 text-[8px] uppercase tracking-tighter py-1">
-                                Segnala errore (Modifica OSM)
+                                Correggi errore (Modifica OSM)
                             </button>
                         </div>
                     </div>
