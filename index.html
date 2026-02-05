@@ -1,289 +1,356 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Park Finder - Parcheggi OSM</title>
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
-  />
-  <style>
-    :root {
-      color-scheme: light dark;
-      --bg: #0f172a;
-      --panel: #111827;
-      --text: #e2e8f0;
-      --muted: #94a3b8;
-      --blue: #2563eb;
-      --green: #16a34a;
-      --violet: #7c3aed;
-      --gray: #64748b;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Parking - Mappa Accessi</title>
+    
+    <!-- Icone per salvataggio su Desktop/Home Screen -->
+    <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/192/map-marker.png">
+    <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/48/map-marker.png">
+    <meta name="apple-mobile-web-app-title" content="Smart Parking">
+    <meta name="application-name" content="Smart Parking">
 
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: "Inter", "Segoe UI", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-    }
-
-    header {
-      padding: 1rem 1.5rem 0.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    header h1 {
-      margin: 0;
-      font-size: 1.6rem;
-    }
-
-    header p {
-      margin: 0;
-      color: var(--muted);
-    }
-
-    #map {
-      height: calc(100vh - 190px);
-      width: 100%;
-    }
-
-    .panel {
-      margin: 1rem 1.5rem;
-      padding: 0.75rem 1rem;
-      background: var(--panel);
-      border-radius: 12px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      align-items: center;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      font-size: 0.9rem;
-    }
-
-    .swatch {
-      width: 14px;
-      height: 14px;
-      border-radius: 4px;
-      display: inline-block;
-    }
-
-    .status {
-      font-size: 0.9rem;
-      color: var(--muted);
-    }
-
-    .popup-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-    }
-
-    .popup-table td {
-      padding: 0.15rem 0.3rem;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-      vertical-align: top;
-    }
-
-    .popup-table tr:last-child td {
-      border-bottom: none;
-    }
-
-    .navigate-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      padding: 0.4rem 0.6rem;
-      margin-top: 0.5rem;
-      background: #1f2937;
-      color: var(--text);
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      border-radius: 6px;
-      text-decoration: none;
-      font-size: 0.85rem;
-    }
-
-    @media (max-width: 720px) {
-      #map {
-        height: calc(100vh - 230px);
-      }
-    }
-  </style>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { height: calc(100vh - 80px); width: 100%; background: #f1f5f9; }
+        .loader { border-top-color: #3b82f6; animation: spinner 0.6s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .leaflet-interactive { cursor: pointer !important; }
+        .custom-popup .leaflet-popup-content-wrapper { border-radius: 12px; padding: 8px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+        .leaflet-popup-content { margin: 8px; line-height: 1.4; }
+        
+        .legend-container {
+            transition: all 0.3s ease;
+            max-height: 40px;
+            overflow: hidden;
+        }
+        .legend-container.expanded {
+            max-height: 300px;
+        }
+        /* Stile per il link OSM */
+        .osm-link { color: #2563eb; text-decoration: none; font-weight: bold; }
+        .osm-link:hover { text-decoration: underline; }
+    </style>
 </head>
-<body>
-  <header>
-    <h1>Park Finder</h1>
-    <p>Visualizza le aree <strong>amenity=parking</strong> da OpenStreetMap e controlla i costi.</p>
-  </header>
+<body class="bg-slate-50 font-sans text-slate-900 overflow-hidden">
 
-  <section class="panel">
-    <div class="legend">
-      <div class="legend-item"><span class="swatch" style="background: var(--green);"></span>Gratis</div>
-      <div class="legend-item"><span class="swatch" style="background: var(--blue);"></span>A pagamento</div>
-      <div class="legend-item"><span class="swatch" style="background: var(--violet);"></span>Disco orario</div>
-      <div class="legend-item"><span class="swatch" style="background: var(--gray);"></span>Info non disponibili</div>
-    </div>
-    <div class="status" id="status">Caricamento parcheggi...</div>
-  </section>
+    <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 sticky top-0 z-[1001] gap-4">
+        <div class="flex items-center gap-3 shrink-0">
+            <div class="bg-blue-600 p-2 rounded-lg text-white shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-2.286-6.857L2 11l6.857-2.286L11 2l2.286 6.857L20 11l-6.857 2.286L9 20z" />
+                </svg>
+            </div>
+            <div class="hidden sm:block">
+                <h1 class="font-bold text-lg leading-none italic uppercase tracking-tight text-blue-700">Smart Parking</h1>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Aree e Stalli</p>
+            </div>
+        </div>
+        
+        <div class="relative flex-1 max-w-md">
+            <input type="text" id="citySearch" placeholder="Cerca Città o CAP..." class="w-full bg-slate-100 border-none rounded-full py-2 px-4 pl-10 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3 top-2.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <div id="searchResults" class="absolute top-full left-0 right-0 bg-white shadow-xl rounded-b-xl mt-1 hidden z-[2000] border border-slate-200 overflow-hidden"></div>
+        </div>
 
-  <div id="map"></div>
+        <div class="flex gap-2 shrink-0">
+            <select id="filterType" class="bg-slate-100 border-none rounded-full px-3 md:px-4 py-2 text-[12px] md:text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
+                <option value="all">Tutti</option>
+                <option value="free">Gratis</option>
+                <option value="paid">Pagamento</option>
+                <option value="timed">Disco Orario</option>
+                <option value="restricted">Speciali</option>
+            </select>
+            <button id="refreshData" class="bg-white border border-slate-200 hover:bg-slate-50 rounded-full p-2 text-slate-600 transition-colors shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </button>
+        </div>
+    </header>
 
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-  ></script>
-  <script src="https://unpkg.com/osmtogeojson@3.0.0/osmtogeojson.js"></script>
-  <script>
-    const statusEl = document.getElementById("status");
-    const map = L.map("map").setView([41.9028, 12.4964], 13);
+    <main class="relative">
+        <div id="map"></div>
+        
+        <div id="legend" class="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur-sm p-3 rounded-2xl shadow-xl border border-slate-200 text-[11px] legend-container w-40 cursor-pointer md:cursor-default" onclick="this.classList.toggle('expanded')">
+            <div class="flex items-center justify-between mb-2 md:mb-3">
+                <span class="font-bold text-slate-700 uppercase tracking-tighter text-[9px]">Legenda</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 md:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </div>
+            <div class="flex flex-col gap-2">
+                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-green-500/40 border-2 border-green-600 rounded"></div><span class="font-medium">Gratis</span></div>
+                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-blue-500/40 border-2 border-blue-600 rounded"></div><span class="font-medium">Pagamento</span></div>
+                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-purple-500/40 border-2 border-purple-600 rounded"></div><span class="font-medium">Disco Orario</span></div>
+                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-pink-400/70 border-2 border-pink-600 rounded"></div><span class="font-medium">Posto Rosa</span></div>
+                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-slate-700/70 border-2 border-slate-900 rounded"></div><span class="font-medium">Bus / Mezzi</span></div>
+                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-orange-500/40 border-2 border-orange-600 rounded"></div><span class="font-medium">Riservato</span></div>
+            </div>
+        </div>
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors',
-      maxZoom: 19,
-    }).addTo(map);
+        <div id="statusIndicator" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-[1000] items-center gap-2 text-blue-600 font-medium text-xs bg-white/90 backdrop-blur px-4 py-2 rounded-full border border-blue-100 shadow-md">
+            <div class="loader w-3 h-3 border-2 border-slate-200 rounded-full"></div>
+            <span id="statusText">Ricerca...</span>
+        </div>
 
-    const parkingLayer = L.geoJSON(null, {
-      style: feature => ({
-        color: "#1f2937",
-        weight: 1,
-        fillColor: feature.properties._fill,
-        fillOpacity: 0.6,
-      }),
-      onEachFeature: (feature, layer) => {
-        const tags = feature.properties.tags || {};
-        const coords = feature.properties._center || feature.geometry.coordinates[0][0];
-        const [lon, lat] = coords;
-        const tableRows = Object.entries(tags)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([key, value]) => `<tr><td><strong>${key}</strong></td><td>${value}</td></tr>`)
-          .join("");
+        <button id="gpsBtn" class="absolute bottom-10 right-6 z-[1000] bg-blue-600 text-white p-4 rounded-full shadow-2xl hover:bg-blue-700 transition-all active:scale-95">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+        </button>
+    </main>
 
-        const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
-        const popupHtml = `
-          <div>
-            <strong>Parcheggio</strong>
-            <table class="popup-table">
-              ${tableRows || "<tr><td colspan=\"2\">Nessun tag disponibile</td></tr>"}
-            </table>
-            <a class="navigate-btn" href="${navUrl}" target="_blank" rel="noopener">Apri navigatore</a>
-          </div>
-        `;
-        layer.bindPopup(popupHtml, { maxWidth: 320 });
-      },
-    }).addTo(map);
-
-    const getFeeStatus = tags => {
-      const feeValueRaw = (tags["parking:fee"] || tags.fee || "").toString().toLowerCase();
-      const discValue = (tags["parking:disc"] || tags.disc || "").toString().toLowerCase();
-
-      const discKeywords = ["disc", "disk", "disco", "clock", "ticket", "orario"];
-      if (discValue === "yes" || discKeywords.some(keyword => feeValueRaw.includes(keyword))) {
-        return { label: "disco orario", color: "var(--violet)" };
-      }
-
-      if (["yes", "true", "paid", "customers", "ticket"].includes(feeValueRaw)) {
-        return { label: "a pagamento", color: "var(--blue)" };
-      }
-
-      if (["no", "false", "gratis", "free"].includes(feeValueRaw)) {
-        return { label: "gratuito", color: "var(--green)" };
-      }
-
-      return { label: "non specificato", color: "var(--gray)" };
-    };
-
-    const fetchParking = async () => {
-      const bounds = map.getBounds();
-      const bbox = [bounds.getSouth(), bounds.getWest(), bounds.getNorth(), bounds.getEast()].join(",");
-      const query = `
-        [out:json][timeout:25];
-        (
-          way["amenity"="parking"](${bbox});
-          relation["amenity"="parking"](${bbox});
-        );
-        out body;
-        >;
-        out skel qt;
-      `;
-
-      statusEl.textContent = "Aggiornamento dati parcheggi...";
-      try {
-        const endpoints = [
-          "https://overpass-api.de/api/interpreter",
-          "https://overpass.kumi.systems/api/interpreter",
+    <script>
+        let map, parkingLayerGroup, fetchTimer, searchTimer;
+        const renderedIds = new Set();
+        
+        const overpassEndpoints = [
+            'https://overpass-api.de/api/interpreter',
+            'https://lz4.overpass-api.de/api/interpreter'
         ];
-        let response = null;
-        let lastError = null;
-        for (const endpoint of endpoints) {
-          try {
-            response = await fetch(endpoint, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-              },
-              body: new URLSearchParams({ data: query }),
-            });
-            if (response.ok) {
-              break;
+
+        const zPriority = { pink: 2000, heavy: 1900, restricted: 1800, timed: 1700, paid: 1600, free: 1500 };
+
+        const colors = {
+            free: { fill: '#22c55e', stroke: '#166534', label: 'Gratuito' },
+            paid: { fill: '#3b82f6', stroke: '#1e40af', label: 'A Pagamento' },
+            timed: { fill: '#a855f7', stroke: '#6b21a8', label: 'Disco Orario' }, 
+            restricted: { fill: '#f97316', stroke: '#9a3412', label: 'Riservato' },
+            pink: { fill: '#f472b6', stroke: '#be185d', label: 'Posto Rosa' },
+            heavy: { fill: '#334155', stroke: '#0f172a', label: 'Bus / HGV' }
+        };
+
+        function formatOSMConditions(str, context = 'fee') {
+            if (!str) return '';
+            let s = str.toLowerCase();
+            s = s.replace(/00:00-24:00/g, 'tutto il giorno').replace(/24\/7/g, 'sempre');
+
+            if (context === 'access') {
+                s = s.replace(/no\s*@/g, '<span class="text-red-700 font-extrabold italic">⛔ Chiuso</span> nei seguenti orari: ')
+                     .replace(/yes\s*@/g, '<span class="text-green-700 font-bold uppercase text-[9px]">✅ Aperto</span> nei seguenti orari: ');
+            } else {
+                s = s.replace(/no\s*@/g, '<span class="text-green-700 font-bold italic uppercase text-[9px]">Gratis</span> nei seguenti orari: ')
+                     .replace(/yes\s*@/g, '<span class="text-blue-700 font-bold italic uppercase text-[9px]">Pagamento</span> nei seguenti orari: ');
             }
-          } catch (error) {
-            lastError = error;
-          }
+
+            return s.replace(/;/g, '<br>')
+                    .replace(/ph/g, 'Festivi')
+                    .replace(/\btu\b/g, 'Mar').replace(/\bwe\b/g, 'Mer')
+                    .replace(/\bth\b/g, 'Gio').replace(/\bfr\b/g, 'Ven')
+                    .replace(/\bsa\b/g, 'Sab').replace(/\bsu\b/g, 'Dom')
+                    .replace(/\bmo\b/g, 'Lun')
+                    .replace(/mo-fr/g, 'Lun-Ven')
+                    .replace(/sa-su/g, 'Sab-Dom')
+                    .replace(/\(/g, '').replace(/\)/g, '');
         }
-        if (!response || !response.ok) {
-          throw lastError || new Error("Errore caricamento Overpass");
+
+        function initMap() {
+            map = L.map('map', { zoomControl: false, preferCanvas: false }).setView([45.6713, 11.9284], 18);
+            
+            // Attribuzione con link interattivo a OSM
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { 
+                attribution: '&copy; <a href="https://www.openstreetmap.org/about" target="_blank" class="osm-link">OSM</a>' 
+            }).addTo(map);
+
+            L.control.zoom({ position: 'topleft' }).addTo(map);
+            parkingLayerGroup = L.layerGroup().addTo(map);
+
+            map.on('moveend', () => {
+                clearTimeout(fetchTimer);
+                fetchTimer = setTimeout(fetchData, 600);
+            });
+            
+            setupCitySearch();
+            setupGPS();
+            fetchData();
+            
+            if (window.innerWidth >= 768) {
+                document.getElementById('legend').classList.add('expanded');
+            }
         }
-        const data = await response.json();
-        const geojson = osmtogeojson(data);
-        const features = geojson.features.map(feature => {
-          const tags = feature.properties.tags || {};
-          const fee = getFeeStatus(tags);
 
-          feature.properties._fill = fee.color;
-          if (feature.geometry.type === "Polygon") {
-            feature.properties._center = feature.geometry.coordinates[0][0];
-          }
-          if (feature.geometry.type === "MultiPolygon") {
-            feature.properties._center = feature.geometry.coordinates[0][0][0];
-          }
-          return feature;
-        });
+        window.navigateTo = (lat, lon) => {
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&travelmode=driving`;
+            window.open(url, '_blank');
+        };
 
-        parkingLayer.clearLayers();
-        parkingLayer.addData(features);
-        statusEl.textContent = `Trovati ${features.length} parcheggi nella vista.`;
-      } catch (error) {
-        statusEl.textContent = "Errore durante il caricamento dei dati.";
-        console.error(error);
-      }
-    };
+        function setupGPS() {
+            document.getElementById('gpsBtn').onclick = () => {
+                map.locate({setView: true, maxZoom: 18});
+            };
+            map.on('locationfound', (e) => {
+                L.circle(e.latlng, { radius: 10, color: '#3b82f6', fillOpacity: 0.5 }).addTo(map);
+            });
+        }
 
-    map.whenReady(fetchParking);
-    map.on("moveend", () => {
-      fetchParking();
-    });
-  </script>
+        function setupCitySearch() {
+            const input = document.getElementById('citySearch');
+            const results = document.getElementById('searchResults');
+
+            input.oninput = () => {
+                clearTimeout(searchTimer);
+                const query = input.value;
+                if (query.length < 3) { results.classList.add('hidden'); return; }
+
+                searchTimer = setTimeout(async () => {
+                    try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=it&limit=5`);
+                        const data = await res.json();
+                        results.innerHTML = '';
+                        if (data.length > 0) {
+                            results.classList.remove('hidden');
+                            data.forEach(item => {
+                                const div = document.createElement('div');
+                                div.className = 'px-4 py-2 hover:bg-slate-50 cursor-pointer text-sm border-b border-slate-100 last:border-0';
+                                div.innerText = item.display_name;
+                                div.onclick = () => {
+                                    map.setView([item.lat, item.lon], 16);
+                                    results.classList.add('hidden');
+                                    input.value = item.display_name;
+                                };
+                                results.appendChild(div);
+                            });
+                        }
+                    } catch (e) {}
+                }, 400);
+            };
+        }
+
+        async function fetchData() {
+            if (map.getZoom() < 14) return;
+            document.getElementById('statusIndicator').style.display = 'flex';
+            document.getElementById('statusText').innerText = "Cerca stalli...";
+
+            const bounds = map.getBounds();
+            const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
+            const query = `[out:json][timeout:25];(way["amenity"~"parking|parking_space"]["amenity"!="bicycle_parking"](${bbox});relation["amenity"~"parking|parking_space"]["amenity"!="bicycle_parking"](${bbox});node["amenity"~"parking|parking_space"]["amenity"!="bicycle_parking"](${bbox}););out body geom;`;
+
+            for (let endpoint of overpassEndpoints) {
+                try {
+                    const response = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`);
+                    if (!response.ok) continue;
+                    const data = await response.json();
+                    if (data.elements) {
+                        renderData(data.elements);
+                        document.getElementById('statusIndicator').style.display = 'none';
+                        return;
+                    }
+                } catch (e) {}
+            }
+        }
+
+        function renderData(elements) {
+            const filter = document.getElementById('filterType').value;
+            elements.forEach(el => {
+                if (renderedIds.has(el.id)) return;
+                const tags = el.tags || {};
+                if (tags.amenity === 'bicycle_parking' || tags.parking_space === 'normal') return;
+
+                let latLngs;
+                let center;
+                if (el.type === 'node') {
+                    const radius = 0.00002;
+                    latLngs = [[el.lat - radius, el.lon - radius], [el.lat + radius, el.lon - radius], [el.lat + radius, el.lon + radius], [el.lat - radius, el.lon + radius]];
+                    center = [el.lat, el.lon];
+                } else if (el.geometry) {
+                    latLngs = el.geometry.map(pt => [pt.lat, pt.lon]);
+                    center = [el.geometry[0].lat, el.geometry[0].lon];
+                } else return;
+
+                let type = 'free';
+                const fee = tags.fee || tags['parking:fee'];
+                const feeCond = tags['fee:conditional'] || '';
+                const access = tags.access || '';
+                const accessCond = tags['access:conditional'] || '';
+                const maxstay = tags.maxstay || tags['parking:condition'] === 'disc';
+                const isWomen = tags['capacity:women'] || tags.female === 'yes' || tags['parking:condition'] === 'women' || tags['parking_space'] === 'women';
+                const isHeavy = tags.hgv === 'yes' || tags.bus === 'yes' || tags['parking:hgv'] === 'yes' || tags['parking_space'] === 'bus';
+
+                if (isWomen) type = 'pink';
+                else if (isHeavy) type = 'heavy';
+                else if (access && !['yes', 'public', 'permissive'].includes(access)) type = 'restricted';
+                else if (maxstay) type = 'timed';
+                else if (fee === 'yes' || (feeCond && !feeCond.includes('no @'))) type = 'paid';
+
+                if (filter !== 'all' && type !== filter) {
+                    if (!(filter === 'restricted' && (type === 'pink' || type === 'heavy' || type === 'restricted'))) return;
+                }
+
+                const style = colors[type];
+                const layer = L.polygon(latLngs, {
+                    color: style.stroke,
+                    fillColor: style.fill,
+                    fillOpacity: (type === 'pink' || type === 'heavy') ? 0.8 : 0.5,
+                    weight: (type === 'pink' || type === 'heavy') ? 3 : 1,
+                    zIndexOffset: zPriority[type] || 0
+                });
+
+                let feeDetails = '';
+                if (type === 'paid' || feeCond) {
+                    feeDetails = `<div class="mt-2 p-2 bg-blue-50 border border-blue-100 rounded text-[11px] text-blue-800 italic leading-tight">
+                        <b class="block not-italic text-blue-900 mb-0.5 tracking-tighter uppercase text-[9px]">Informazioni Tariffa:</b>
+                        ${feeCond ? formatOSMConditions(feeCond, 'fee') : 'Sosta a pagamento'}
+                    </div>`;
+                }
+
+                let accessDetails = '';
+                if (accessCond) {
+                    accessDetails = `<div class="mt-2 p-2 bg-red-50 border border-red-100 rounded text-[11px] text-red-800 leading-tight">
+                        <b class="block text-red-900 mb-0.5 tracking-tighter uppercase text-[9px]">Accesso Condizionato:</b>
+                        ${formatOSMConditions(accessCond, 'access')}
+                    </div>`;
+                }
+
+                let categoryTag = '';
+                if (isWomen) categoryTag = '<span class="bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-[8px] font-bold border border-pink-200">🚺 STALLO ROSA</span>';
+                if (isHeavy) categoryTag = '<span class="bg-slate-800 text-white px-2 py-0.5 rounded-full text-[8px] font-bold">🚌 BUS/HGV</span>';
+
+                const content = `
+                    <div class="text-[12px] min-w-[210px] max-w-[250px]">
+                        <div class="flex justify-between items-center border-b mb-2 pb-1 gap-2">
+                            <b class="text-slate-800 uppercase text-[10px] tracking-tight">${style.label}</b>
+                            ${categoryTag}
+                        </div>
+                        
+                        <div class="mb-2">
+                            ${tags.name ? `<p class="font-bold text-slate-900 leading-tight">${tags.name}</p>` : ''}
+                            ${tags.operator ? `<p class="text-[10px] text-slate-500 italic">Gestore: ${tags.operator}</p>` : ''}
+                        </div>
+
+                        ${accessDetails}
+                        ${feeDetails}
+                        
+                        <div class="flex flex-wrap gap-2 mt-2">
+                            ${tags.maxstay ? `<div class="bg-purple-100 text-purple-700 px-2 py-1 rounded text-[10px] font-bold">⏱️ Max: ${tags.maxstay}</div>` : ''}
+                            ${tags.capacity ? `<div class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[10px] font-bold">🚗 Posti: ${tags.capacity}</div>` : ''}
+                        </div>
+
+                        <button onclick="navigateTo(${center[0]}, ${center[1]})" class="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all active:scale-95">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                            </svg>
+                            PORTAMI QUI
+                        </button>
+                    </div>
+                `;
+                
+                layer.bindPopup(content, { className: 'custom-popup' }).addTo(parkingLayerGroup);
+                if (type === 'pink' || type === 'heavy') layer.bringToFront();
+                renderedIds.add(el.id);
+            });
+        }
+
+        document.getElementById('refreshData').onclick = () => { renderedIds.clear(); parkingLayerGroup.clearLayers(); fetchData(); };
+        document.getElementById('filterType').onchange = () => { renderedIds.clear(); parkingLayerGroup.clearLayers(); fetchData(); };
+
+        window.onload = initMap;
+    </script>
 </body>
 </html>
