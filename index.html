@@ -239,6 +239,7 @@
             .then(function (data) {
                 renderParking(data);
                 parkingSpacesLayer.bringToFront();  // ← questa riga forza i posti speciali in cima
+                parkingAreasLayer.bringToBack();
                 setStatus('Parcheggi aggiornati');
                 setTimeout(function(){ setStatus(''); }, 3000);
             })
