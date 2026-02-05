@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Smart Parking - Mappa Accessi</title>
     
-    <!-- Icone per salvataggio su Desktop/Home Screen -->
     <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/192/map-marker.png">
     <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/48/map-marker.png">
     <meta name="apple-mobile-web-app-title" content="Smart Parking">
@@ -17,44 +16,37 @@
     <style>
         #map { height: calc(100vh - 72px); width: 100%; background: #f1f5f9; }
         @media (min-width: 768px) { #map { height: calc(100vh - 80px); } }
-
-        /* Quando in fullscreen, la mappa occupa tutto lo schermo */
         :fullscreen #map { height: 100vh; }
         :-webkit-full-screen #map { height: 100vh; }
-
         .loader { border-top-color: #3b82f6; animation: spinner 0.6s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
         .leaflet-interactive { cursor: pointer !important; }
-        
-        /* Ottimizzazione Popup per Mobile */
         .custom-popup .leaflet-popup-content-wrapper { border-radius: 12px; padding: 4px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
         .leaflet-popup-content { margin: 8px; line-height: 1.4; max-width: 75vw !important; }
+        .legend-container { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); max-height: 32px; overflow: hidden; }
+        .legend-container.expanded { max-height: 400px; }
         
-        /* Legenda richiudibile */
-        .legend-container {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            max-height: 32px;
-            overflow: hidden;
+        /* Ingrandimento scritte Leaflet e Copyright */
+        .leaflet-control-attribution { 
+            font-size: 12px !important; 
+            background: rgba(255,255,255,0.85) !important; 
+            padding: 2px 8px !important;
+            border-radius: 4px 0 0 0;
+            color: #475569 !important;
         }
-        .legend-container.expanded {
-            max-height: 400px;
+        .leaflet-control-attribution a {
+            font-size: 12px !important;
+            font-weight: 600 !important;
         }
 
-        /* Correzione posizione controlli Leaflet su Mobile */
         .leaflet-bottom.leaflet-right { margin-bottom: 10px; }
-        .leaflet-control-attribution { font-size: 9px !important; background: rgba(255,255,255,0.7) !important; }
-
         .osm-link { color: #2563eb; text-decoration: none; font-weight: bold; }
-        
-        /* Nascondi scrollbar */
         ::-webkit-scrollbar { width: 0px; background: transparent; }
     </style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-900 overflow-hidden" id="appBody">
 
     <header class="h-[72px] md:h-20 bg-white border-b border-slate-200 flex items-center justify-between px-3 md:px-6 sticky top-0 z-[1001] gap-2 md:gap-4">
-        <!-- Logo -->
         <div class="flex items-center gap-2 shrink-0">
             <div class="bg-blue-600 p-1.5 md:p-2 rounded-lg text-white shadow-lg">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -67,7 +59,6 @@
             </div>
         </div>
         
-        <!-- Search -->
         <div class="relative flex-1 max-w-md">
             <input type="text" id="citySearch" placeholder="Cerca..." class="w-full bg-slate-100 border-none rounded-full py-2 px-3 pl-8 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -76,13 +67,12 @@
             <div id="searchResults" class="absolute top-full left-0 right-0 bg-white shadow-2xl rounded-b-xl mt-1 hidden z-[2000] border border-slate-200 max-h-60 overflow-y-auto"></div>
         </div>
 
-        <!-- Controls -->
         <div class="flex gap-1.5 md:gap-2 shrink-0">
             <select id="filterType" class="bg-slate-100 border-none rounded-full px-2 md:px-4 py-2 text-[10px] md:text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
                 <option value="all">Tutti</option>
                 <option value="free">Gratis</option>
                 <option value="paid">Pagamento</option>
-                <option value="timed">DiscoOrario</option>
+                <option value="timed">Disco Orario</option>
                 <option value="restricted">Speciale</option>
             </select>
             <button id="refreshData" class="bg-white border border-slate-200 hover:bg-slate-50 rounded-full p-2 text-slate-600 shadow-sm active:scale-90 transition-transform">
@@ -96,14 +86,12 @@
     <main class="relative" id="mainContainer">
         <div id="map"></div>
         
-        <!-- Pulsante Fullscreen (Solo Mobile/Compact) -->
         <button id="fullscreenBtn" class="absolute top-3 left-3 z-[1000] bg-white border border-slate-200 p-2.5 rounded-xl shadow-md active:scale-95 transition-all md:hidden">
             <svg id="fsIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
             </svg>
         </button>
         
-        <!-- Legenda -->
         <div id="legend" class="absolute top-3 right-3 z-[1000] bg-white/95 backdrop-blur-sm p-2 rounded-xl shadow-lg border border-slate-200 text-[10px] legend-container w-32 md:w-40 cursor-pointer select-none" onclick="this.classList.toggle('expanded')">
             <div class="flex items-center justify-between h-[16px]">
                 <span class="font-black text-slate-700 uppercase tracking-tighter text-[9px]">Legenda</span>
@@ -126,9 +114,8 @@
             <span id="statusText">Caricamento...</span>
         </div>
 
-        <!-- GPS Button -->
-        <button id="gpsBtn" class="absolute bottom-25 right-25 z-[1000] bg-blue-600 text-white p-3.5 md:p-4 rounded-full shadow-2xl hover:bg-blue-700 transition-all active:scale-90 border-2 border-white/20">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <button id="gpsBtn" class="absolute bottom-20 right-12 z-[1000] bg-blue-600 text-white p-4 rounded-full shadow-2xl hover:bg-blue-700 transition-all active:scale-90 border-2 border-white/20">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
@@ -154,29 +141,6 @@
             pink: { fill: '#f472b6', stroke: '#be185d', label: 'Posto Rosa' },
             heavy: { fill: '#334155', stroke: '#0f172a', label: 'Bus / HGV' }
         };
-
-        function formatOSMConditions(str, context = 'fee') {
-            if (!str) return '';
-            let s = str.toLowerCase();
-            s = s.replace(/00:00-24:00/g, 'H24').replace(/24\/7/g, 'Sempre');
-
-            if (context === 'access') {
-                s = s.replace(/no\s*@/g, '<span class="text-red-700 font-bold italic">⛔ Chiuso:</span> ')
-                     .replace(/yes\s*@/g, '<span class="text-green-700 font-bold uppercase text-[8px]">✅ Aperto:</span> ');
-            } else {
-                s = s.replace(/no\s*@/g, '<span class="text-green-700 font-bold uppercase text-[8px]">Gratis:</span> ')
-                     .replace(/yes\s*@/g, '<span class="text-blue-700 font-bold uppercase text-[8px]">Pagamento:</span> ');
-            }
-
-            return s.replace(/;/g, '<br>')
-                    .replace(/ph/g, 'Festivi')
-                    .replace(/\btu\b/g, 'Mar').replace(/\bwe\b/g, 'Mer')
-                    .replace(/\bth\b/g, 'Gio').replace(/\bfr\b/g, 'Ven')
-                    .replace(/\bsa\b/g, 'Sab').replace(/\bsu\b/g, 'Dom')
-                    .replace(/\bmo\b/g, 'Lun')
-                    .replace(/mo-fr/g, 'Lun-Ven')
-                    .replace(/sa-su/g, 'Sab-Dom');
-        }
 
         function initMap() {
             map = L.map('map', { 
@@ -213,40 +177,30 @@
             const fsBtn = document.getElementById('fullscreenBtn');
             const container = document.getElementById('appBody');
             const icon = document.getElementById('fsIcon');
-
             fsBtn.addEventListener('click', () => {
                 if (!document.fullscreenElement) {
-                    container.requestFullscreen().catch(err => {
-                        console.error(`Errore attivazione fullscreen: ${err.message}`);
-                    });
+                    container.requestFullscreen().catch(err => { console.error(err); });
                 } else {
                     document.exitFullscreen();
                 }
             });
-
             document.addEventListener('fullscreenchange', () => {
                 if (document.fullscreenElement) {
-                    icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />'; // Icona X
+                    icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />';
                 } else {
-                    icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />'; // Icona espandi
+                    icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />';
                 }
                 setTimeout(() => map.invalidateSize(), 300);
             });
         }
 
         window.navigateTo = (lat, lon) => {
-            const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&travelmode=driving`;
-            window.open(url, '_blank');
-        };
-
-        window.openInID = (type, id) => {
-            const url = `https://www.openstreetmap.org/edit?editor=id&${type}=${id}`;
-            window.open(url, '_blank');
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&travelmode=driving`, '_blank');
         };
 
         function setupGPS() {
             document.getElementById('gpsBtn').onclick = () => {
-                map.locate({setView: true, maxZoom: 30});
+                map.locate({setView: true, maxZoom: 18});
             };
             map.on('locationfound', (e) => {
                 L.circle(e.latlng, { radius: 10, color: '#3b82f6', weight: 2, fillOpacity: 0.2 }).addTo(map);
@@ -256,12 +210,10 @@
         function setupCitySearch() {
             const input = document.getElementById('citySearch');
             const results = document.getElementById('searchResults');
-
             input.oninput = () => {
                 clearTimeout(searchTimer);
                 const query = input.value;
                 if (query.length < 3) { results.classList.add('hidden'); return; }
-
                 searchTimer = setTimeout(async () => {
                     try {
                         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=it&limit=5`);
@@ -290,12 +242,9 @@
             if (map.getZoom() < 14) return;
             document.getElementById('statusIndicator').style.display = 'flex';
             document.getElementById('statusText').innerText = "Cerca...";
-
             const bounds = map.getBounds();
             const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
-            
             const query = `[out:json][timeout:25];(way["amenity"="parking"]["parking_space"!="normal"](${bbox});relation["amenity"="parking"]["parking_space"!="normal"](${bbox});node["amenity"="parking"]["parking_space"!="normal"](${bbox}););out body geom;`;
-
             for (let endpoint of overpassEndpoints) {
                 try {
                     const response = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`);
@@ -315,9 +264,7 @@
             elements.forEach(el => {
                 if (renderedIds.has(el.id)) return;
                 const tags = el.tags || {};
-                
                 if (tags.parking_space === 'normal' || tags.amenity === 'bicycle_parking') return;
-
                 let latLngs, center;
                 if (el.type === 'node') {
                     center = [el.lat, el.lon];
@@ -327,26 +274,21 @@
                     latLngs = el.geometry.map(pt => [pt.lat, pt.lon]);
                     center = [el.geometry[0].lat, el.geometry[0].lon];
                 } else return;
-
                 let type = 'free';
                 const fee = tags.fee || tags['parking:fee'];
                 const feeCond = tags['fee:conditional'] || '';
                 const access = tags.access || '';
-                const accessCond = tags['access:conditional'] || '';
                 const maxstay = tags.maxstay || tags['parking:condition'] === 'disc';
                 const isWomen = tags['capacity:women'] || tags.female === 'yes' || tags['parking:condition'] === 'women';
                 const isHeavy = tags.hgv === 'yes' || tags.bus === 'yes' || tags['parking:hgv'] === 'yes';
-
                 if (isWomen) type = 'pink';
                 else if (isHeavy) type = 'heavy';
                 else if (access && !['yes', 'public', 'permissive'].includes(access)) type = 'restricted';
                 else if (maxstay) type = 'timed';
                 else if (fee === 'yes' || (feeCond && !feeCond.includes('no @'))) type = 'paid';
-
                 if (filter !== 'all' && type !== filter) {
                     if (!(filter === 'restricted' && ['pink','heavy','restricted'].includes(type))) return;
                 }
-
                 const style = colors[type];
                 const layer = L.polygon(latLngs, {
                     color: style.stroke,
@@ -355,43 +297,17 @@
                     weight: 1.5,
                     zIndexOffset: zPriority[type] || 0
                 });
-
-                let feeDetails = (type === 'paid' || feeCond) ? `
-                    <div class="mt-2 p-1.5 bg-blue-50 border border-blue-100 rounded text-[10px] text-blue-800 leading-tight">
-                        ${feeCond ? formatOSMConditions(feeCond, 'fee') : 'Tariffa standard applicata'}
-                    </div>` : '';
-
-                let accessDetails = accessCond ? `
-                    <div class="mt-2 p-1.5 bg-red-50 border border-red-100 rounded text-[10px] text-red-800 leading-tight">
-                        ${formatOSMConditions(accessCond, 'access')}
-                    </div>` : '';
-
-                let catTag = isWomen ? '<span class="bg-pink-100 text-pink-700 px-1.5 py-0.5 rounded text-[8px] font-bold">ROSA</span>' : 
-                             isHeavy ? '<span class="bg-slate-800 text-white px-1.5 py-0.5 rounded text-[8px] font-bold">BUS/HGV</span>' : '';
-
                 const content = `
                     <div class="flex flex-col gap-1">
                         <div class="flex justify-between items-center border-b pb-1">
                             <b class="text-slate-800 uppercase text-[9px]">${style.label}</b>
-                            ${catTag}
                         </div>
                         <p class="font-bold text-slate-900 leading-tight text-[11px]">${tags.name || 'Parcheggio'}</p>
-                        ${accessDetails} ${feeDetails}
-                        <div class="flex gap-2 text-[9px] font-bold mt-1">
-                            ${tags.maxstay ? `<span class="text-purple-700">⏱️ ${tags.maxstay}</span>` : ''}
-                            ${tags.capacity ? `<span class="text-slate-600 text-right flex-1">🚗 ${tags.capacity} posti</span>` : ''}
-                        </div>
-                        <div class="flex flex-col gap-1.5 mt-2">
-                            <button onclick="navigateTo(${center[0]}, ${center[1]})" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg text-xs shadow-md active:bg-blue-700">
-                                NAVIGA
-                            </button>
-                            <button onclick="openInID('${el.type}', ${el.id})" class="w-full text-slate-400 text-[8px] uppercase tracking-tighter py-1">
-                                Correggi errore (Modifica OSM)
-                            </button>
-                        </div>
+                        <button onclick="navigateTo(${center[0]}, ${center[1]})" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg text-xs shadow-md active:bg-blue-700 mt-2">
+                            NAVIGA
+                        </button>
                     </div>
                 `;
-                
                 layer.bindPopup(content, { className: 'custom-popup' }).addTo(parkingLayerGroup);
                 renderedIds.add(el.id);
             });
@@ -399,7 +315,6 @@
 
         document.getElementById('refreshData').onclick = () => { renderedIds.clear(); parkingLayerGroup.clearLayers(); fetchData(); };
         document.getElementById('filterType').onchange = () => { renderedIds.clear(); parkingLayerGroup.clearLayers(); fetchData(); };
-
         window.onload = initMap;
     </script>
 </body>
