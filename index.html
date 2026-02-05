@@ -284,12 +284,12 @@
         }
 
         function renderData(elements) {
-			const isParkingSpace = tags.amenity === 'parking_space';
-			const isParkingArea = tags.amenity === 'parking';
             const filter = document.getElementById('filterType').value;
             elements.forEach(el => {
                 if (renderedIds.has(el.id)) return;
                 const tags = el.tags || {};
+				const amenity = tags.amenity || '';
+				const isParkingSpace = amenity === 'parking_space';
                 if (tags.amenity === 'bicycle_parking' || tags.parking_space === 'normal') return;
 
                 let latLngs;
