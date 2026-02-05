@@ -2,408 +2,428 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Parking - Mappa Accessi</title>
-    
-    <!-- Icone per salvataggio su Desktop/Home Screen -->
-    <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/100/parking.png">
-    <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/50/parking.png">
-    <meta name="apple-mobile-web-app-title" content="Smart Parking">
-    <meta name="application-name" content="Smart Parking">
+    <title>ParkMap - OSM Parking</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
     <style>
-        #map { height: calc(100vh - 80px); width: 100%; background: #f1f5f9; }
-        .loader { border-top-color: #3b82f6; animation: spinner 0.6s linear infinite; }
-        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .leaflet-interactive { cursor: pointer !important; }
-        .custom-popup .leaflet-popup-content-wrapper { border-radius: 12px; padding: 8px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
-        .leaflet-popup-content { margin: 8px; line-height: 1.4; }
-        
-        .legend-container {
-            transition: all 0.3s ease;
-            max-height: 40px;
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        #map {
+            position: absolute;
+            top: 60px;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+        #topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #1e293b;
+            color: #f9fafb;
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            gap: 8px;
+            z-index: 1000;
+        }
+        #title {
+            font-weight: 600;
+            margin-right: 8px;
+            white-space: nowrap;
+        }
+        #searchBox {
+            flex: 1;
+            display: flex;
+            gap: 4px;
+        }
+        #searchInput {
+            flex: 1;
+            padding: 6px 8px;
+            border-radius: 4px;
+            border: 1px solid #4b5563;
+            font-size: 14px;
+        }
+        button {
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: none;
+            font-size: 13px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        #searchBtn {
+            background: #3b82f6;
+            color: #f9fafb;
+        }
+        #gpsBtn {
+            background: #22c55e;
+            color: #064e3b;
+        }
+        #status {
+            font-size: 12px;
+            margin-left: 6px;
+            white-space: nowrap;
+            max-width: 25%;
             overflow: hidden;
+            text-overflow: ellipsis;
         }
-        .legend-container.expanded {
-            max-height: 300px;
+        .popup-title {
+            font-weight: 600;
+            margin-bottom: 4px;
         }
-        /* Stile per il link OSM */
-        .osm-link { color: #2563eb; text-decoration: none; font-weight: bold; }
-        .osm-link:hover { text-decoration: underline; }
+        .popup-section {
+            margin-top: 4px;
+            font-size: 13px;
+        }
+        .popup-section span.label {
+            font-weight: 600;
+        }
+        .popup-links a {
+            display: inline-block;
+            margin-right: 6px;
+            margin-top: 6px;
+            font-size: 13px;
+            text-decoration: none;
+            color: #2563eb;
+        }
+        .popup-links a:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 600px) {
+            #title {
+                display: none;
+            }
+            #status {
+                display: none;
+            }
+        }
     </style>
 </head>
-<body class="bg-slate-50 font-sans text-slate-900 overflow-hidden">
+<body>
+<div id="topbar">
+    <div id="title">ParkMap OSM</div>
+    <div id="searchBox">
+        <input id="searchInput" type="text" placeholder="Cerca una località (es. Milano Duomo)">
+        <button id="searchBtn">Cerca</button>
+    </div>
+    <button id="gpsBtn">GPS</button>
+    <div id="status"></div>
+</div>
 
-    <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 sticky top-0 z-[1001] gap-4">
-        <div class="flex items-center gap-3 shrink-0">
-            <div class="bg-blue-600 p-2 rounded-lg text-white shadow-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-2.286-6.857L2 11l6.857-2.286L11 2l2.286 6.857L20 11l-6.857 2.286L9 20z" />
-                </svg>
-            </div>
-            <div class="hidden sm:block">
-                <h1 class="font-bold text-lg leading-none italic uppercase tracking-tight text-blue-700">Smart Parking</h1>
-                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Per Una Sosta Certa</p>
-            </div>
-        </div>
-        
-        <div class="relative flex-1 max-w-md">
-            <input type="text" id="citySearch" placeholder="Cerca Città o CAP..." class="w-full bg-slate-100 border-none rounded-full py-2 px-4 pl-10 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3 top-2.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <div id="searchResults" class="absolute top-full left-0 right-0 bg-white shadow-xl rounded-b-xl mt-1 hidden z-[2000] border border-slate-200 overflow-hidden"></div>
-        </div>
+<div id="map"></div>
 
-        <div class="flex gap-2 shrink-0">
-            <select id="filterType" class="bg-slate-100 border-none rounded-full px-3 md:px-4 py-2 text-[12px] md:text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
-                <option value="all">Tutti</option>
-                <option value="free">Gratis</option>
-                <option value="paid">Pagamento</option>
-                <option value="timed">Disco Orario</option>
-                <option value="restricted">Speciali</option>
-            </select>
-            <button id="refreshData" class="bg-white border border-slate-200 hover:bg-slate-50 rounded-full p-2 text-slate-600 transition-colors shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-            </button>
-        </div>
-    </header>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
 
-    <main class="relative">
-        <div id="map"></div>
-        
-        <div id="legend" class="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur-sm p-3 rounded-2xl shadow-xl border border-slate-200 text-[11px] legend-container w-40 cursor-pointer md:cursor-default" onclick="this.classList.toggle('expanded')">
-            <div class="flex items-center justify-between mb-2 md:mb-3">
-                <span class="font-bold text-slate-700 uppercase tracking-tighter text-[9px]">Legenda</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 md:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-            </div>
-            <div class="flex flex-col gap-2">
-                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-green-500/40 border-2 border-green-600 rounded"></div><span class="font-medium">Gratis</span></div>
-                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-blue-500/40 border-2 border-blue-600 rounded"></div><span class="font-medium">Pagamento</span></div>
-                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-purple-500/40 border-2 border-purple-600 rounded"></div><span class="font-medium">Disco Orario</span></div>
-                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-pink-400/70 border-2 border-pink-600 rounded"></div><span class="font-medium">Posto Rosa</span></div>
-                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-slate-700/70 border-2 border-slate-900 rounded"></div><span class="font-medium">Bus / Mezzi</span></div>
-                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-orange-500/40 border-2 border-orange-600 rounded"></div><span class="font-medium">Riservato</span></div>
-            </div>
-        </div>
+<script>
+    // Inizializza mappa (centrata su Milano di default)
+    var map = L.map('map').setView([45.4642, 9.19], 15);
 
-        <div id="statusIndicator" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-[1000] items-center gap-2 text-blue-600 font-medium text-xs bg-white/90 backdrop-blur px-4 py-2 rounded-full border border-blue-100 shadow-md">
-            <div class="loader w-3 h-3 border-2 border-slate-200 rounded-full"></div>
-            <span id="statusText">Ricerca...</span>
-        </div>
+    // Base OSM
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 20,
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
 
-        <!-- Pulsante Schermo Intero -->
-        <button id="fullscreenBtn" class="absolute bottom-28 right-6 z-[1000] bg-white text-slate-700 p-3 rounded-full shadow-xl border border-slate-200 hover:bg-slate-50 transition-all active:scale-95">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-            </svg>
-        </button>
+    // Layer gruppi
+    var parkingAreasLayer = L.layerGroup().addTo(map);      // amenity=parking
+    var parkingSpacesLayer = L.layerGroup().addTo(map);     // amenity=parking_space speciali
 
-        <button id="gpsBtn" class="absolute bottom-10 right-6 z-[1000] bg-blue-600 text-white p-4 rounded-full shadow-2xl hover:bg-blue-700 transition-all active:scale-95">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-        </button>
-    </main>
+    // Controllo layer
+    L.control.layers(null, {
+        "Aree parcheggio": parkingAreasLayer,
+        "Posti speciali": parkingSpacesLayer
+    }, { collapsed: false }).addTo(map);
 
-    <script>
-        let map, parkingLayerGroup, fetchTimer, searchTimer;
-        const renderedIds = new Set();
-        
-        const overpassEndpoints = [
-            'https://overpass-api.de/api/interpreter',
-            'https://lz4.overpass-api.de/api/interpreter'
-        ];
+    var statusEl = document.getElementById('status');
 
-        const zPriority = { pink: 2000, heavy: 1900, restricted: 1800, timed: 1700, paid: 1600, free: 1500 };
+    function setStatus(msg) {
+        statusEl.textContent = msg || '';
+    }
 
-        const colors = {
-            free: { fill: '#22c55e', stroke: '#166534', label: 'Gratuito' },
-            paid: { fill: '#3b82f6', stroke: '#1e40af', label: 'A Pagamento' },
-            timed: { fill: '#a855f7', stroke: '#6b21a8', label: 'Disco Orario' }, 
-            restricted: { fill: '#f97316', stroke: '#9a3412', label: 'Riservato' },
-            pink: { fill: '#f472b6', stroke: '#be185d', label: 'Posto Rosa' },
-            heavy: { fill: '#334155', stroke: '#0f172a', label: 'Bus / HGV' }
-        };
+    // Funzione helper: costruisci URL Google Maps per navigazione
+    function buildGMapsUrl(lat, lon) {
+        // Url semplice con parametro q=lat,lon
+        return 'https://www.google.com/maps?q=' + encodeURIComponent(lat + ',' + lon);
+    }
 
-        function formatOSMConditions(str, context = 'fee') {
-            if (!str) return '';
-            let s = str.toLowerCase();
-            s = s.replace(/00:00-24:00/g, 'tutto il giorno').replace(/24\/7/g, 'sempre');
+    // Funzione helper: costruisci URL iD editor
+    function buildIdUrl(osmType, osmId, lat, lon, zoom) {
+        zoom = zoom || map.getZoom() || 18;
+        var base = 'https://www.openstreetmap.org/edit?editor=id';
+        var center = '#map=' + zoom + '/' + lat + '/' + lon;
+        var sel = '';
+        if (osmType && osmId) {
+            // osmType: 'node' | 'way' | 'relation'
+            sel = '&' + osmType + '=' + osmId;
+        }
+        return base + sel + center;
+    }
 
-            if (context === 'access') {
-                s = s.replace(/no\s*@/g, '<span class="text-red-700 font-extrabold italic">⛔ Chiuso</span> nei seguenti orari: ')
-                     .replace(/yes\s*@/g, '<span class="text-green-700 font-bold uppercase text-[9px]">✅ Aperto</span> nei seguenti orari: ');
-            } else {
-                s = s.replace(/no\s*@/g, '<span class="text-green-700 font-bold italic uppercase text-[9px]">Gratis</span> nei seguenti orari: ')
-                     .replace(/yes\s*@/g, '<span class="text-blue-700 font-bold italic uppercase text-[9px]">Pagamento</span> nei seguenti orari: ');
-            }
+    // Costruisci descrizione popup comune
+    function buildPopupContent(props, geom, osmMeta) {
+        var name = props.name || props.ref || '(senza nome)';
+        var operator = props.operator || '-';
+        var access = props.access || '-';
+        var fee = (props.fee === 'yes') ? 'a pagamento' :
+                  (props.fee === 'no') ? 'gratuito' :
+                  (props.fee || '-');
+        var condFee = props['fee:conditional'] || props['parking:condition'] || props['parking:condition:time_interval'] || '-';
+        var lat = geom.coordinates[1];
+        var lon = geom.coordinates[0];
 
-            return s.replace(/;/g, '<br>')
-                    .replace(/ph/g, 'Festivi')
-                    .replace(/\btu\b/g, 'Mar').replace(/\bwe\b/g, 'Mer')
-                    .replace(/\bth\b/g, 'Gio').replace(/\bfr\b/g, 'Ven')
-                    .replace(/\bsa\b/g, 'Sab').replace(/\bsu\b/g, 'Dom')
-                    .replace(/\bmo\b/g, 'Lun')
-                    .replace(/mo-fr/g, 'Lun-Ven')
-                    .replace(/sa-su/g, 'Sab-Dom')
-                    .replace(/\(/g, '').replace(/\)/g, '');
+        var gmapsUrl = buildGMapsUrl(lat, lon);
+        var idUrl = buildIdUrl(osmMeta.type, osmMeta.id, lat, lon);
+
+        var html = '';
+        html += '<div class="popup-title">' + name + '</div>';
+
+        html += '<div class="popup-section"><span class="label">Operatore:</span> ' + operator + '</div>';
+        html += '<div class="popup-section"><span class="label">Accesso:</span> ' + access + '</div>';
+        html += '<div class="popup-section"><span class="label">Costo:</span> ' + fee + '</div>';
+        html += '<div class="popup-section"><span class="label">Costo / condizioni:</span> ' + condFee + '</div>';
+
+        if (props.capacity) {
+            html += '<div class="popup-section"><span class="label">Capacità:</span> ' + props.capacity + '</div>';
+        }
+        if (props.parking_space) {
+            html += '<div class="popup-section"><span class="label">Tipo posto:</span> ' + props.parking_space + '</div>';
         }
 
-        function initMap() {
-            map = L.map('map', { zoomControl: false, preferCanvas: false }).setView([45.6713, 11.9284], 18);
-            
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { 
-                attribution: '&copy; <a href="https://www.openstreetmap.org/about" target="_blank" class="osm-link">OSM</a>' 
-            }).addTo(map);
+        html += '<div class="popup-links">';
+        html += '<a href="' + gmapsUrl + '" target="_blank" rel="noopener">Naviga con Google Maps</a>';
+        html += '<a href="' + idUrl + '" target="_blank" rel="noopener">Modifica su OSM iD</a>';
+        html += '</div>';
 
-            L.control.zoom({ position: 'topleft' }).addTo(map);
-            parkingLayerGroup = L.layerGroup().addTo(map);
+        return html;
+    }
 
-            map.on('moveend', () => {
-                clearTimeout(fetchTimer);
-                fetchTimer = setTimeout(fetchData, 600);
-            });
-            
-            setupCitySearch();
-            setupGPS();
-            setupFullscreen(); // Inizializza pulsante fullscreen
-            fetchData();
-            
-            if (window.innerWidth >= 768) {
-                document.getElementById('legend').classList.add('expanded');
-            }
-        }
+    // Query Overpass per area corrente
+    function fetchParking() {
+        var bounds = map.getBounds();
+        var s = bounds.getSouth();
+        var w = bounds.getWest();
+        var n = bounds.getNorth();
+        var e = bounds.getEast();
 
-		// Layer professionali ordinati
-		const layers = {
-		    parking_space: L.layerGroup().addTo(map),  // sotto
-		    parking: L.layerGroup().addTo(map),        // sopra
-		    special: L.layerGroup().addTo(map)         // pink/heavy/restricted
-		};
+        setStatus('Carico parcheggi in zona…');
 
+        // Overpass QL:
+        // 1) amenity=parking
+        // 2) amenity=parking_space con parking_space != normal
+        var query = `
+            [out:json][timeout:25];
+            (
+              way["amenity"="parking"](${s},${w},${n},${e});
+              relation["amenity"="parking"](${s},${w},${n},${e});
+              node["amenity"="parking"](${s},${w},${n},${e});
 
-        window.navigateTo = (lat, lon) => {
-            const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&travelmode=driving`;
-            window.open(url, '_blank');
-        };
-
-        window.openInID = (type, id) => {
-            const url = `https://www.openstreetmap.org/edit?editor=id&${type}=${id}`;
-            window.open(url, '_blank');
-        };
-
-        function setupGPS() {
-            document.getElementById('gpsBtn').onclick = () => {
-                map.locate({setView: true, maxZoom: 18});
-            };
-            map.on('locationfound', (e) => {
-                L.circle(e.latlng, { radius: 10, color: '#3b82f6', fillOpacity: 0.5 }).addTo(map);
-            });
-        }
-
-        function setupFullscreen() {
-            const btn = document.getElementById('fullscreenBtn');
-            if (!document.documentElement.requestFullscreen && !document.documentElement.webkitRequestFullscreen) {
-                // Nascondi se non supportato (opzionale, ma utile per compatibilità iOS vecchi)
-                // btn.style.display = 'none'; 
-                // Lo lasciamo visibile come richiesto, ma potrebbe non funzionare su alcuni iPhone senza PWA
-            }
-            
-            btn.onclick = () => {
-                if (!document.fullscreenElement) {
-                    if (document.documentElement.requestFullscreen) {
-                        document.documentElement.requestFullscreen();
-                    } else if (document.documentElement.webkitRequestFullscreen) { /* Safari */
-                        document.documentElement.webkitRequestFullscreen();
-                    }
-                } else {
-                    if (document.exitFullscreen) {
-                        document.exitFullscreen();
-                    } else if (document.webkitExitFullscreen) { /* Safari */
-                        document.webkitExitFullscreen();
-                    }
-                }
-            };
-        }
-
-        function setupCitySearch() {
-            const input = document.getElementById('citySearch');
-            const results = document.getElementById('searchResults');
-
-            input.oninput = () => {
-                clearTimeout(searchTimer);
-                const query = input.value;
-                if (query.length < 3) { results.classList.add('hidden'); return; }
-
-                searchTimer = setTimeout(async () => {
-                    try {
-                        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=it&limit=5`);
-                        const data = await res.json();
-                        results.innerHTML = '';
-                        if (data.length > 0) {
-                            results.classList.remove('hidden');
-                            data.forEach(item => {
-                                const div = document.createElement('div');
-                                div.className = 'px-4 py-2 hover:bg-slate-50 cursor-pointer text-sm border-b border-slate-100 last:border-0';
-                                div.innerText = item.display_name;
-                                div.onclick = () => {
-                                    map.setView([item.lat, item.lon], 16);
-                                    results.classList.add('hidden');
-                                    input.value = item.display_name;
-                                };
-                                results.appendChild(div);
-                            });
-                        }
-                    } catch (e) {}
-                }, 400);
-            };
-        }
-
-        async function fetchData() {
-            if (map.getZoom() < 14) return;
-            document.getElementById('statusIndicator').style.display = 'flex';
-            document.getElementById('statusText').innerText = "Cerca stalli...";
-
-            const bounds = map.getBounds();
-            const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
-            const query = `[out:json][timeout:25];(way["amenity"~"parking|parking_space"]["amenity"!="bicycle_parking"](${bbox});relation["amenity"~"parking|parking_space"]["amenity"!="bicycle_parking"](${bbox});node["amenity"~"parking|parking_space"]["amenity"!="bicycle_parking"](${bbox}););out body geom;`;
-
-            for (let endpoint of overpassEndpoints) {
-                try {
-                    const response = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`);
-                    if (!response.ok) continue;
-                    const data = await response.json();
-                    if (data.elements) {
-                        renderData(data.elements);
-                        document.getElementById('statusIndicator').style.display = 'none';
-                        return;
-                    }
-                } catch (e) {}
-            }
-        }
-
-        function renderData(elements) {
-    const filter = document.getElementById('filterType').value;
-
-    elements.forEach(el => {
-        if (renderedIds.has(el.id)) return;
-        const tags = el.tags || {};
-        const amenity = tags.amenity || '';
-        const isParkingSpace = amenity === 'parking_space';
-
-        if (amenity === 'bicycle_parking' || tags.parking_space === 'normal') return;
-
-        // Geometria
-        let latLngs, center;
-        if (el.type === 'node') {
-            const r = 0.00002;
-            latLngs = [
-                [el.lat - r, el.lon - r],
-                [el.lat + r, el.lon - r],
-                [el.lat + r, el.lon + r],
-                [el.lat - r, el.lon + r]
-            ];
-            center = [el.lat, el.lon];
-        } else if (el.geometry) {
-            latLngs = el.geometry.map(pt => [pt.lat, pt.lon]);
-            center = [el.geometry[0].lat, el.geometry[0].lon];
-        } else return;
-
-        // Determina tipo stallo
-        let type = 'free';
-        const fee = tags.fee || tags['parking:fee'];
-        const feeCond = tags['fee:conditional'] || '';
-        const access = tags.access || '';
-        const accessCond = tags['access:conditional'] || '';
-        const maxstay = tags.maxstay || tags['parking:condition'] === 'disc';
-        const isWomen = tags['capacity:women'] || tags.female === 'yes' || tags['parking:condition'] === 'women' || tags['parking_space'] === 'women';
-        const isHeavy = tags.hgv === 'yes' || tags.bus === 'yes' || tags['parking:hgv'] === 'yes' || tags['parking_space'] === 'bus';
-
-        if (isWomen) type = 'pink';
-        else if (isHeavy) type = 'heavy';
-        else if (access && !['yes', 'public', 'permissive'].includes(access)) type = 'restricted';
-        else if (maxstay) type = 'timed';
-        else if (fee === 'yes' || (feeCond && !feeCond.includes('no @'))) type = 'paid';
-
-        // Filtra
-        if (filter !== 'all' && type !== filter) {
-            if (!(filter === 'restricted' && (type === 'pink' || type === 'heavy' || type === 'restricted'))) return;
-        }
-
-        // Stile
-        const style = colors[type];
-        const layer = L.polygon(latLngs, {
-            color: style.stroke,
-            fillColor: style.fill,
-            fillOpacity: (type === 'pink' || type === 'heavy') ? 0.8 : 0.5,
-            weight: (type === 'pink' || type === 'heavy') ? 3 : 1
-        });
-
-        // Contenuto popup
-        const feeDetails = (type === 'paid' || feeCond) ? `<div class="mt-2 p-2 bg-blue-50 border border-blue-100 rounded text-[11px] text-blue-800 italic leading-tight">
-            <b class="block not-italic text-blue-900 mb-0.5 tracking-tighter uppercase text-[9px]">Tariffa:</b>
-            ${feeCond ? formatOSMConditions(feeCond, 'fee') : 'Pagamento'}
-        </div>` : '';
-
-        const accessDetails = accessCond ? `<div class="mt-2 p-2 bg-red-50 border border-red-100 rounded text-[11px] text-red-800 leading-tight">
-            <b class="block text-red-900 mb-0.5 tracking-tighter uppercase text-[9px]">Accesso Condizionato:</b>
-            ${formatOSMConditions(accessCond, 'access')}
-        </div>` : '';
-
-        const categoryTag = isWomen ? 
-            '<span class="bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-[8px] font-bold border border-pink-200">🚺 STALLO ROSA</span>' :
-            isHeavy ? '<span class="bg-slate-800 text-white px-2 py-0.5 rounded-full text-[8px] font-bold">🚌 BUS/HGV</span>' : '';
-
-        const content = `
-            <div class="text-[12px] min-w-[210px] max-w-[250px]">
-                <div class="flex justify-between items-center border-b mb-2 pb-1 gap-2">
-                    <b class="text-slate-800 uppercase text-[10px] tracking-tight">${style.label}</b>
-                    ${categoryTag}
-                </div>
-                ${tags.name ? `<p class="font-bold text-slate-900 leading-tight">${tags.name}</p>` : ''}
-                ${tags.operator ? `<p class="text-[10px] text-slate-500 italic">Gestore: ${tags.operator}</p>` : ''}
-                ${accessDetails}
-                ${feeDetails}
-                <div class="flex flex-col gap-2 mt-3">
-                    <button onclick="navigateTo(${center[0]}, ${center[1]})" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all active:scale-95">
-                        PORTAMI QUI
-                    </button>
-                    <button onclick="openInID('${el.type}', ${el.id})" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-1.5 rounded-lg flex items-center justify-center gap-2 text-[10px] transition-all border border-slate-200">
-                        MODIFICA SU iD (OSM)
-                    </button>
-                </div>
-            </div>
+              node["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](${s},${w},${n},${e});
+              way["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](${s},${w},${n},${e});
+              relation["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](${s},${w},${n},${e});
+            );
+            out body;
+            >;
+            out skel qt;
         `;
 
-        layer.bindPopup(content, { className: 'custom-popup' });
+        var url = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query);
 
-        // ✅ Aggiungi al layer giusto
-        if (type === 'pink' || type === 'heavy' || type === 'restricted') {
-            layer.addTo(layers.special);
-        } else if (isParkingSpace) {
-            layer.addTo(layers.parking_space);
-        } else {
-            layer.addTo(layers.parking);
-        }
+        fetch(url)
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                renderParking(data);
+                setStatus('Parcheggi aggiornati');
+                setTimeout(function(){ setStatus(''); }, 3000);
+            })
+            .catch(function (err) {
+                console.error(err);
+                setStatus('Errore nel caricamento dei parcheggi');
+            });
+    }
 
-        renderedIds.add(el.id);
+    // Rendering dati Overpass
+    function renderParking(data) {
+        parkingAreasLayer.clearLayers();
+        parkingSpacesLayer.clearLayers();
+
+        if (!data || !data.elements) return;
+
+        // Index nodi per costruire poligoni da way
+        var nodesIndex = {};
+        data.elements.forEach(function (el) {
+            if (el.type === 'node') {
+                nodesIndex[el.id] = el;
+            }
+        });
+
+        data.elements.forEach(function (el) {
+            var tags = el.tags || {};
+            if (!tags.amenity) return;
+
+            // Costruisci geometria semplice per popup / marker
+            var geom = null;
+
+            if (el.type === 'node') {
+                geom = {
+                    type: 'Point',
+                    coordinates: [el.lon, el.lat]
+                };
+            } else if (el.type === 'way' && el.nodes) {
+                var coords = el.nodes.map(function (nid) {
+                    var n = nodesIndex[nid];
+                    return n ? [n.lat, n.lon] : null;
+                }).filter(Boolean);
+
+                if (coords.length > 1) {
+                    // prendi il primo nodo come riferimento per popup
+                    geom = {
+                        type: 'Point',
+                        coordinates: [coords[0][1], coords[0][0]]
+                    };
+                }
+            } else if (el.type === 'relation' && el.members) {
+                // prendi il primo membro con ruolo outer o qualsiasi membro node/way
+                var center = null;
+                for (var i = 0; i < el.members.length; i++) {
+                    var m = el.members[i];
+                    if (m.type === 'node' && nodesIndex[m.ref]) {
+                        center = nodesIndex[m.ref];
+                        break;
+                    }
+                }
+                if (center) {
+                    geom = {
+                        type: 'Point',
+                        coordinates: [center.lon, center.lat]
+                    };
+                }
+            }
+
+            if (!geom) return;
+
+            var osmMeta = { type: el.type, id: el.id };
+
+            // amenity=parking (layer intermedio)
+            if (tags.amenity === 'parking') {
+                var popupHtml = buildPopupContent(tags, geom, osmMeta);
+                var marker = L.circleMarker([geom.coordinates[1], geom.coordinates[0]], {
+                    radius: 7,
+                    color: '#1d4ed8',
+                    weight: 2,
+                    fillColor: '#60a5fa',
+                    fillOpacity: 0.6
+                }).bindPopup(popupHtml);
+                marker.addTo(parkingAreasLayer);
+            }
+
+            // amenity=parking_space (layer superiore), escludendo parking_space=normal
+            if (tags.amenity === 'parking_space') {
+                var psType = tags.parking_space;
+                if (psType && psType !== 'normal') {
+                    var popupHtml2 = buildPopupContent(tags, geom, osmMeta);
+                    var color = '#dc2626'; // rosso per posti speciali
+                    var fill = '#f97373';
+                    var marker2 = L.circleMarker([geom.coordinates[1], geom.coordinates[0]], {
+                        radius: 6,
+                        color: color,
+                        weight: 2,
+                        fillColor: fill,
+                        fillOpacity: 0.7
+                    }).bindPopup(popupHtml2);
+                    marker2.addTo(parkingSpacesLayer);
+                }
+            }
+        });
+    }
+
+    // Ricarica quando l'utente smette di muovere la mappa
+    var fetchTimeout = null;
+    map.on('moveend', function () {
+        if (fetchTimeout) clearTimeout(fetchTimeout);
+        fetchTimeout = setTimeout(fetchParking, 400);
     });
-}
 
+    // Prima chiamata
+    fetchParking();
 
-        document.getElementById('refreshData').onclick = () => { renderedIds.clear(); parkingLayerGroup.clearLayers(); fetchData(); };
-        document.getElementById('filterType').onchange = () => { renderedIds.clear(); parkingLayerGroup.clearLayers(); fetchData(); };
+    // Ricerca per località con Nominatim
+    function geocode(query) {
+        if (!query) return;
+        setStatus('Cerco "' + query + '"…');
 
-        window.onload = initMap;
-    </script>
+        var url = 'https://nominatim.openstreetmap.org/search?format=json&q=' +
+                  encodeURIComponent(query) + '&limit=1&addressdetails=0';
+
+        fetch(url, {
+            headers: {
+                'Accept-Language': 'it'
+            }
+        })
+            .then(function (res) { return res.json(); })
+            .then(function (results) {
+                if (!results || !results.length) {
+                    setStatus('Nessun risultato per "' + query + '"');
+                    return;
+                }
+                var r = results[0];
+                var lat = parseFloat(r.lat);
+                var lon = parseFloat(r.lon);
+                map.setView([lat, lon], 17);
+                setStatus('Trovato: ' + (r.display_name || query));
+            })
+            .catch(function (err) {
+                console.error(err);
+                setStatus('Errore nella ricerca');
+            });
+    }
+
+    document.getElementById('searchBtn').addEventListener('click', function () {
+        geocode(document.getElementById('searchInput').value.trim());
+    });
+
+    document.getElementById('searchInput').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            geocode(document.getElementById('searchInput').value.trim());
+        }
+    });
+
+    // Localizzazione GPS
+    document.getElementById('gpsBtn').addEventListener('click', function () {
+        if (!navigator.geolocation) {
+            setStatus('Geolocalizzazione non supportata');
+            return;
+        }
+        setStatus('Cerco la tua posizione…');
+        navigator.geolocation.getCurrentPosition(function (pos) {
+            var lat = pos.coords.latitude;
+            var lon = pos.coords.longitude;
+            map.setView([lat, lon], 17);
+            setStatus('Posizione trovata');
+        }, function (err) {
+            console.error(err);
+            setStatus('Impossibile ottenere la posizione');
+        }, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        });
+    });
+</script>
 </body>
 </html>
