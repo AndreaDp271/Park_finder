@@ -238,6 +238,7 @@
             .then(function (res) { return res.json(); })
             .then(function (data) {
                 renderParking(data);
+                parkingSpacesLayer.bringToFront();  // ← questa riga forza i posti speciali in cima
                 setStatus('Parcheggi aggiornati');
                 setTimeout(function(){ setStatus(''); }, 3000);
             })
@@ -245,6 +246,7 @@
                 console.error(err);
                 setStatus('Errore nel caricamento dei parcheggi');
             });
+
     }
 
     // Rendering
