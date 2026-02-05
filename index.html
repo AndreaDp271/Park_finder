@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Smart Parking - Mappa Accessi</title>
     
     <!-- Icone per salvataggio su Desktop/Home Screen -->
@@ -15,59 +15,74 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        #map { height: calc(100vh - 80px); width: 100%; background: #f1f5f9; }
+        #map { height: calc(100vh - 72px); width: 100%; background: #f1f5f9; }
+        @media (min-width: 768px) { #map { height: calc(100vh - 80px); } }
+
         .loader { border-top-color: #3b82f6; animation: spinner 0.6s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .leaflet-interactive { cursor: pointer !important; }
-        .custom-popup .leaflet-popup-content-wrapper { border-radius: 12px; padding: 8px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
-        .leaflet-popup-content { margin: 8px; line-height: 1.4; }
         
+        .leaflet-interactive { cursor: pointer !important; }
+        
+        /* Ottimizzazione Popup per Mobile */
+        .custom-popup .leaflet-popup-content-wrapper { border-radius: 12px; padding: 4px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+        .leaflet-popup-content { margin: 8px; line-height: 1.4; max-width: 75vw !important; }
+        
+        /* Legenda richiudibile */
         .legend-container {
-            transition: all 0.3s ease;
-            max-height: 40px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 32px;
             overflow: hidden;
         }
         .legend-container.expanded {
-            max-height: 300px;
+            max-height: 400px;
         }
-        /* Stile per il link OSM */
+
+        /* Correzione posizione controlli Leaflet su Mobile */
+        .leaflet-bottom.leaflet-right { margin-bottom: 10px; }
+        .leaflet-control-attribution { font-size: 9px !important; background: rgba(255,255,255,0.7) !important; }
+
         .osm-link { color: #2563eb; text-decoration: none; font-weight: bold; }
-        .osm-link:hover { text-decoration: underline; }
+        
+        /* Nascondi scrollbar */
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
     </style>
 </head>
 <body class="bg-slate-50 font-sans text-slate-900 overflow-hidden">
 
-    <header class="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 sticky top-0 z-[1001] gap-4">
-        <div class="flex items-center gap-3 shrink-0">
-            <div class="bg-blue-600 p-2 rounded-lg text-white shadow-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <header class="h-[72px] md:h-20 bg-white border-b border-slate-200 flex items-center justify-between px-3 md:px-6 sticky top-0 z-[1001] gap-2 md:gap-4">
+        <!-- Logo -->
+        <div class="flex items-center gap-2 shrink-0">
+            <div class="bg-blue-600 p-1.5 md:p-2 rounded-lg text-white shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-2.286-6.857L2 11l6.857-2.286L11 2l2.286 6.857L20 11l-6.857 2.286L9 20z" />
                 </svg>
             </div>
-            <div class="hidden sm:block">
-                <h1 class="font-bold text-lg leading-none italic uppercase tracking-tight text-blue-700">Smart Parking</h1>
-                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Aree e Stalli</p>
+            <div class="hidden lg:block">
+                <h1 class="font-bold text-base leading-none italic uppercase tracking-tight text-blue-700">Smart Parking</h1>
+                <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Aree e Stalli</p>
             </div>
         </div>
         
+        <!-- Search -->
         <div class="relative flex-1 max-w-md">
-            <input type="text" id="citySearch" placeholder="Cerca Città o CAP..." class="w-full bg-slate-100 border-none rounded-full py-2 px-4 pl-10 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3 top-2.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <input type="text" id="citySearch" placeholder="Cerca..." class="w-full bg-slate-100 border-none rounded-full py-2 px-3 pl-8 text-xs md:text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <div id="searchResults" class="absolute top-full left-0 right-0 bg-white shadow-xl rounded-b-xl mt-1 hidden z-[2000] border border-slate-200 overflow-hidden"></div>
+            <div id="searchResults" class="absolute top-full left-0 right-0 bg-white shadow-2xl rounded-b-xl mt-1 hidden z-[2000] border border-slate-200 max-h-60 overflow-y-auto"></div>
         </div>
 
-        <div class="flex gap-2 shrink-0">
-            <select id="filterType" class="bg-slate-100 border-none rounded-full px-3 md:px-4 py-2 text-[12px] md:text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
+        <!-- Controls -->
+        <div class="flex gap-1.5 md:gap-2 shrink-0">
+            <select id="filterType" class="bg-slate-100 border-none rounded-full px-2 md:px-4 py-2 text-[10px] md:text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
                 <option value="all">Tutti</option>
                 <option value="free">Gratis</option>
-                <option value="paid">Pagamento</option>
-                <option value="timed">Disco Orario</option>
-                <option value="restricted">Speciali</option>
+                <option value="paid">€€€</option>
+                <option value="timed">Disco</option>
+                <option value="restricted">Spec.</option>
             </select>
-            <button id="refreshData" class="bg-white border border-slate-200 hover:bg-slate-50 rounded-full p-2 text-slate-600 transition-colors shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <button id="refreshData" class="bg-white border border-slate-200 hover:bg-slate-50 rounded-full p-2 text-slate-600 shadow-sm active:scale-90 transition-transform">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
             </button>
@@ -77,30 +92,32 @@
     <main class="relative">
         <div id="map"></div>
         
-        <div id="legend" class="absolute top-4 right-4 z-[1000] bg-white/95 backdrop-blur-sm p-3 rounded-2xl shadow-xl border border-slate-200 text-[11px] legend-container w-40 cursor-pointer md:cursor-default" onclick="this.classList.toggle('expanded')">
-            <div class="flex items-center justify-between mb-2 md:mb-3">
-                <span class="font-bold text-slate-700 uppercase tracking-tighter text-[9px]">Legenda</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 md:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <!-- Legend -->
+        <div id="legend" class="absolute top-3 right-3 z-[1000] bg-white/95 backdrop-blur-sm p-2 rounded-xl shadow-lg border border-slate-200 text-[10px] legend-container w-32 md:w-40 cursor-pointer select-none" onclick="this.classList.toggle('expanded')">
+            <div class="flex items-center justify-between h-[16px]">
+                <span class="font-black text-slate-700 uppercase tracking-tighter text-[9px]">Legenda</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-slate-400 transition-transform duration-300" id="legendArrow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
             </div>
-            <div class="flex flex-col gap-2">
-                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-green-500/40 border-2 border-green-600 rounded"></div><span class="font-medium">Gratis</span></div>
-                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-blue-500/40 border-2 border-blue-600 rounded"></div><span class="font-medium">Pagamento</span></div>
-                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-purple-500/40 border-2 border-purple-600 rounded"></div><span class="font-medium">Disco Orario</span></div>
-                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-pink-400/70 border-2 border-pink-600 rounded"></div><span class="font-medium">Posto Rosa</span></div>
-                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-slate-700/70 border-2 border-slate-900 rounded"></div><span class="font-medium">Bus / Mezzi</span></div>
-                <div class="flex items-center gap-2"><div class="w-3 h-3 bg-orange-500/40 border-2 border-orange-600 rounded"></div><span class="font-medium">Riservato</span></div>
+            <div class="flex flex-col gap-1.5 mt-3 pt-2 border-t border-slate-100">
+                <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 bg-green-500/40 border border-green-600 rounded"></div><span>Gratis</span></div>
+                <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 bg-blue-500/40 border border-blue-600 rounded"></div><span>Pagamento</span></div>
+                <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 bg-purple-500/40 border border-purple-600 rounded"></div><span>Disco Orario</span></div>
+                <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 bg-pink-400/70 border border-pink-600 rounded"></div><span>Posto Rosa</span></div>
+                <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 bg-slate-700/70 border border-slate-900 rounded"></div><span>Bus / Mezzi</span></div>
+                <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 bg-orange-500/40 border border-orange-600 rounded"></div><span>Riservato</span></div>
             </div>
         </div>
 
-        <div id="statusIndicator" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-[1000] items-center gap-2 text-blue-600 font-medium text-xs bg-white/90 backdrop-blur px-4 py-2 rounded-full border border-blue-100 shadow-md">
+        <div id="statusIndicator" class="hidden absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] items-center gap-2 text-blue-600 font-bold text-[10px] bg-white px-4 py-2 rounded-full border border-blue-100 shadow-xl uppercase tracking-widest">
             <div class="loader w-3 h-3 border-2 border-slate-200 rounded-full"></div>
-            <span id="statusText">Ricerca...</span>
+            <span id="statusText">Caricamento...</span>
         </div>
 
-        <button id="gpsBtn" class="absolute bottom-10 right-6 z-[1000] bg-blue-600 text-white p-4 rounded-full shadow-2xl hover:bg-blue-700 transition-all active:scale-95">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <!-- GPS Button -->
+        <button id="gpsBtn" class="absolute bottom-6 right-4 z-[1000] bg-blue-600 text-white p-3.5 md:p-4 rounded-full shadow-2xl hover:bg-blue-700 transition-all active:scale-90 border-2 border-white/20">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
@@ -130,14 +147,14 @@
         function formatOSMConditions(str, context = 'fee') {
             if (!str) return '';
             let s = str.toLowerCase();
-            s = s.replace(/00:00-24:00/g, 'tutto il giorno').replace(/24\/7/g, 'sempre');
+            s = s.replace(/00:00-24:00/g, 'H24').replace(/24\/7/g, 'Sempre');
 
             if (context === 'access') {
-                s = s.replace(/no\s*@/g, '<span class="text-red-700 font-extrabold italic">⛔ Chiuso</span> nei seguenti orari: ')
-                     .replace(/yes\s*@/g, '<span class="text-green-700 font-bold uppercase text-[9px]">✅ Aperto</span> nei seguenti orari: ');
+                s = s.replace(/no\s*@/g, '<span class="text-red-700 font-bold italic">⛔ Chiuso:</span> ')
+                     .replace(/yes\s*@/g, '<span class="text-green-700 font-bold uppercase text-[8px]">✅ Aperto:</span> ');
             } else {
-                s = s.replace(/no\s*@/g, '<span class="text-green-700 font-bold italic uppercase text-[9px]">Gratis</span> nei seguenti orari: ')
-                     .replace(/yes\s*@/g, '<span class="text-blue-700 font-bold italic uppercase text-[9px]">Pagamento</span> nei seguenti orari: ');
+                s = s.replace(/no\s*@/g, '<span class="text-green-700 font-bold uppercase text-[8px]">Gratis:</span> ')
+                     .replace(/yes\s*@/g, '<span class="text-blue-700 font-bold uppercase text-[8px]">Pagamento:</span> ');
             }
 
             return s.replace(/;/g, '<br>')
@@ -147,18 +164,21 @@
                     .replace(/\bsa\b/g, 'Sab').replace(/\bsu\b/g, 'Dom')
                     .replace(/\bmo\b/g, 'Lun')
                     .replace(/mo-fr/g, 'Lun-Ven')
-                    .replace(/sa-su/g, 'Sab-Dom')
-                    .replace(/\(/g, '').replace(/\)/g, '');
+                    .replace(/sa-su/g, 'Sab-Dom');
         }
 
         function initMap() {
-            map = L.map('map', { zoomControl: false, preferCanvas: false }).setView([45.6713, 11.9284], 18);
+            map = L.map('map', { 
+                zoomControl: false, 
+                preferCanvas: true,
+                tap: false
+            }).setView([45.6713, 11.9284], 18);
             
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { 
                 attribution: '&copy; <a href="https://www.openstreetmap.org/about" target="_blank" class="osm-link">OSM</a>' 
             }).addTo(map);
 
-            L.control.zoom({ position: 'topleft' }).addTo(map);
+            L.control.zoom({ position: 'bottomleft' }).addTo(map);
             parkingLayerGroup = L.layerGroup().addTo(map);
 
             map.on('moveend', () => {
@@ -169,10 +189,12 @@
             setupCitySearch();
             setupGPS();
             fetchData();
-            
-            if (window.innerWidth >= 768) {
-                document.getElementById('legend').classList.add('expanded');
-            }
+
+            const legend = document.getElementById('legend');
+            const arrow = document.getElementById('legendArrow');
+            legend.addEventListener('click', () => {
+                arrow.style.transform = legend.classList.contains('expanded') ? 'rotate(180deg)' : 'rotate(0deg)';
+            });
         }
 
         window.navigateTo = (lat, lon) => {
@@ -190,7 +212,7 @@
                 map.locate({setView: true, maxZoom: 18});
             };
             map.on('locationfound', (e) => {
-                L.circle(e.latlng, { radius: 10, color: '#3b82f6', fillOpacity: 0.5 }).addTo(map);
+                L.circle(e.latlng, { radius: 10, color: '#3b82f6', weight: 2, fillOpacity: 0.2 }).addTo(map);
             });
         }
 
@@ -212,12 +234,12 @@
                             results.classList.remove('hidden');
                             data.forEach(item => {
                                 const div = document.createElement('div');
-                                div.className = 'px-4 py-2 hover:bg-slate-50 cursor-pointer text-sm border-b border-slate-100 last:border-0';
+                                div.className = 'px-4 py-3 hover:bg-slate-50 cursor-pointer text-xs border-b border-slate-100 last:border-0 active:bg-slate-100';
                                 div.innerText = item.display_name;
                                 div.onclick = () => {
                                     map.setView([item.lat, item.lon], 16);
                                     results.classList.add('hidden');
-                                    input.value = item.display_name;
+                                    input.value = item.display_name.split(',')[0];
                                 };
                                 results.appendChild(div);
                             });
@@ -230,11 +252,13 @@
         async function fetchData() {
             if (map.getZoom() < 14) return;
             document.getElementById('statusIndicator').style.display = 'flex';
-            document.getElementById('statusText').innerText = "Cerca stalli...";
+            document.getElementById('statusText').innerText = "Cerca...";
 
             const bounds = map.getBounds();
             const bbox = `${bounds.getSouth()},${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()}`;
-            const query = `[out:json][timeout:25];(way["amenity"~"parking|parking_space"]["amenity"!="bicycle_parking"](${bbox});relation["amenity"~"parking|parking_space"]["amenity"!="bicycle_parking"](${bbox});node["amenity"~"parking|parking_space"]["amenity"!="bicycle_parking"](${bbox}););out body geom;`;
+            
+            // CORREZIONE: Query specifica per escludere parking_space=normal
+            const query = `[out:json][timeout:25];(way["amenity"="parking"]["parking_space"!="normal"](${bbox});relation["amenity"="parking"]["parking_space"!="normal"](${bbox});node["amenity"="parking"]["parking_space"!="normal"](${bbox}););out body geom;`;
 
             for (let endpoint of overpassEndpoints) {
                 try {
@@ -255,14 +279,15 @@
             elements.forEach(el => {
                 if (renderedIds.has(el.id)) return;
                 const tags = el.tags || {};
-                if (tags.amenity === 'bicycle_parking' || tags.parking_space === 'normal') return;
+                
+                // Filtro JS aggiuntivo di sicurezza
+                if (tags.parking_space === 'normal' || tags.amenity === 'bicycle_parking') return;
 
-                let latLngs;
-                let center;
+                let latLngs, center;
                 if (el.type === 'node') {
-                    const radius = 0.00002;
-                    latLngs = [[el.lat - radius, el.lon - radius], [el.lat + radius, el.lon - radius], [el.lat + radius, el.lon + radius], [el.lat - radius, el.lon + radius]];
                     center = [el.lat, el.lon];
+                    const r = 0.00003;
+                    latLngs = [[el.lat-r, el.lon-r],[el.lat+r, el.lon-r],[el.lat+r, el.lon+r],[el.lat-r, el.lon+r]];
                 } else if (el.geometry) {
                     latLngs = el.geometry.map(pt => [pt.lat, pt.lon]);
                     center = [el.geometry[0].lat, el.geometry[0].lon];
@@ -274,8 +299,8 @@
                 const access = tags.access || '';
                 const accessCond = tags['access:conditional'] || '';
                 const maxstay = tags.maxstay || tags['parking:condition'] === 'disc';
-                const isWomen = tags['capacity:women'] || tags.female === 'yes' || tags['parking:condition'] === 'women' || tags['parking_space'] === 'women';
-                const isHeavy = tags.hgv === 'yes' || tags.bus === 'yes' || tags['parking:hgv'] === 'yes' || tags['parking_space'] === 'bus';
+                const isWomen = tags['capacity:women'] || tags.female === 'yes' || tags['parking:condition'] === 'women';
+                const isHeavy = tags.hgv === 'yes' || tags.bus === 'yes' || tags['parking:hgv'] === 'yes';
 
                 if (isWomen) type = 'pink';
                 else if (isHeavy) type = 'heavy';
@@ -284,78 +309,55 @@
                 else if (fee === 'yes' || (feeCond && !feeCond.includes('no @'))) type = 'paid';
 
                 if (filter !== 'all' && type !== filter) {
-                    if (!(filter === 'restricted' && (type === 'pink' || type === 'heavy' || type === 'restricted'))) return;
+                    if (!(filter === 'restricted' && ['pink','heavy','restricted'].includes(type))) return;
                 }
 
                 const style = colors[type];
                 const layer = L.polygon(latLngs, {
                     color: style.stroke,
                     fillColor: style.fill,
-                    fillOpacity: (type === 'pink' || type === 'heavy') ? 0.8 : 0.5,
-                    weight: (type === 'pink' || type === 'heavy') ? 3 : 1,
+                    fillOpacity: (type === 'pink' || type === 'heavy') ? 0.7 : 0.4,
+                    weight: 1.5,
                     zIndexOffset: zPriority[type] || 0
                 });
 
-                let feeDetails = '';
-                if (type === 'paid' || feeCond) {
-                    feeDetails = `<div class="mt-2 p-2 bg-blue-50 border border-blue-100 rounded text-[11px] text-blue-800 italic leading-tight">
-                        <b class="block not-italic text-blue-900 mb-0.5 tracking-tighter uppercase text-[9px]">Informazioni Tariffa:</b>
-                        ${feeCond ? formatOSMConditions(feeCond, 'fee') : 'Sosta a pagamento'}
-                    </div>`;
-                }
+                let feeDetails = (type === 'paid' || feeCond) ? `
+                    <div class="mt-2 p-1.5 bg-blue-50 border border-blue-100 rounded text-[10px] text-blue-800 leading-tight">
+                        ${feeCond ? formatOSMConditions(feeCond, 'fee') : 'Tariffa standard applicata'}
+                    </div>` : '';
 
-                let accessDetails = '';
-                if (accessCond) {
-                    accessDetails = `<div class="mt-2 p-2 bg-red-50 border border-red-100 rounded text-[11px] text-red-800 leading-tight">
-                        <b class="block text-red-900 mb-0.5 tracking-tighter uppercase text-[9px]">Accesso Condizionato:</b>
+                let accessDetails = accessCond ? `
+                    <div class="mt-2 p-1.5 bg-red-50 border border-red-100 rounded text-[10px] text-red-800 leading-tight">
                         ${formatOSMConditions(accessCond, 'access')}
-                    </div>`;
-                }
+                    </div>` : '';
 
-                let categoryTag = '';
-                if (isWomen) categoryTag = '<span class="bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-[8px] font-bold border border-pink-200">🚺 STALLO ROSA</span>';
-                if (isHeavy) categoryTag = '<span class="bg-slate-800 text-white px-2 py-0.5 rounded-full text-[8px] font-bold">🚌 BUS/HGV</span>';
+                let catTag = isWomen ? '<span class="bg-pink-100 text-pink-700 px-1.5 py-0.5 rounded text-[8px] font-bold">ROSA</span>' : 
+                             isHeavy ? '<span class="bg-slate-800 text-white px-1.5 py-0.5 rounded text-[8px] font-bold">BUS/HGV</span>' : '';
 
                 const content = `
-                    <div class="text-[12px] min-w-[210px] max-w-[250px]">
-                        <div class="flex justify-between items-center border-b mb-2 pb-1 gap-2">
-                            <b class="text-slate-800 uppercase text-[10px] tracking-tight">${style.label}</b>
-                            ${categoryTag}
+                    <div class="flex flex-col gap-1">
+                        <div class="flex justify-between items-center border-b pb-1">
+                            <b class="text-slate-800 uppercase text-[9px]">${style.label}</b>
+                            ${catTag}
                         </div>
-                        
-                        <div class="mb-2">
-                            ${tags.name ? `<p class="font-bold text-slate-900 leading-tight">${tags.name}</p>` : ''}
-                            ${tags.operator ? `<p class="text-[10px] text-slate-500 italic">Gestore: ${tags.operator}</p>` : ''}
+                        <p class="font-bold text-slate-900 leading-tight text-[11px]">${tags.name || 'Parcheggio'}</p>
+                        ${accessDetails} ${feeDetails}
+                        <div class="flex gap-2 text-[9px] font-bold mt-1">
+                            ${tags.maxstay ? `<span class="text-purple-700">⏱️ ${tags.maxstay}</span>` : ''}
+                            ${tags.capacity ? `<span class="text-slate-600 text-right flex-1">🚗 ${tags.capacity} posti</span>` : ''}
                         </div>
-
-                        ${accessDetails}
-                        ${feeDetails}
-                        
-                        <div class="flex flex-wrap gap-2 mt-2">
-                            ${tags.maxstay ? `<div class="bg-purple-100 text-purple-700 px-2 py-1 rounded text-[10px] font-bold">⏱️ Max: ${tags.maxstay}</div>` : ''}
-                            ${tags.capacity ? `<div class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[10px] font-bold">🚗 Posti: ${tags.capacity}</div>` : ''}
-                        </div>
-
-                        <div class="flex flex-col gap-2 mt-3">
-                            <button onclick="navigateTo(${center[0]}, ${center[1]})" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all active:scale-95">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                </svg>
-                                PORTAMI QUI
+                        <div class="flex flex-col gap-1.5 mt-2">
+                            <button onclick="navigateTo(${center[0]}, ${center[1]})" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg text-xs shadow-md active:bg-blue-700">
+                                NAVIGA
                             </button>
-                            
-                            <button onclick="openInID('${el.type}', ${el.id})" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-1.5 rounded-lg flex items-center justify-center gap-2 text-[10px] transition-all border border-slate-200">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                                MODIFICA SU iD (OSM)
+                            <button onclick="openInID('${el.type}', ${el.id})" class="w-full text-slate-400 text-[8px] uppercase tracking-tighter py-1">
+                                Segnala errore (Modifica OSM)
                             </button>
                         </div>
                     </div>
                 `;
                 
                 layer.bindPopup(content, { className: 'custom-popup' }).addTo(parkingLayerGroup);
-                if (type === 'pink' || type === 'heavy') layer.bringToFront();
                 renderedIds.add(el.id);
             });
         }
