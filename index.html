@@ -183,6 +183,14 @@
             }
         }
 
+		// Layer professionali ordinati
+		const layers = {
+		    parking_space: L.layerGroup().addTo(map),  // sotto
+		    parking: L.layerGroup().addTo(map),        // sopra
+		    special: L.layerGroup().addTo(map)         // pink/heavy/restricted
+		};
+
+
         window.navigateTo = (lat, lon) => {
             const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&travelmode=driving`;
             window.open(url, '_blank');
@@ -284,117 +292,113 @@
         }
 
         function renderData(elements) {
-            const filter = document.getElementById('filterType').value;
-            elements.forEach(el => {
-                if (renderedIds.has(el.id)) return;
-                const tags = el.tags || {};
-				const amenity = tags.amenity || '';
-				const isParkingSpace = amenity === 'parking_space';
-                if (tags.amenity === 'bicycle_parking' || tags.parking_space === 'normal') return;
+    const filter = document.getElementById('filterType').value;
 
-                let latLngs;
-                let center;
-                if (el.type === 'node') {
-                    const radius = 0.00002;
-                    latLngs = [[el.lat - radius, el.lon - radius], [el.lat + radius, el.lon - radius], [el.lat + radius, el.lon + radius], [el.lat - radius, el.lon + radius]];
-                    center = [el.lat, el.lon];
-                } else if (el.geometry) {
-                    latLngs = el.geometry.map(pt => [pt.lat, pt.lon]);
-                    center = [el.geometry[0].lat, el.geometry[0].lon];
-                } else return;
+    elements.forEach(el => {
+        if (renderedIds.has(el.id)) return;
+        const tags = el.tags || {};
+        const amenity = tags.amenity || '';
+        const isParkingSpace = amenity === 'parking_space';
 
-                let type = 'free';
-                const fee = tags.fee || tags['parking:fee'];
-                const feeCond = tags['fee:conditional'] || '';
-                const access = tags.access || '';
-                const accessCond = tags['access:conditional'] || '';
-                const maxstay = tags.maxstay || tags['parking:condition'] === 'disc';
-                const isWomen = tags['capacity:women'] || tags.female === 'yes' || tags['parking:condition'] === 'women' || tags['parking_space'] === 'women';
-                const isHeavy = tags.hgv === 'yes' || tags.bus === 'yes' || tags['parking:hgv'] === 'yes' || tags['parking_space'] === 'bus';
+        if (amenity === 'bicycle_parking' || tags.parking_space === 'normal') return;
 
-                if (isWomen) type = 'pink';
-                else if (isHeavy) type = 'heavy';
-                else if (access && !['yes', 'public', 'permissive'].includes(access)) type = 'restricted';
-                else if (maxstay) type = 'timed';
-                else if (fee === 'yes' || (feeCond && !feeCond.includes('no @'))) type = 'paid';
+        // Geometria
+        let latLngs, center;
+        if (el.type === 'node') {
+            const r = 0.00002;
+            latLngs = [
+                [el.lat - r, el.lon - r],
+                [el.lat + r, el.lon - r],
+                [el.lat + r, el.lon + r],
+                [el.lat - r, el.lon + r]
+            ];
+            center = [el.lat, el.lon];
+        } else if (el.geometry) {
+            latLngs = el.geometry.map(pt => [pt.lat, pt.lon]);
+            center = [el.geometry[0].lat, el.geometry[0].lon];
+        } else return;
 
-                if (filter !== 'all' && type !== filter) {
-                    if (!(filter === 'restricted' && (type === 'pink' || type === 'heavy' || type === 'restricted'))) return;
-                }
+        // Determina tipo stallo
+        let type = 'free';
+        const fee = tags.fee || tags['parking:fee'];
+        const feeCond = tags['fee:conditional'] || '';
+        const access = tags.access || '';
+        const accessCond = tags['access:conditional'] || '';
+        const maxstay = tags.maxstay || tags['parking:condition'] === 'disc';
+        const isWomen = tags['capacity:women'] || tags.female === 'yes' || tags['parking:condition'] === 'women' || tags['parking_space'] === 'women';
+        const isHeavy = tags.hgv === 'yes' || tags.bus === 'yes' || tags['parking:hgv'] === 'yes' || tags['parking_space'] === 'bus';
 
-                const style = colors[type];
-                const layer = L.polygon(latLngs, {
-                    color: style.stroke,
-                    fillColor: style.fill,
-                    fillOpacity: (type === 'pink' || type === 'heavy') ? 0.8 : 0.5,
-                    weight: (type === 'pink' || type === 'heavy') ? 3 : 1,
-                    zIndexOffset: (zPriority[type] || 0) + (isParkingSpace ? 100 : 0)
+        if (isWomen) type = 'pink';
+        else if (isHeavy) type = 'heavy';
+        else if (access && !['yes', 'public', 'permissive'].includes(access)) type = 'restricted';
+        else if (maxstay) type = 'timed';
+        else if (fee === 'yes' || (feeCond && !feeCond.includes('no @'))) type = 'paid';
 
-                });
-
-                let feeDetails = '';
-                if (type === 'paid' || feeCond) {
-                    feeDetails = `<div class="mt-2 p-2 bg-blue-50 border border-blue-100 rounded text-[11px] text-blue-800 italic leading-tight">
-                        <b class="block not-italic text-blue-900 mb-0.5 tracking-tighter uppercase text-[9px]">Informazioni Tariffa:</b>
-                        ${feeCond ? formatOSMConditions(feeCond, 'fee') : 'Sosta a pagamento'}
-                    </div>`;
-                }
-
-                let accessDetails = '';
-                if (accessCond) {
-                    accessDetails = `<div class="mt-2 p-2 bg-red-50 border border-red-100 rounded text-[11px] text-red-800 leading-tight">
-                        <b class="block text-red-900 mb-0.5 tracking-tighter uppercase text-[9px]">Accesso Condizionato:</b>
-                        ${formatOSMConditions(accessCond, 'access')}
-                    </div>`;
-                }
-
-                let categoryTag = '';
-                if (isWomen) categoryTag = '<span class="bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-[8px] font-bold border border-pink-200">🚺 STALLO ROSA</span>';
-                if (isHeavy) categoryTag = '<span class="bg-slate-800 text-white px-2 py-0.5 rounded-full text-[8px] font-bold">🚌 BUS/HGV</span>';
-
-                const content = `
-                    <div class="text-[12px] min-w-[210px] max-w-[250px]">
-                        <div class="flex justify-between items-center border-b mb-2 pb-1 gap-2">
-                            <b class="text-slate-800 uppercase text-[10px] tracking-tight">${style.label}</b>
-                            ${categoryTag}
-                        </div>
-                        
-                        <div class="mb-2">
-                            ${tags.name ? `<p class="font-bold text-slate-900 leading-tight">${tags.name}</p>` : ''}
-                            ${tags.operator ? `<p class="text-[10px] text-slate-500 italic">Gestore: ${tags.operator}</p>` : ''}
-                        </div>
-
-                        ${accessDetails}
-                        ${feeDetails}
-                        
-                        <div class="flex flex-wrap gap-2 mt-2">
-                            ${tags.maxstay ? `<div class="bg-purple-100 text-purple-700 px-2 py-1 rounded text-[10px] font-bold">⏱️ Max: ${tags.maxstay}</div>` : ''}
-                            ${tags.capacity ? `<div class="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[10px] font-bold">🚗 Posti: ${tags.capacity}</div>` : ''}
-                        </div>
-
-                        <div class="flex flex-col gap-2 mt-3">
-                            <button onclick="navigateTo(${center[0]}, ${center[1]})" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all active:scale-95">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                </svg>
-                                PORTAMI QUI
-                            </button>
-                            
-                            <button onclick="openInID('${el.type}', ${el.id})" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-1.5 rounded-lg flex items-center justify-center gap-2 text-[10px] transition-all border border-slate-200">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                                MODIFICA SU iD (OSM)
-                            </button>
-                        </div>
-                    </div>
-                `;
-                
-                layer.bindPopup(content, { className: 'custom-popup' }).addTo(parkingLayerGroup);
-                if (type === 'pink' || type === 'heavy') layer.bringToFront();
-                renderedIds.add(el.id);
-            });
+        // Filtra
+        if (filter !== 'all' && type !== filter) {
+            if (!(filter === 'restricted' && (type === 'pink' || type === 'heavy' || type === 'restricted'))) return;
         }
+
+        // Stile
+        const style = colors[type];
+        const layer = L.polygon(latLngs, {
+            color: style.stroke,
+            fillColor: style.fill,
+            fillOpacity: (type === 'pink' || type === 'heavy') ? 0.8 : 0.5,
+            weight: (type === 'pink' || type === 'heavy') ? 3 : 1
+        });
+
+        // Contenuto popup
+        const feeDetails = (type === 'paid' || feeCond) ? `<div class="mt-2 p-2 bg-blue-50 border border-blue-100 rounded text-[11px] text-blue-800 italic leading-tight">
+            <b class="block not-italic text-blue-900 mb-0.5 tracking-tighter uppercase text-[9px]">Tariffa:</b>
+            ${feeCond ? formatOSMConditions(feeCond, 'fee') : 'Pagamento'}
+        </div>` : '';
+
+        const accessDetails = accessCond ? `<div class="mt-2 p-2 bg-red-50 border border-red-100 rounded text-[11px] text-red-800 leading-tight">
+            <b class="block text-red-900 mb-0.5 tracking-tighter uppercase text-[9px]">Accesso Condizionato:</b>
+            ${formatOSMConditions(accessCond, 'access')}
+        </div>` : '';
+
+        const categoryTag = isWomen ? 
+            '<span class="bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full text-[8px] font-bold border border-pink-200">🚺 STALLO ROSA</span>' :
+            isHeavy ? '<span class="bg-slate-800 text-white px-2 py-0.5 rounded-full text-[8px] font-bold">🚌 BUS/HGV</span>' : '';
+
+        const content = `
+            <div class="text-[12px] min-w-[210px] max-w-[250px]">
+                <div class="flex justify-between items-center border-b mb-2 pb-1 gap-2">
+                    <b class="text-slate-800 uppercase text-[10px] tracking-tight">${style.label}</b>
+                    ${categoryTag}
+                </div>
+                ${tags.name ? `<p class="font-bold text-slate-900 leading-tight">${tags.name}</p>` : ''}
+                ${tags.operator ? `<p class="text-[10px] text-slate-500 italic">Gestore: ${tags.operator}</p>` : ''}
+                ${accessDetails}
+                ${feeDetails}
+                <div class="flex flex-col gap-2 mt-3">
+                    <button onclick="navigateTo(${center[0]}, ${center[1]})" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all active:scale-95">
+                        PORTAMI QUI
+                    </button>
+                    <button onclick="openInID('${el.type}', ${el.id})" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-1.5 rounded-lg flex items-center justify-center gap-2 text-[10px] transition-all border border-slate-200">
+                        MODIFICA SU iD (OSM)
+                    </button>
+                </div>
+            </div>
+        `;
+
+        layer.bindPopup(content, { className: 'custom-popup' });
+
+        // ✅ Aggiungi al layer giusto
+        if (type === 'pink' || type === 'heavy' || type === 'restricted') {
+            layer.addTo(layers.special);
+        } else if (isParkingSpace) {
+            layer.addTo(layers.parking_space);
+        } else {
+            layer.addTo(layers.parking);
+        }
+
+        renderedIds.add(el.id);
+    });
+}
+
 
         document.getElementById('refreshData').onclick = () => { renderedIds.clear(); parkingLayerGroup.clearLayers(); fetchData(); };
         document.getElementById('filterType').onchange = () => { renderedIds.clear(); parkingLayerGroup.clearLayers(); fetchData(); };
