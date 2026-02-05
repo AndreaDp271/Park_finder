@@ -6,8 +6,8 @@
     <title>Smart Parking - Mappa Accessi</title>
     
     <!-- Icone per salvataggio su Desktop/Home Screen -->
-    <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/192/map-marker.png">
-    <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/48/map-marker.png">
+    <link rel="apple-touch-icon" href="https://img.icons8.com/fluency/100/parking.png">
+    <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/50/parking.png">
     <meta name="apple-mobile-web-app-title" content="Smart Parking">
     <meta name="application-name" content="Smart Parking">
 
@@ -46,7 +46,7 @@
             </div>
             <div class="hidden sm:block">
                 <h1 class="font-bold text-lg leading-none italic uppercase tracking-tight text-blue-700">Smart Parking</h1>
-                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Aree e Stalli</p>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Per Una Sosta Certa</p>
             </div>
         </div>
         
@@ -98,6 +98,13 @@
             <div class="loader w-3 h-3 border-2 border-slate-200 rounded-full"></div>
             <span id="statusText">Ricerca...</span>
         </div>
+
+        <!-- Pulsante Schermo Intero -->
+        <button id="fullscreenBtn" class="absolute bottom-28 right-6 z-[1000] bg-white text-slate-700 p-3 rounded-full shadow-xl border border-slate-200 hover:bg-slate-50 transition-all active:scale-95">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+        </button>
 
         <button id="gpsBtn" class="absolute bottom-10 right-6 z-[1000] bg-blue-600 text-white p-4 rounded-full shadow-2xl hover:bg-blue-700 transition-all active:scale-95">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -168,6 +175,7 @@
             
             setupCitySearch();
             setupGPS();
+            setupFullscreen(); // Inizializza pulsante fullscreen
             fetchData();
             
             if (window.innerWidth >= 768) {
@@ -192,6 +200,31 @@
             map.on('locationfound', (e) => {
                 L.circle(e.latlng, { radius: 10, color: '#3b82f6', fillOpacity: 0.5 }).addTo(map);
             });
+        }
+
+        function setupFullscreen() {
+            const btn = document.getElementById('fullscreenBtn');
+            if (!document.documentElement.requestFullscreen && !document.documentElement.webkitRequestFullscreen) {
+                // Nascondi se non supportato (opzionale, ma utile per compatibilità iOS vecchi)
+                // btn.style.display = 'none'; 
+                // Lo lasciamo visibile come richiesto, ma potrebbe non funzionare su alcuni iPhone senza PWA
+            }
+            
+            btn.onclick = () => {
+                if (!document.fullscreenElement) {
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen();
+                    } else if (document.documentElement.webkitRequestFullscreen) { /* Safari */
+                        document.documentElement.webkitRequestFullscreen();
+                    }
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) { /* Safari */
+                        document.webkitExitFullscreen();
+                    }
+                }
+            };
         }
 
         function setupCitySearch() {
