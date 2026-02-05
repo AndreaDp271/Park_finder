@@ -131,7 +131,7 @@
         crossorigin=""></script>
 
 <script>
-    // Inizializza mappa (centrata su Milano di default)
+    // Inizializza mappa (Milano di default)
     var map = L.map('map').setView([45.4642, 9.19], 15);
 
     // Base OSM
@@ -141,8 +141,8 @@
     }).addTo(map);
 
     // Layer gruppi
-    var parkingAreasLayer = L.layerGroup().addTo(map);      // amenity=parking
-    var parkingSpacesLayer = L.layerGroup().addTo(map);     // amenity=parking_space speciali
+    var parkingAreasLayer = L.layerGroup().addTo(map);      // amenity=parking (poligoni)
+    var parkingSpacesLayer = L.layerGroup().addTo(map);     // amenity=parking_space speciali (marker)
 
     // Controllo layer
     L.control.layers(null, {
@@ -156,53 +156,47 @@
         statusEl.textContent = msg || '';
     }
 
-    // Funzione helper: costruisci URL Google Maps per navigazione
+    // URL Google Maps semplice
     function buildGMapsUrl(lat, lon) {
-        // Url semplice con parametro q=lat,lon
         return 'https://www.google.com/maps?q=' + encodeURIComponent(lat + ',' + lon);
     }
 
-    // Funzione helper: costruisci URL iD editor
+    // URL iD editor su oggetto
     function buildIdUrl(osmType, osmId, lat, lon, zoom) {
         zoom = zoom || map.getZoom() || 18;
         var base = 'https://www.openstreetmap.org/edit?editor=id';
         var center = '#map=' + zoom + '/' + lat + '/' + lon;
         var sel = '';
         if (osmType && osmId) {
-            // osmType: 'node' | 'way' | 'relation'
             sel = '&' + osmType + '=' + osmId;
         }
         return base + sel + center;
     }
 
-    // Costruisci descrizione popup comune
-    function buildPopupContent(props, geom, osmMeta) {
-        var name = props.name || props.ref || '(senza nome)';
-        var operator = props.operator || '-';
-        var access = props.access || '-';
-        var fee = (props.fee === 'yes') ? 'a pagamento' :
-                  (props.fee === 'no') ? 'gratuito' :
-                  (props.fee || '-');
-        var condFee = props['fee:conditional'] || props['parking:condition'] || props['parking:condition:time_interval'] || '-';
-        var lat = geom.coordinates[1];
-        var lon = geom.coordinates[0];
+    function buildPopupContent(tags, lat, lon, osmMeta) {
+        var name = tags.name || tags.ref || '(senza nome)';
+        var operator = tags.operator || '-';
+        var access = tags.access || '-';
+        var fee = (tags.fee === 'yes') ? 'a pagamento' :
+                  (tags.fee === 'no') ? 'gratuito' :
+                  (tags.fee || '-');
+        var condFee = tags['fee:conditional'] || tags['parking:condition'] || tags['parking:condition:time_interval'] || '-';
 
         var gmapsUrl = buildGMapsUrl(lat, lon);
         var idUrl = buildIdUrl(osmMeta.type, osmMeta.id, lat, lon);
 
         var html = '';
         html += '<div class="popup-title">' + name + '</div>';
-
         html += '<div class="popup-section"><span class="label">Operatore:</span> ' + operator + '</div>';
         html += '<div class="popup-section"><span class="label">Accesso:</span> ' + access + '</div>';
         html += '<div class="popup-section"><span class="label">Costo:</span> ' + fee + '</div>';
         html += '<div class="popup-section"><span class="label">Costo / condizioni:</span> ' + condFee + '</div>';
 
-        if (props.capacity) {
-            html += '<div class="popup-section"><span class="label">Capacità:</span> ' + props.capacity + '</div>';
+        if (tags.capacity) {
+            html += '<div class="popup-section"><span class="label">Capacità:</span> ' + tags.capacity + '</div>';
         }
-        if (props.parking_space) {
-            html += '<div class="popup-section"><span class="label">Tipo posto:</span> ' + props.parking_space + '</div>';
+        if (tags.parking_space) {
+            html += '<div class="popup-section"><span class="label">Tipo posto:</span> ' + tags.parking_space + '</div>';
         }
 
         html += '<div class="popup-links">';
@@ -213,7 +207,7 @@
         return html;
     }
 
-    // Query Overpass per area corrente
+    // Query Overpass per area corrente (con geom)
     function fetchParking() {
         var bounds = map.getBounds();
         var s = bounds.getSouth();
@@ -223,9 +217,7 @@
 
         setStatus('Carico parcheggi in zona…');
 
-        // Overpass QL:
-        // 1) amenity=parking
-        // 2) amenity=parking_space con parking_space != normal
+        // out geom per ottenere geometria completa delle way/relation
         var query = `
             [out:json][timeout:25];
             (
@@ -237,9 +229,7 @@
               way["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](${s},${w},${n},${e});
               relation["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](${s},${w},${n},${e});
             );
-            out body;
-            >;
-            out skel qt;
+            out body geom;
         `;
 
         var url = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query);
@@ -257,102 +247,150 @@
             });
     }
 
-    // Rendering dati Overpass
+    // Rendering
     function renderParking(data) {
-        parkingAreasLayer.clearLayers();
-        parkingSpacesLayer.clearLayers();
+    parkingAreasLayer.clearLayers();
+    parkingSpacesLayer.clearLayers();
 
-        if (!data || !data.elements) return;
+    if (!data || !data.elements) return;
 
-        // Index nodi per costruire poligoni da way
-        var nodesIndex = {};
-        data.elements.forEach(function (el) {
-            if (el.type === 'node') {
-                nodesIndex[el.id] = el;
-            }
-        });
+    data.elements.forEach(function (el) {
+        var tags = el.tags || {};
+        if (!tags.amenity) return;
 
-        data.elements.forEach(function (el) {
-            var tags = el.tags || {};
-            if (!tags.amenity) return;
+        var osmMeta = { type: el.type, id: el.id };
 
-            // Costruisci geometria semplice per popup / marker
-            var geom = null;
+        // --- amenity=parking: aree / linee / nodi ---
+        if (tags.amenity === 'parking') {
+            if (el.geometry && el.geometry.length > 0) {
+                var latlngs = el.geometry.map(function (g) {
+                    return [g.lat, g.lon];
+                });
 
-            if (el.type === 'node') {
-                geom = {
-                    type: 'Point',
-                    coordinates: [el.lon, el.lat]
-                };
-            } else if (el.type === 'way' && el.nodes) {
-                var coords = el.nodes.map(function (nid) {
-                    var n = nodesIndex[nid];
-                    return n ? [n.lat, n.lon] : null;
-                }).filter(Boolean);
+                var first = latlngs[0];
+                var last = latlngs[latlngs.length - 1];
+                var isClosed = first[0] === last[0] && first[1] === last[1];
 
-                if (coords.length > 1) {
-                    // prendi il primo nodo come riferimento per popup
-                    geom = {
-                        type: 'Point',
-                        coordinates: [coords[0][1], coords[0][0]]
-                    };
+                var layer;
+                if (isClosed && latlngs.length > 2) {
+                    layer = L.polygon(latlngs, {
+                        color: '#1d4ed8',
+                        weight: 2,
+                        fillColor: '#60a5fa',
+                        fillOpacity: 0.4
+                    });
+                } else if (latlngs.length > 1) {
+                    layer = L.polyline(latlngs, {
+                        color: '#1d4ed8',
+                        weight: 2
+                    });
+                } else {
+                    // fallback a nodo singolo
+                    var lat = el.lat || (latlngs[0] && latlngs[0][0]);
+                    var lon = el.lon || (latlngs[0] && latlngs[0][1]);
+                    if (!lat || !lon) return;
+                    layer = L.circleMarker([lat, lon], {
+                        radius: 6,
+                        color: '#1d4ed8',
+                        weight: 2,
+                        fillColor: '#60a5fa',
+                        fillOpacity: 0.6
+                    });
                 }
-            } else if (el.type === 'relation' && el.members) {
-                // prendi il primo membro con ruolo outer o qualsiasi membro node/way
-                var center = null;
-                for (var i = 0; i < el.members.length; i++) {
-                    var m = el.members[i];
-                    if (m.type === 'node' && nodesIndex[m.ref]) {
-                        center = nodesIndex[m.ref];
-                        break;
-                    }
-                }
-                if (center) {
-                    geom = {
-                        type: 'Point',
-                        coordinates: [center.lon, center.lat]
-                    };
-                }
-            }
 
-            if (!geom) return;
+                var centerIdx = Math.floor(latlngs.length / 2);
+                var centerLat = latlngs[centerIdx][0];
+                var centerLon = latlngs[centerIdx][1];
+                var popupHtml = buildPopupContent(tags, centerLat, centerLon, osmMeta);
+                layer.bindPopup(popupHtml);
+                layer.addTo(parkingAreasLayer);
 
-            var osmMeta = { type: el.type, id: el.id };
-
-            // amenity=parking (layer intermedio)
-            if (tags.amenity === 'parking') {
-                var popupHtml = buildPopupContent(tags, geom, osmMeta);
-                var marker = L.circleMarker([geom.coordinates[1], geom.coordinates[0]], {
-                    radius: 7,
+            } else if (el.type === 'node') {
+                var latN = el.lat;
+                var lonN = el.lon;
+                var popupHtmlN = buildPopupContent(tags, latN, lonN, osmMeta);
+                var m = L.circleMarker([latN, lonN], {
+                    radius: 6,
                     color: '#1d4ed8',
                     weight: 2,
                     fillColor: '#60a5fa',
                     fillOpacity: 0.6
-                }).bindPopup(popupHtml);
-                marker.addTo(parkingAreasLayer);
+                }).bindPopup(popupHtmlN);
+                m.addTo(parkingAreasLayer);
             }
+        }
 
-            // amenity=parking_space (layer superiore), escludendo parking_space=normal
-            if (tags.amenity === 'parking_space') {
-                var psType = tags.parking_space;
-                if (psType && psType !== 'normal') {
-                    var popupHtml2 = buildPopupContent(tags, geom, osmMeta);
-                    var color = '#dc2626'; // rosso per posti speciali
-                    var fill = '#f97373';
-                    var marker2 = L.circleMarker([geom.coordinates[1], geom.coordinates[0]], {
-                        radius: 6,
-                        color: color,
+        // --- amenity=parking_space: aree sopra tutto, solo speciali (!= normal) ---
+        if (tags.amenity === 'parking_space') {
+            var psType = tags.parking_space;
+            if (!psType || psType === 'normal') return;
+
+            // Se ho geometria completa, provo a fare poligono
+            if (el.geometry && el.geometry.length > 0) {
+                var latlngsPs = el.geometry.map(function (g) {
+                    return [g.lat, g.lon];
+                });
+
+                var firstPs = latlngsPs[0];
+                var lastPs = latlngsPs[latlngsPs.length - 1];
+                var isClosedPs = firstPs[0] === lastPs[0] && firstPs[1] === lastPs[1];
+
+                var centerIdxPs = Math.floor(latlngsPs.length / 2);
+                var centerLatPs = latlngsPs[centerIdxPs][0];
+                var centerLonPs = latlngsPs[centerIdxPs][1];
+
+                var layerPs;
+                if (isClosedPs && latlngsPs.length > 2) {
+                    // area del singolo posto (in cima)
+                    layerPs = L.polygon(latlngsPs, {
+                        color: '#b91c1c',
                         weight: 2,
-                        fillColor: fill,
+                        fillColor: '#f97373',
                         fillOpacity: 0.7
-                    }).bindPopup(popupHtml2);
-                    marker2.addTo(parkingSpacesLayer);
+                    });
+                } else if (latlngsPs.length > 1) {
+                    // stallo come linea
+                    layerPs = L.polyline(latlngsPs, {
+                        color: '#b91c1c',
+                        weight: 3
+                    });
+                } else {
+                    // fallback a nodo marker
+                    var latPs = el.lat || centerLatPs;
+                    var lonPs = el.lon || centerLonPs;
+                    layerPs = L.circleMarker([latPs, lonPs], {
+                        radius: 6,
+                        color: '#b91c1c',
+                        weight: 2,
+                        fillColor: '#f97373',
+                        fillOpacity: 0.9
+                    });
                 }
-            }
-        });
-    }
 
-    // Ricarica quando l'utente smette di muovere la mappa
+                var popupHtmlPs = buildPopupContent(tags, centerLatPs, centerLonPs, osmMeta);
+                layerPs.bindPopup(popupHtmlPs);
+                layerPs.addTo(parkingSpacesLayer);
+
+            } else if (el.type === 'node') {
+                // nodo semplice
+                var latPsN = el.lat;
+                var lonPsN = el.lon;
+                var popupHtmlPsN = buildPopupContent(tags, latPsN, lonPsN, osmMeta);
+                var m2 = L.circleMarker([latPsN, lonPsN], {
+                    radius: 6,
+                    color: '#b91c1c',
+                    weight: 2,
+                    fillColor: '#f97373',
+                    fillOpacity: 0.9
+                }).bindPopup(popupHtmlPsN);
+                m2.addTo(parkingSpacesLayer);
+            }
+        }
+    });
+}
+
+
+    // Trigger su moveend
     var fetchTimeout = null;
     map.on('moveend', function () {
         if (fetchTimeout) clearTimeout(fetchTimeout);
@@ -362,7 +400,7 @@
     // Prima chiamata
     fetchParking();
 
-    // Ricerca per località con Nominatim
+    // Geocoding Nominatim
     function geocode(query) {
         if (!query) return;
         setStatus('Cerco "' + query + '"…');
