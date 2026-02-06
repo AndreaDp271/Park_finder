@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>ParkMap - OSM Parking</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
 
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -19,13 +20,16 @@
         :root {
             --primary: #3b82f6;
             --primary-dark: #2563eb;
+            --primary-light: #eff6ff;
             --bg-dark: #0f172a;
             --text-main: #1e293b;
             --text-light: #64748b;
             --radius: 12px;
-            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
             --glass: rgba(255, 255, 255, 0.95);
-            --danger: #ef4444; /* Colore per i divieti */
+            --danger: #ef4444;
         }
 
         html, body {
@@ -34,7 +38,8 @@
             padding: 0;
             overflow: hidden;
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: #f1f5f9;
+            background: #f8fafc;
+            -webkit-tap-highlight-color: transparent;
         }
 
         #map {
@@ -46,326 +51,372 @@
             z-index: 1;
         }
 
+        /* --- UI Overlay Container --- */
         #topbar {
             position: fixed;
-            top: 16px;
+            top: 12px;
             left: 50%;
             transform: translateX(-50%);
-            width: 95%;
-            max-width: 800px;
-            height: 56px;
-            background: var(--glass);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            border-radius: 16px;
+            width: calc(100% - 24px);
+            max-width: 600px;
+            z-index: 1000;
             display: flex;
             align-items: center;
-            padding: 0 10px;
             gap: 10px;
-            z-index: 1000;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            pointer-events: none; /* Let clicks pass through gaps */
         }
 
-        #title {
-            font-weight: 800;
-            color: var(--bg-dark);
-            margin: 0 8px;
-            white-space: nowrap;
-            letter-spacing: -0.8px;
+        /* Elementi interattivi nel topbar */
+        #topbar > * {
+            pointer-events: auto;
+            box-shadow: var(--shadow-md);
+        }
+
+        /* Logo / Title Badge */
+        #titleBadge {
+            background: var(--bg-dark);
+            color: white;
+            height: 48px;
+            padding: 0 16px;
+            border-radius: var(--radius);
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 18px;
+            font-weight: 700;
+            font-size: 16px;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
-        #title i { color: var(--primary); }
+        #titleBadge i { color: var(--primary); width: 20px; height: 20px; }
 
+        /* Search Container */
         #searchBox {
             flex: 1;
+            background: var(--glass);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            height: 48px;
+            border-radius: var(--radius);
             display: flex;
             align-items: center;
-            background: #f1f5f9;
-            border-radius: 10px;
-            padding-right: 4px;
-            border: 1px solid #e2e8f0;
-            transition: all 0.2s ease;
+            padding: 0 4px 0 16px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         #searchBox:focus-within {
-            border-color: var(--primary);
-            background: #fff;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            box-shadow: var(--shadow-lg), 0 0 0 2px var(--primary);
+            transform: translateY(-1px);
         }
 
         #searchInput {
             flex: 1;
-            padding: 10px 12px;
             border: none;
             background: transparent;
-            font-size: 14px;
-            outline: none;
+            font-family: inherit;
+            font-size: 15px;
             color: var(--text-main);
+            outline: none;
+            min-width: 0; /* Prevent overflow */
+            padding: 0;
         }
+        #searchInput::placeholder { color: #94a3b8; }
 
-        button {
-            padding: 8px 12px;
-            border-radius: 10px;
+        /* Action Buttons (GPS, Refresh, Search) */
+        .icon-btn {
+            height: 40px;
+            width: 40px;
             border: none;
-            font-size: 14px;
-            font-weight: 600;
+            border-radius: 10px;
             cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            color: var(--text-main);
+            background: white;
+            padding: 0;
+            flex-shrink: 0;
         }
+        
+        .icon-btn:active { transform: scale(0.92); }
+        .icon-btn:hover { background: #f1f5f9; color: var(--primary); }
 
-        button:active { transform: scale(0.95); }
-
+        /* Search Button inside the input */
         #searchBtn {
             background: var(--primary);
             color: white;
-            padding: 8px 16px;
+            height: 40px;
+            padding: 0 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 8px;
         }
         #searchBtn:hover { background: var(--primary-dark); }
+        #searchBtn:active { transform: scale(0.95); }
 
-        #gpsBtn, #refreshBtn {
-            background: #fff;
+        /* External Control Buttons (GPS, Refresh) */
+        .control-group {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .control-btn {
+            height: 48px;
+            width: 48px;
+            background: var(--glass);
+            backdrop-filter: blur(8px);
+            border: none;
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: var(--text-main);
-            border: 1px solid #e2e8f0;
-            min-width: 42px;
-            height: 42px;
-            padding: 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
-        #gpsBtn:hover, #refreshBtn:hover {
-            background: #f8fafc;
-            border-color: var(--primary);
-            color: var(--primary);
-        }
+        .control-btn:hover { color: var(--primary); background: white; transform: translateY(-1px); }
+        .control-btn:active { transform: translateY(0) scale(0.95); }
 
+        /* Status Toast */
         #status {
             position: fixed;
-            bottom: 24px;
+            bottom: 30px;
             left: 50%;
-            transform: translateX(-50%);
-            background: var(--bg-dark);
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(4px);
             color: white;
-            padding: 10px 20px;
-            border-radius: 24px;
-            font-size: 13px;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
             font-weight: 500;
             z-index: 2000;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
             pointer-events: none;
             opacity: 0;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             display: flex;
             align-items: center;
             gap: 8px;
+            white-space: nowrap;
         }
-        #status:not(:empty) { opacity: 1; bottom: 32px; }
+        #status:not(:empty) { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* Legend Panel & Toggle */
+        #toggleLegend {
+            position: fixed;
+            bottom: 24px;
+            right: 20px;
+            z-index: 1001;
+            background: white;
+            color: var(--text-main);
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            box-shadow: var(--shadow-lg);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        #toggleLegend:hover { transform: scale(1.05); color: var(--primary); }
+        #toggleLegend:active { transform: scale(0.95); }
 
         #legendPanel {
             position: fixed;
-            bottom: 30px;
+            bottom: 90px;
             right: 20px;
-            width: 290px;
-            max-height: 70vh;
+            width: 280px;
+            max-width: calc(100% - 40px);
+            max-height: 60vh;
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);
+            border-radius: 24px;
+            box-shadow: var(--shadow-lg);
             z-index: 1000;
             overflow-y: auto;
-            border: 1px solid #e2e8f0;
             display: none;
-            animation: slideIn 0.3s ease-out;
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        @keyframes slideIn {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        #toggleLegend {
-            position: fixed;
-            bottom: 30px;
-            right: 20px;
-            z-index: 1001;
-            background: var(--bg-dark);
-            color: white;
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2);
-            border: 2px solid rgba(255,255,255,0.1);
-        }
-        #toggleLegend:hover { background: #1e293b; transform: translateY(-2px); }
-
+        /* --- Preserved Popup & Legend Styling (Cleaned up) --- */
         .legend-header {
-            padding: 20px;
-            background: var(--bg-dark);
-            color: white;
+            padding: 16px 20px;
+            border-bottom: 1px solid #f1f5f9;
             font-weight: 700;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            font-size: 16px;
+            color: var(--bg-dark);
+            position: sticky;
+            top: 0;
+            background: white;
         }
-
         .legend-section { padding: 16px 20px; }
         .legend-section-title {
             font-size: 11px;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.08em;
             color: var(--text-light);
-            margin-bottom: 14px;
+            margin-bottom: 12px;
             font-weight: 800;
         }
-
         .legend-item {
             display: flex;
             align-items: center;
             margin-bottom: 10px;
-            font-size: 13.5px;
+            font-size: 14px;
             font-weight: 500;
             color: var(--text-main);
         }
-
         .legend-color {
-            width: 16px;
-            height: 16px;
-            border-radius: 5px;
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
             margin-right: 12px;
-            border: 1.5px solid rgba(0,0,0,0.05);
+            flex-shrink: 0;
         }
 
-        /* Popups */
+        /* Leaflet Popup Restyling */
         .leaflet-popup-content-wrapper {
-            border-radius: 18px;
-            box-shadow: 0 15px 30px -5px rgba(0,0,0,0.15);
-            padding: 2px;
+            border-radius: 20px;
+            box-shadow: var(--shadow-lg);
+            padding: 0;
+            overflow: hidden;
         }
         .leaflet-popup-content {
-            margin: 12px 16px;
-            min-width: 220px;
+            margin: 16px 20px;
+            min-width: 240px !important;
         }
+        .leaflet-container a.leaflet-popup-close-button {
+            top: 12px;
+            right: 12px;
+            color: #94a3b8;
+            font-size: 20px;
+        }
+        
+        /* Popup Internal Elements (generated by JS) */
         .popup-header-container {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 12px;
-            border-bottom: 2px solid #f1f5f9;
-            padding-bottom: 10px;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f1f5f9;
         }
         .popup-icon-box {
-            background: var(--primary);
-            color: white;
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
+            background: var(--primary-light);
+            color: var(--primary);
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: 20px;
             flex-shrink: 0;
         }
         .popup-title {
-            font-size: 15px;
-            font-weight: 800;
-            color: var(--bg-dark);
-            line-height: 1.2;
-        }
-        .popup-section {
-            margin-bottom: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-        .label {
-            color: var(--text-light);
+            font-size: 16px;
             font-weight: 700;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            color: var(--bg-dark);
+            line-height: 1.3;
         }
-        .val { 
-            color: var(--text-main); 
-            font-weight: 600; 
-            font-size: 13.5px;
-            line-height: 1.4;
-        }
+        .popup-section { margin-bottom: 12px; display: flex; flex-direction: column; }
+        .label { color: var(--text-light); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+        .val { color: var(--text-main); font-weight: 500; font-size: 14px; line-height: 1.5; }
         .badge-note {
-            background: #eff6ff;
-            color: #1d4ed8;
-            font-size: 11px;
-            padding: 4px 8px;
-            border-radius: 6px;
-            margin-top: 4px;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            font-size: 12px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            margin-top: 6px;
             font-weight: 600;
-            border: 1px solid #dbeafe;
+            display: inline-block;
         }
-        /* Nuovo stile per divieti */
-        .badge-note.danger {
-            background: #fef2f2;
-            color: var(--danger);
-            border-color: #fee2e2;
-        }
+        .badge-note.danger { background: #fef2f2; color: var(--danger); }
         
-        .popup-links {
-            margin-top: 14px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
+        .popup-links { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
         .popup-links a {
             text-align: center;
-            padding: 10px 4px;
+            padding: 10px;
             background: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 10px;
             text-decoration: none;
-            font-weight: 700;
-            font-size: 11px;
+            font-weight: 600;
+            font-size: 12px;
             color: var(--text-main);
             transition: all 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 0.02em;
         }
-        .popup-links a:hover { 
-            background: var(--primary); 
-            color: white; 
-            border-color: var(--primary);
-            transform: translateY(-1px);
-        }
+        .popup-links a:hover { background: var(--text-main); color: white; border-color: var(--text-main); }
 
+        /* Mobile Responsive Adjustments */
         @media (max-width: 600px) {
-            #title span { display: none; }
-            #topbar { top: 10px; height: 52px; width: 92%; }
-            #legendPanel { 
-                width: calc(100% - 40px);
-                right: 20px;
-                left: 20px;
-                bottom: 90px;
+            #topbar {
+                top: 10px;
+                width: calc(100% - 20px);
+                gap: 8px;
             }
+            
+            /* Hide Title Text on Mobile to prioritize Search */
+            #titleBadge span { display: none; }
+            #titleBadge { padding: 0; width: 48px; justify-content: center; }
+            
+            /* Hide 'Cerca' text, keep icon */
+            #searchBtn span.text { display: none; }
+            #searchBtn { padding: 0; width: 36px; height: 36px; justify-content: center; margin-left: 4px; }
+            
+            /* Adjust padding */
+            #searchBox { padding-left: 12px; padding-right: 6px; }
+            
+            #legendPanel { left: 16px; right: 16px; width: auto; bottom: 90px; }
         }
     </style>
 </head>
 <body>
 
 <div id="topbar">
-    <div id="title"><i data-lucide="map-pin"></i> <span>ParkMap</span></div>
+    <div id="titleBadge" title="ParkMap"><i data-lucide="map-pin"></i> <span>ParkMap</span></div>
+    
     <div id="searchBox">
-        <input id="searchInput" type="text" placeholder="Cerca località...">
-        <button id="searchBtn"><i data-lucide="search"></i><span class="mobile-hide">Cerca</span></button>
+        <input id="searchInput" type="text" placeholder="Cerca località..." aria-label="Cerca località">
+        <button id="searchBtn">
+            <i data-lucide="search" style="width: 18px; height: 18px;"></i>
+            <span class="text">Cerca</span>
+        </button>
     </div>
-    <button id="gpsBtn" title="Trovami"><i data-lucide="locate-fixed"></i></button>
-    <button id="refreshBtn" title="Aggiorna"><i data-lucide="refresh-cw"></i></button>
+
+    <div class="control-group">
+        <button id="gpsBtn" class="control-btn" title="La mia posizione">
+            <i data-lucide="locate-fixed"></i>
+        </button>
+        <button id="refreshBtn" class="control-btn" title="Aggiorna dati">
+            <i data-lucide="refresh-cw"></i>
+        </button>
+    </div>
 </div>
 
 <div id="map"></div>
 <div id="status"></div>
 
-<button id="toggleLegend" onclick="toggleLegend()"><i data-lucide="info"></i></button>
+<button id="toggleLegend" onclick="toggleLegend()" title="Legenda">
+    <i data-lucide="layers"></i>
+</button>
 
 <div id="legendPanel">
     <div class="legend-header">
@@ -374,18 +425,18 @@
     </div>
     <div class="legend-section">
         <div class="legend-section-title">Aree Parcheggio</div>
-        <div class="legend-item"><div class="legend-color" style="background: #60a5fa; border-color: #1d4ed8;"></div>Pagamento</div>
-        <div class="legend-item"><div class="legend-color" style="background: #4ade80; border-color: #15803d;"></div>Gratuito</div>
-        <div class="legend-item"><div class="legend-color" style="background: #a78bfa; border-color: #7c3aed;"></div>Disco orario</div>
-        <div class="legend-item"><div class="legend-color" style="background: #fb923c; border-color: #ea580c;"></div>Limitato / Privato / Permit</div>
-        <div class="legend-item"><div class="legend-color" style="background: #94a3b8; border-color: #64748b;"></div>Non specificato</div>
+        <div class="legend-item"><div class="legend-color" style="background: #60a5fa; border: 1px solid #1d4ed8;"></div>Pagamento</div>
+        <div class="legend-item"><div class="legend-color" style="background: #4ade80; border: 1px solid #15803d;"></div>Gratuito</div>
+        <div class="legend-item"><div class="legend-color" style="background: #a78bfa; border: 1px solid #7c3aed;"></div>Disco orario</div>
+        <div class="legend-item"><div class="legend-color" style="background: #fb923c; border: 1px solid #ea580c;"></div>Limitato / Privato</div>
+        <div class="legend-item"><div class="legend-color" style="background: #94a3b8; border: 1px solid #64748b;"></div>Non specificato</div>
     </div>
     <div class="legend-section" style="background: #f8fafc">
         <div class="legend-section-title">Posti Speciali</div>
-        <div class="legend-item"><div class="legend-color" style="background: #fde047; border-color: #eab308;"></div>Disabili</div>
-        <div class="legend-item"><div class="legend-color" style="background: #f0f9ff; border-color: #0284c7;"></div>Ricarica EV</div>
-        <div class="legend-item"><div class="legend-color" style="background: #fed7aa; border-color: #d97706;"></div>Carico/Scarico</div>
-        <div class="legend-item"><div class="legend-color" style="background: #fbcfe8; border-color: #db2777;"></div>Famiglie / Rosa</div>
+        <div class="legend-item"><div class="legend-color" style="background: #fde047; border: 1px solid #eab308;"></div>Disabili</div>
+        <div class="legend-item"><div class="legend-color" style="background: #f0f9ff; border: 1px solid #0284c7;"></div>Ricarica EV</div>
+        <div class="legend-item"><div class="legend-color" style="background: #fed7aa; border: 1px solid #d97706;"></div>Carico/Scarico</div>
+        <div class="legend-item"><div class="legend-color" style="background: #fbcfe8; border: 1px solid #db2777;"></div>Famiglie / Rosa</div>
     </div>
 </div>
 
@@ -403,6 +454,7 @@
     }
 
     var map = L.map('map', { zoomControl: false }).setView([45.4642, 9.19], 15);
+    // Spostato zoom control in alto a sinistra (o in basso a sinistra) ma con un po' di margine per non coprire UI
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -418,6 +470,7 @@
     var parkingAreasLayer = L.layerGroup().addTo(map);
     var parkingSpacesLayer = L.layerGroup().addTo(map);
 
+    // Controllo Layer (Standard Leaflet, lo stile è gestito dalla lib)
     L.control.layers(null, {
         "Aree parcheggio": parkingAreasLayer,
         "Posti speciali": parkingSpacesLayer
@@ -594,7 +647,7 @@
                     layer.bindPopup(buildPopupContent(tags, pts[0][0], pts[0][1], osmMeta)).addTo(parkingAreasLayer);
                 } else if (el.lat) {
                     L.circleMarker([el.lat, el.lon], { radius: 7, color, fillColor, fillOpacity: 0.7, pane: 'parkingAreasPane' })
-                     .bindPopup(buildPopupContent(tags, el.lat, el.lon, osmMeta)).addTo(parkingAreasLayer);
+                      .bindPopup(buildPopupContent(tags, el.lat, el.lon, osmMeta)).addTo(parkingAreasLayer);
                 }
             }
             if (tags.amenity === 'parking_space' && tags.parking_space !== 'normal') {
@@ -608,10 +661,10 @@
                 if (el.geometry) {
                     var pts = el.geometry.map(g => [g.lat, g.lon]);
                     L.polygon(pts, { color: cPs, weight: 2, fillColor: fPs, fillOpacity: 0.8, pane: 'parkingSpacesPane' })
-                     .bindPopup(buildPopupContent(tags, pts[0][0], pts[0][1], osmMeta)).addTo(parkingSpacesLayer);
+                      .bindPopup(buildPopupContent(tags, pts[0][0], pts[0][1], osmMeta)).addTo(parkingSpacesLayer);
                 } else if (el.lat) {
                     L.circleMarker([el.lat, el.lon], { radius: 8, color: cPs, fillColor: fPs, fillOpacity: 0.9, pane: 'parkingSpacesPane' })
-                     .bindPopup(buildPopupContent(tags, el.lat, el.lon, osmMeta)).addTo(parkingSpacesLayer);
+                      .bindPopup(buildPopupContent(tags, el.lat, el.lon, osmMeta)).addTo(parkingSpacesLayer);
                 }
             }
         });
