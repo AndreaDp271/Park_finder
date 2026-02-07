@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-	
+
     <meta charset="UTF-8">
     <title>ParkMap - OSM Parking</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -10,7 +10,6 @@
     <link rel="icon" type="image/svg+xml" sizes="any"
       href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Crect%20width%3D%2724%27%20height%3D%2724%27%20fill%3D%27%23ffffff%27/%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%233b82f6%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Crect%20x%3D%273%27%20y%3D%273%27%20width%3D%2718%27%20height%3D%2718%27%20rx%3D%272%27/%3E%3Cpath%20d%3D%27M9%2017V7h4a3%203%200%200%201%200%206H9%27/%3E%3C/g%3E%3C/svg%3E">
 
-	
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
@@ -207,6 +206,28 @@
         }
         #status:not(:empty) { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+        /* Pulsante schermo intero (sopra al pulsante info) */
+        #fullscreenBtn {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            z-index: 1001;
+            background: white;
+            color: var(--text-main);
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            box-shadow: var(--shadow-lg);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        #fullscreenBtn:hover { transform: scale(1.05); color: var(--primary); }
+        #fullscreenBtn:active { transform: scale(0.95); }
+
         #toggleLegend {
             position: fixed;
             bottom: 24px;
@@ -230,7 +251,7 @@
 
         #legendPanel {
             position: fixed;
-            bottom: 90px;
+            bottom: 156px; /* sopra entrambi i pulsanti (fullscreen + info) */
             right: 20px;
             width: 280px;
             max-width: calc(100% - 40px);
@@ -349,7 +370,7 @@
             #searchBtn span.text { display: none; }
             #searchBtn { padding: 0; width: 36px; height: 36px; justify-content: center; margin-left: 4px; }
             #searchBox { padding-left: 12px; padding-right: 6px; }
-            #legendPanel { left: 16px; right: 16px; width: auto; bottom: 90px; }
+            #legendPanel { left: 16px; right: 16px; width: auto; bottom: 156px; }
         }
     </style>
 </head>
@@ -379,6 +400,11 @@
 
 <div id="map"></div>
 <div id="status"></div>
+
+<!-- NUOVO: pulsante schermo intero (sopra info) -->
+<button id="fullscreenBtn" title="Schermo intero">
+    <i data-lucide="maximize-2"></i>
+</button>
 
 <button id="toggleLegend" onclick="toggleLegend()" title="Legenda">
     <i data-lucide="info"></i>
@@ -733,6 +759,43 @@
     };
 
     document.getElementById('refreshBtn').onclick = fetchParking;
+
+    /* ===== Schermo intero ===== */
+    function updateFullscreenIcon() {
+        const btn = document.getElementById('fullscreenBtn');
+        const isFs = !!document.fullscreenElement;
+
+        btn.innerHTML = isFs
+            ? '<i data-lucide="minimize-2"></i>'
+            : '<i data-lucide="maximize-2"></i>';
+
+        lucide.createIcons({ root: btn });
+    }
+
+    function toggleFullscreen() {
+        const root = document.documentElement;
+
+        if (!document.fullscreenElement) {
+            if (!root.requestFullscreen) {
+                setStatus('Schermo intero non supportato');
+                return;
+            }
+            root.requestFullscreen()
+                .catch(() => setStatus('Impossibile attivare schermo intero'));
+        } else {
+            if (document.exitFullscreen) document.exitFullscreen();
+        }
+    }
+
+    document.getElementById('fullscreenBtn').onclick = toggleFullscreen;
+
+    document.addEventListener('fullscreenchange', () => {
+        updateFullscreenIcon();
+        setTimeout(() => map.invalidateSize(), 200);
+    });
+
+    updateFullscreenIcon();
 </script>
 </body>
 </html>
+
