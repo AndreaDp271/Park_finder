@@ -416,7 +416,7 @@
         <i data-lucide="x" style="cursor:pointer; width: 20px;" onclick="toggleLegend()"></i>
     </div>
     <div class="legend-section">
-        <div class="legend-section-title">Aree Parcheggio</div>
+        <div class="legend-section-title">Aree Sosta</div>
         <div class="legend-item"><div class="legend-color" style="background: #60a5fa; border: 1px solid #1d4ed8;"></div>Pagamento</div>
         <div class="legend-item"><div class="legend-color" style="background: #4ade80; border: 1px solid #15803d;"></div>Gratuito</div>
         <div class="legend-item"><div class="legend-color" style="background: #a78bfa; border: 1px solid #7c3aed;"></div>Disco orario</div>
@@ -424,11 +424,11 @@
         <div class="legend-item"><div class="legend-color" style="background: #94a3b8; border: 1px solid #64748b;"></div>Non specificato</div>
     </div>
     <div class="legend-section" style="background: #f8fafc">
-        <div class="legend-section-title">Posti Speciali</div>
+        <div class="legend-section-title">Stalli Speciali</div>
         <div class="legend-item"><div class="legend-color" style="background: #fde047; border: 1px solid #eab308;"></div>Disabili</div>
         <div class="legend-item"><div class="legend-color" style="background: #f0f9ff; border: 1px solid #0284c7;"></div>Ricarica EV</div>
         <div class="legend-item"><div class="legend-color" style="background: #fed7aa; border: 1px solid #d97706;"></div>Carico/Scarico</div>
-        <div class="legend-item"><div class="legend-color" style="background: #fbcfe8; border: 1px solid #db2777;"></div>Famiglie / Rosa</div>
+        <div class="legend-item"><div class="legend-color" style="background: #fbcfe8; border: 1px solid #db2777;"></div>Famiglie/Rosa</div>
     </div>
 </div>
 
@@ -497,13 +497,14 @@
         if (!str) return '';
         return str
             .replace(/Mo/g, 'Lun').replace(/Tu/g, 'Mar').replace(/We/g, 'Mer')
-            .replace(/Th/g, 'Gio').replace(/Fr/g, 'Ven').replace(/Sa/g, 'Sab')
+            .replace(/Th/g, 'Gio').replace(/Fr/g, 'Ven')
+            .replace(/Sa/g, 'Sab')
             .replace(/Su/g, 'Dom').replace(/PH/g, 'Festivi')
             .replace(/off/g, 'chiuso').replace(/24\\\/7/g, 'sempre aperto');
     }
 
     function buildPopupContent(tags, lat, lon, osmMeta) {
-        var name = tags.name || tags.ref || (tags.amenity === 'parking_space' ? 'Posto Singolo' : 'Area Parcheggio');
+        var name = tags.name || tags.ref || (tags.amenity === 'parking_space' ? 'Stallo speciale' : 'Area di Sosta');
         var operator = tags.operator || '';
 
         var accessRaw = tags.access || '';
@@ -514,7 +515,7 @@
         else if (accessRaw === 'customers') access = 'Solo clienti';
         else if (accessRaw === 'permissive') access = 'Autorizzato';
         else if (accessRaw === 'destination') access = 'Solo residenti';
-        else if (accessRaw === 'permit' || vehicleAccess === 'permit') access = 'Solo con permesso (Permit)';
+        else if (accessRaw === 'permit' || vehicleAccess === 'permit') access = 'Solo con permesso';
         else if (accessRaw === 'no') access = 'Vietato';
 
         var accessNoteHtml = '';
@@ -530,18 +531,31 @@
         var feeRaw = tags.fee || '';
         var feeConditional = tags['fee:conditional'] || '';
         var fee = 'Non specificato';
+        var feeNoteHtml = '';
 
         if (feeRaw === 'no') fee = 'Gratuito';
-        else if (feeRaw === 'yes' || feeRaw === 'conditional') fee = 'A pagamento';
+        else if (feeRaw === 'yes') fee = 'A pagamento';
+        else if (feeRaw === 'conditional') fee = 'Condizionato:';
 
         if (feeConditional) {
-            var feeCondText = feeConditional.split(';').map(p => {
+            fee = (fee === 'Non specificato') ? 'Condizionato:' : (fee);
+
+            feeNoteHtml = feeConditional.split(';').map(p => {
                 p = p.trim();
-                if (p.includes('yes @')) return translateOsmTime(p.split('@')[1]);
-                if (p.includes('no @')) return 'Gratis ' + translateOsmTime(p.split('@')[1]);
-                return translateOsmTime(p);
-            }).join(', ');
-            fee = 'Pagamento solo ' + feeCondText;
+
+                let isFree = p.includes('no @');
+                let label = '';
+
+                if (p.includes('yes @')) {
+                    label = 'a pagamento negli orari: ' + translateOsmTime(((p.split('@')[1] || '')).trim());
+                } else if (isFree) {
+                    label = 'gratis negli orari: ' + translateOsmTime(((p.split('@')[1] || '')).trim());
+                } else {
+                    label = translateOsmTime(p);
+                }
+
+                return `<div class="badge-note ${isFree ? 'danger' : ''}">${escapeHtml(label)}</div>`;
+            }).join('');
         }
 
         var notes = [];
@@ -577,7 +591,7 @@
 
         <div class="popup-section">
             <span class="label">Costo</span>
-            <span class="val">${fee}</span>
+            <span class="val">${fee} ${feeNoteHtml}</span>
         </div>
 
         ${notes.length > 0 ? `
@@ -593,8 +607,8 @@
         </div>` : ''}
 
         <div class="popup-links">
-            <a href="${buildGMapsUrl(lat, lon)}" target="_blank">Navigatore</a>
-            <a href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank">Dati OSM</a>
+            <a href="${buildGMapsUrl(lat, lon)}" target="_blank">Vai a</a>
+            <a href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank">Modifica</a>
         </div>`;
 
         return html;
@@ -798,4 +812,3 @@
 </script>
 </body>
 </html>
-
