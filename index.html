@@ -416,11 +416,11 @@
         <i data-lucide="x" style="cursor:pointer; width: 20px;" onclick="toggleLegend()"></i>
     </div>
     <div class="legend-section">
-        <div class="legend-section-title">Aree Sosta</div>
+        <div class="legend-section-title">Aree di Sosta</div>
         <div class="legend-item"><div class="legend-color" style="background: #60a5fa; border: 1px solid #1d4ed8;"></div>Pagamento</div>
         <div class="legend-item"><div class="legend-color" style="background: #4ade80; border: 1px solid #15803d;"></div>Gratuito</div>
         <div class="legend-item"><div class="legend-color" style="background: #a78bfa; border: 1px solid #7c3aed;"></div>Disco orario</div>
-        <div class="legend-item"><div class="legend-color" style="background: #fb923c; border: 1px solid #ea580c;"></div>Limitato / Privato</div>
+        <div class="legend-item"><div class="legend-color" style="background: #fb923c; border: 1px solid #ea580c;"></div>Limitato/Privato</div>
         <div class="legend-item"><div class="legend-color" style="background: #94a3b8; border: 1px solid #64748b;"></div>Non specificato</div>
     </div>
     <div class="legend-section" style="background: #f8fafc">
@@ -462,8 +462,8 @@
     var parkingSpacesLayer = L.layerGroup().addTo(map);
 
     L.control.layers(null, {
-        "Aree parcheggio": parkingAreasLayer,
-        "Posti speciali": parkingSpacesLayer
+        "Aree di sosta": parkingAreasLayer,
+        "Stalli speciali": parkingSpacesLayer
     }, { collapsed: true, position: 'bottomleft' }).addTo(map);
 
     var statusEl = document.getElementById('status');
