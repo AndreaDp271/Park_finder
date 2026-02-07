@@ -136,7 +136,6 @@
         #searchBtn:hover { background: var(--primary-dark); }
         #searchBtn:active { transform: scale(0.95); }
 
-        /* Dropdown risultati */
         #searchResults{
             position: absolute;
             left: 0;
@@ -377,7 +376,7 @@
 <div id="status"></div>
 
 <button id="toggleLegend" onclick="toggleLegend()" title="Legenda">
-    <i data-lucide="layers"></i>
+    <i data-lucide="info"></i>
 </button>
 
 <div id="legendPanel">
@@ -680,7 +679,6 @@
         showSearchResults([]);
         setStatus('Cerco località...');
 
-        // Parametri ufficiali: countrycodes, addressdetails, limit [web:1]
         const url =
             'https://nominatim.openstreetmap.org/search?format=json' +
             '&addressdetails=1' +
@@ -693,7 +691,6 @@
             .then(results => {
                 if (!results || !results.length) { setStatus('Nessun risultato'); return; }
 
-                // Escludi solo aree “macro”: nazione/regione/provincia
                 const blocked = new Set(['country', 'state', 'county']);
 
                 const filtered = results.filter(r => {
@@ -715,7 +712,6 @@
         if (e.key === 'Enter') geocode(e.target.value.trim());
     };
 
-    // Chiudi dropdown cliccando fuori
     document.addEventListener('click', (e) => {
         const box = document.getElementById('searchResults');
         const sb = document.getElementById('searchBox');
