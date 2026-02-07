@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#ffffff">
 
+    <!-- FAVICON (schede Chrome) - tutto inline nello stesso file -->
+    <!-- SVG Lucide "square-parking" (semplificato), color #3b82f6 -->
+    <link rel="icon" type="image/svg+xml"
+          href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27%233b82f6%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Crect%20x%3D%273%27%20y%3D%273%27%20width%3D%2718%27%20height%3D%2718%27%20rx%3D%272%27/%3E%3Cpath%20d%3D%27M9%2017V7h4a3%203%200%200%201%200%206H9%27/%3E%3C/svg%3E">
+
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
@@ -351,7 +356,7 @@
 <body>
 
 <div id="topbar">
-    <div id="titleBadge" title="ParkMap"><i data-lucide="map-pin"></i> <span>ParkMap</span></div>
+    <div id="titleBadge" title="ParkMap"><i data-lucide="square-parking"></i> <span>ParkMap</span></div>
 
     <div id="searchBox">
         <input id="searchInput" type="text" placeholder="Cerca località..." aria-label="Cerca località">
@@ -468,7 +473,7 @@
             .replace(/Mo/g, 'Lun').replace(/Tu/g, 'Mar').replace(/We/g, 'Mer')
             .replace(/Th/g, 'Gio').replace(/Fr/g, 'Ven').replace(/Sa/g, 'Sab')
             .replace(/Su/g, 'Dom').replace(/PH/g, 'Festivi')
-            .replace(/off/g, 'chiuso').replace(/24\/7/g, 'sempre aperto');
+            .replace(/off/g, 'chiuso').replace(/24\\\/7/g, 'sempre aperto');
     }
 
     function buildPopupContent(tags, lat, lon, osmMeta) {
