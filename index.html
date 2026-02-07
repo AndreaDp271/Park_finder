@@ -449,9 +449,9 @@
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 20,
-        attribution: '&copy; OpenStreetMap'
-    }).addTo(map);
+		maxZoom: 20,
+		attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
+	}).addTo(map);
 
     map.createPane('parkingAreasPane');
     map.getPane('parkingAreasPane').style.zIndex = 410;
