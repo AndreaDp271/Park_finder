@@ -335,6 +335,7 @@
       margin-bottom:2px;
     }
     .val{ color:var(--text-main); font-weight:500; font-size:14px; line-height:1.5; }
+
     .badge-note{
       background:var(--primary-light);
       color:var(--primary-dark);
@@ -346,6 +347,11 @@
       display:inline-block;
     }
     .badge-note.danger{ background:#fef2f2; color:var(--danger); }
+    .badge-note.time{
+      background:#f3e8ff;
+      color:#6d28d9;
+      border:1px solid #7c3aed;
+    }
 
     .popup-links{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
     .popup-links a{
@@ -515,7 +521,50 @@
         .replace(/Th/g, 'Gio').replace(/Fr/g, 'Ven')
         .replace(/Sa/g, 'Sab')
         .replace(/Su/g, 'Dom').replace(/PH/g, 'Festivi')
-        .replace(/off/g, 'chiuso').replace(/24\\\/7/g, 'sempre aperto');
+        .replace(/off/g, 'chiuso').replace(/24\/7/g, 'sempre aperto');
+    }
+
+    function maxstayValueToItalian(v) {
+      const raw = String(v || '').trim();
+      const s = raw.toLowerCase();
+
+      if (!raw) return '';
+      if (['no', 'none', 'unlimited'].includes(s)) return 'senza limite';
+
+      const m = s.match(/^(\d+(?:[.,]\d+)?)\s*(hour|hours|minute|minutes|day|days|week|weeks|month|months|year|years)$/);
+      if (!m) return raw;
+
+      const numStr = m[1];
+      const num = parseFloat(numStr.replace(',', '.'));
+      const one = Math.abs(num - 1) < 1e-9;
+      const unit = m[2];
+
+      if (unit === 'hour' || unit === 'hours') return one ? '1 ora' : `${numStr} ore`;
+      if (unit === 'minute' || unit === 'minutes') return one ? '1 minuto' : `${numStr} minuti`;
+      if (unit === 'day' || unit === 'days') return one ? '1 giorno' : `${numStr} giorni`;
+      if (unit === 'week' || unit === 'weeks') return one ? '1 settimana' : `${numStr} settimane`;
+      if (unit === 'month' || unit === 'months') return one ? '1 mese' : `${numStr} mesi`;
+      if (unit === 'year' || unit === 'years') return one ? '1 anno' : `${numStr} anni`;
+
+      return raw;
+    }
+
+    function formatMaxstayConditionalItalian(str) {
+      return String(str || '')
+        .split(';')
+        .map(x => x.trim())
+        .filter(Boolean)
+        .map(rule => {
+          let m = rule.match(/^(.+?)\s*@\s*\((.+)\)\s*$/);
+          if (!m) m = rule.match(/^(.+?)\s*@\s*(.+?)\s*$/);
+
+          if (!m) return 'Tempo massimo (cond): ' + translateOsmTime(rule);
+
+          const valueIt = maxstayValueToItalian(m[1]);
+          const condIt = translateOsmTime(m[2]).trim();
+
+          return `Tempo massimo: ${valueIt} nei giorni/orari: ${condIt}`;
+        });
     }
 
     function buildPopupContent(tags, lat, lon, osmMeta) {
@@ -573,15 +622,46 @@
         }).join('');
       }
 
-      var notes = [];
+      // ===== Limitazioni (badge viola per "a tempo") =====
+      var notes = [];        // testo normale (con <br>)
+      var notesBadges = [];  // HTML badge
+
       var cond = tags['parking:condition'] || '';
       var interval = tags['parking:condition:time_interval'] || '';
       var maxstay = tags.maxstay || '';
-      if (cond.toLowerCase().includes('disc')) notes.push('Disco orario');
-      if (cond.toLowerCase().includes('ticket')) notes.push('Sosta a ticket');
-      if (cond.toLowerCase().includes('resident')) notes.push('Riservato residenti');
-      if (interval) notes.push('Validità: ' + translateOsmTime(interval));
-      if (maxstay) notes.push('Tempo max: ' + maxstay);
+      var maxstayConditional = tags['maxstay:conditional'] || '';
+
+      if ((cond || '').toLowerCase().includes('disc')) {
+        notesBadges.push(`<div class="badge-note time">Disco orario</div>`);
+      }
+
+      if (interval) {
+        notesBadges.push(
+          `<div class="badge-note time">${escapeHtml('Validità: ' + translateOsmTime(interval))}</div>`
+        );
+      }
+
+      if (maxstay) {
+        const ms = String(maxstay).toLowerCase().trim();
+        if (!['no','none','unlimited','0'].includes(ms)) {
+          const vIt = maxstayValueToItalian(maxstay);
+          notesBadges.push(`<div class="badge-note time">${escapeHtml('Tempo massimo: ' + vIt)}</div>`);
+        }
+      }
+
+      if (maxstayConditional) {
+        formatMaxstayConditionalItalian(maxstayConditional).forEach(line => {
+          notesBadges.push(`<div class="badge-note time">${escapeHtml(line)}</div>`);
+        });
+      }
+
+      if ((cond || '').toLowerCase().includes('ticket')) notes.push('Sosta a ticket');
+      if ((cond || '').toLowerCase().includes('resident')) notes.push('Riservato residenti');
+
+      var notesParts = [];
+      if (notesBadges.length) notesParts.push(notesBadges.join(''));
+      if (notes.length) notesParts.push(notes.map(x => escapeHtml(x)).join('<br>'));
+      var notesHtml = notesParts.join('<br>');
 
       var ps = tags.parking_space || '';
       var typeLabel = ps === 'disabled' ? 'Disabili' : ps === 'charging' ? 'Ricarica EV' :
@@ -665,10 +745,10 @@
           <span class="val">${paymentHtml}</span>
         </div>` : ''}
 
-        ${notes.length > 0 ? `
+        ${notesHtml ? `
         <div class="popup-section">
           <span class="label">Limitazioni</span>
-          <span class="val">${notes.map(x => escapeHtml(x)).join('<br>')}</span>
+          <span class="val">${notesHtml}</span>
         </div>` : ''}
 
         ${tags.capacity || typeLabel ? `
@@ -763,14 +843,22 @@
           var accessVal = tags.access || '';
           var vehicleVal = tags.vehicle || '';
 
+          // ---- DISCO / LIMITE TEMPO ----
+          var maxstay = (tags.maxstay || '').toString().trim();
+          var maxstayLc = maxstay.toLowerCase();
+          var hasMaxstay = !!maxstay && !['no','none','unlimited','0'].includes(maxstayLc);
+          var hasMaxstayConditional = !!tags['maxstay:conditional'];
+          var hasDisc = ((cond || '').toLowerCase().includes('disc')) || hasMaxstay || hasMaxstayConditional;
+
+          // Ordine richiesto: privato -> a pagamento -> disco -> gratuito -> non specificato
           if (['private','customers','destination','permit'].includes(accessVal) || vehicleVal === 'permit') {
             color = '#ea580c'; fillColor = '#fb923c';
           } else if (fee === 'yes' || fee === 'conditional' || tags['fee:conditional']) {
             color = '#1d4ed8'; fillColor = '#60a5fa';
+          } else if (hasDisc) {
+            color = '#7c3aed'; fillColor = '#a78bfa';
           } else if (fee === 'no') {
             color = '#15803d'; fillColor = '#4ade80';
-          } else if ((cond || '').toLowerCase().includes('disc') || tags.maxstay) {
-            color = '#7c3aed'; fillColor = '#a78bfa';
           } else {
             color = '#64748b'; fillColor = '#94a3b8';
           }
