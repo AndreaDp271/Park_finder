@@ -1,814 +1,960 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
+  <meta charset="UTF-8" />
+  <title>ParkMap - OSM Parking</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
 
-    <meta charset="UTF-8">
-    <title>ParkMap - OSM Parking</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#ffffff">
+  <link rel="icon" type="image/svg+xml" sizes="any"
+    href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Crect%20width%3D%2724%27%20height%3D%2724%27%20fill%3D%27%23ffffff%27/%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%233b82f6%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Crect%20x%3D%273%27%20y%3D%273%27%20width%3D%2718%27%20height%3D%2718%27%20rx%3D%272%27/%3E%3Cpath%20d%3D%27M9%2017V7h4a3%203%200%200%201%200%206H9%27/%3E%3C/g%3E%3C/svg%3E" />
 
-    <link rel="icon" type="image/svg+xml" sizes="any"
-      href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Crect%20width%3D%2724%27%20height%3D%2724%27%20fill%3D%27%23ffffff%27/%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%233b82f6%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Crect%20x%3D%273%27%20y%3D%273%27%20width%3D%2718%27%20height%3D%2718%27%20rx%3D%272%27/%3E%3Cpath%20d%3D%27M9%2017V7h4a3%203%200%200%201%200%206H9%27/%3E%3C/g%3E%3C/svg%3E">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root{
+      --primary:#3b82f6;
+      --primary-dark:#2563eb;
+      --primary-light:#eff6ff;
+      --bg-dark:#0f172a;
+      --text-main:#1e293b;
+      --text-light:#64748b;
+      --radius:12px;
+      --shadow-sm:0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md:0 4px 6px -1px rgb(0 0 0 / 0.1),0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg:0 10px 15px -3px rgb(0 0 0 / 0.1),0 4px 6px -4px rgb(0 0 0 / 0.1);
+      --glass:rgba(255,255,255,0.95);
+      --danger:#ef4444;
+      --meter-fill:#f97316;
+      --meter-stroke:#111827;
+    }
 
-    <style>
-        :root {
-            --primary: #3b82f6;
-            --primary-dark: #2563eb;
-            --primary-light: #eff6ff;
-            --bg-dark: #0f172a;
-            --text-main: #1e293b;
-            --text-light: #64748b;
-            --radius: 12px;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-            --glass: rgba(255, 255, 255, 0.95);
-            --danger: #ef4444;
-        }
+    html,body{
+      height:100%;
+      margin:0;
+      padding:0;
+      overflow:hidden;
+      font-family:'Inter',system-ui,-apple-system,sans-serif;
+      background:#f8fafc;
+      -webkit-tap-highlight-color:transparent;
+    }
 
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: #f8fafc;
-            -webkit-tap-highlight-color: transparent;
-        }
+    #map{
+      position:absolute;
+      top:0;bottom:0;left:0;right:0;
+      z-index:1;
+    }
 
-        #map {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 1;
-        }
+    #topbar{
+      position:fixed;
+      top:12px;
+      left:50%;
+      transform:translateX(-50%);
+      width:calc(100% - 24px);
+      max-width:600px;
+      z-index:1000;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      pointer-events:none;
+    }
+    #topbar > *{ pointer-events:auto; box-shadow:var(--shadow-md); }
 
-        #topbar {
-            position: fixed;
-            top: 12px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: calc(100% - 24px);
-            max-width: 600px;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            pointer-events: none;
-        }
+    #titleBadge{
+      background:var(--bg-dark);
+      color:#fff;
+      height:48px;
+      padding:0 16px;
+      border-radius:var(--radius);
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-weight:700;
+      font-size:16px;
+      white-space:nowrap;
+      flex-shrink:0;
+    }
+    #titleBadge i{ color:var(--primary); width:20px; height:20px; }
 
-        #topbar > * {
-            pointer-events: auto;
-            box-shadow: var(--shadow-md);
-        }
+    #searchBox{
+      flex:1;
+      background:var(--glass);
+      backdrop-filter:blur(8px);
+      -webkit-backdrop-filter:blur(8px);
+      height:48px;
+      border-radius:var(--radius);
+      display:flex;
+      align-items:center;
+      padding:0 4px 0 16px;
+      transition:transform .2s ease, box-shadow .2s ease;
+      position:relative;
+    }
+    #searchBox:focus-within{
+      box-shadow:var(--shadow-lg),0 0 0 2px var(--primary);
+      transform:translateY(-1px);
+    }
 
-        #titleBadge {
-            background: var(--bg-dark);
-            color: white;
-            height: 48px;
-            padding: 0 16px;
-            border-radius: var(--radius);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 700;
-            font-size: 16px;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-        #titleBadge i { color: var(--primary); width: 20px; height: 20px; }
+    #searchInput{
+      flex:1;
+      border:none;
+      background:transparent;
+      font-family:inherit;
+      font-size:15px;
+      color:var(--text-main);
+      outline:none;
+      min-width:0;
+      padding:0;
+    }
+    #searchInput::placeholder{ color:#94a3b8; }
 
-        #searchBox {
-            flex: 1;
-            background: var(--glass);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            height: 48px;
-            border-radius: var(--radius);
-            display: flex;
-            align-items: center;
-            padding: 0 4px 0 16px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            position: relative;
-        }
+    #searchBtn{
+      background:var(--primary);
+      color:#fff;
+      height:40px;
+      padding:0 16px;
+      border-radius:8px;
+      font-weight:600;
+      font-size:14px;
+      border:none;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      gap:6px;
+      margin-left:8px;
+    }
+    #searchBtn:hover{ background:var(--primary-dark); }
+    #searchBtn:active{ transform:scale(0.95); }
 
-        #searchBox:focus-within {
-            box-shadow: var(--shadow-lg), 0 0 0 2px var(--primary);
-            transform: translateY(-1px);
-        }
+    #searchResults{
+      position:absolute;
+      left:0;right:0;
+      top:calc(100% + 8px);
+      background:#fff;
+      border-radius:14px;
+      box-shadow:var(--shadow-lg);
+      overflow:hidden;
+      display:none;
+      z-index:2000;
+      border:1px solid #e2e8f0;
+    }
+    .search-result-item{
+      padding:10px 12px;
+      font-size:14px;
+      cursor:pointer;
+      color:var(--text-main);
+      background:#fff;
+    }
+    .search-result-item:hover{ background:#f8fafc; }
+    .search-result-item + .search-result-item{ border-top:1px solid #f1f5f9; }
 
-        #searchInput {
-            flex: 1;
-            border: none;
-            background: transparent;
-            font-family: inherit;
-            font-size: 15px;
-            color: var(--text-main);
-            outline: none;
-            min-width: 0;
-            padding: 0;
-        }
-        #searchInput::placeholder { color: #94a3b8; }
+    .control-group{ display:flex; gap:8px; }
 
-        #searchBtn {
-            background: var(--primary);
-            color: white;
-            height: 40px;
-            padding: 0 16px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 14px;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-left: 8px;
-        }
-        #searchBtn:hover { background: var(--primary-dark); }
-        #searchBtn:active { transform: scale(0.95); }
+    .control-btn{
+      height:48px;
+      width:48px;
+      background:var(--glass);
+      backdrop-filter:blur(8px);
+      border:none;
+      border-radius:var(--radius);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:var(--text-main);
+      cursor:pointer;
+      transition:all .2s ease;
+    }
+    .control-btn:hover{ color:var(--primary); background:#fff; transform:translateY(-1px); }
+    .control-btn:active{ transform:translateY(0) scale(0.95); }
 
-        #searchResults{
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: calc(100% + 8px);
-            background: white;
-            border-radius: 14px;
-            box-shadow: var(--shadow-lg);
-            overflow: hidden;
-            display: none;
-            z-index: 2000;
-            border: 1px solid #e2e8f0;
-        }
-        .search-result-item{
-            padding: 10px 12px;
-            font-size: 14px;
-            cursor: pointer;
-            color: var(--text-main);
-            background: white;
-        }
-        .search-result-item:hover{ background: #f8fafc; }
-        .search-result-item + .search-result-item{ border-top: 1px solid #f1f5f9; }
+    #status{
+      position:fixed;
+      bottom:30px;
+      left:50%;
+      transform:translateX(-50%) translateY(20px);
+      background:rgba(15,23,42,.9);
+      backdrop-filter:blur(4px);
+      color:#fff;
+      padding:12px 24px;
+      border-radius:30px;
+      font-size:14px;
+      font-weight:500;
+      z-index:2000;
+      box-shadow:0 10px 25px -5px rgba(0,0,0,0.3);
+      pointer-events:none;
+      opacity:0;
+      transition:all .3s cubic-bezier(0.16,1,0.3,1);
+      display:flex;
+      align-items:center;
+      gap:8px;
+      white-space:nowrap;
+    }
+    #status:not(:empty){ opacity:1; transform:translateX(-50%) translateY(0); }
 
-        .control-group { display: flex; gap: 8px; }
+    /* Pulsante schermo intero (sopra al pulsante info) */
+    #fullscreenBtn{
+      position:fixed;
+      bottom:90px;
+      right:20px;
+      z-index:1001;
+      background:#fff;
+      color:var(--text-main);
+      width:56px;height:56px;
+      border-radius:50%;
+      box-shadow:var(--shadow-lg);
+      border:none;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      transition:transform .2s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    #fullscreenBtn:hover{ transform:scale(1.05); color:var(--primary); }
+    #fullscreenBtn:active{ transform:scale(0.95); }
 
-        .control-btn {
-            height: 48px;
-            width: 48px;
-            background: var(--glass);
-            backdrop-filter: blur(8px);
-            border: none;
-            border-radius: var(--radius);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-main);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .control-btn:hover { color: var(--primary); background: white; transform: translateY(-1px); }
-        .control-btn:active { transform: translateY(0) scale(0.95); }
+    #toggleLegend{
+      position:fixed;
+      bottom:24px;
+      right:20px;
+      z-index:1001;
+      background:#fff;
+      color:var(--text-main);
+      width:56px;height:56px;
+      border-radius:50%;
+      box-shadow:var(--shadow-lg);
+      border:none;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      transition:transform .2s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    #toggleLegend:hover{ transform:scale(1.05); color:var(--primary); }
+    #toggleLegend:active{ transform:scale(0.95); }
 
-        #status {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%) translateY(20px);
-            background: rgba(15, 23, 42, 0.9);
-            backdrop-filter: blur(4px);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 30px;
-            font-size: 14px;
-            font-weight: 500;
-            z-index: 2000;
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
-            pointer-events: none;
-            opacity: 0;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            white-space: nowrap;
-        }
-        #status:not(:empty) { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #legendPanel{
+      position:fixed;
+      bottom:156px;
+      right:20px;
+      width:280px;
+      max-width:calc(100% - 40px);
+      max-height:60vh;
+      background:#fff;
+      border-radius:24px;
+      box-shadow:var(--shadow-lg);
+      z-index:1000;
+      overflow-y:auto;
+      display:none;
+      animation:slideUp .3s cubic-bezier(0.16,1,0.3,1);
+    }
+    @keyframes slideUp{
+      from{ opacity:0; transform:translateY(20px) scale(0.95); }
+      to{ opacity:1; transform:translateY(0) scale(1); }
+    }
 
-        /* Pulsante schermo intero (sopra al pulsante info) */
-        #fullscreenBtn {
-            position: fixed;
-            bottom: 90px;
-            right: 20px;
-            z-index: 1001;
-            background: white;
-            color: var(--text-main);
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            box-shadow: var(--shadow-lg);
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        #fullscreenBtn:hover { transform: scale(1.05); color: var(--primary); }
-        #fullscreenBtn:active { transform: scale(0.95); }
+    .legend-header{
+      padding:16px 20px;
+      border-bottom:1px solid #f1f5f9;
+      font-weight:700;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      font-size:16px;
+      color:var(--bg-dark);
+      position:sticky;
+      top:0;
+      background:#fff;
+    }
+    .legend-section{ padding:16px 20px; }
+    .legend-section-title{
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--text-light);
+      margin-bottom:12px;
+      font-weight:800;
+    }
+    .legend-item{
+      display:flex;
+      align-items:center;
+      margin-bottom:10px;
+      font-size:14px;
+      font-weight:500;
+      color:var(--text-main);
+    }
+    .legend-color{
+      width:14px;height:14px;
+      border-radius:4px;
+      margin-right:12px;
+      flex-shrink:0;
+    }
 
-        #toggleLegend {
-            position: fixed;
-            bottom: 24px;
-            right: 20px;
-            z-index: 1001;
-            background: white;
-            color: var(--text-main);
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            box-shadow: var(--shadow-lg);
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        #toggleLegend:hover { transform: scale(1.05); color: var(--primary); }
-        #toggleLegend:active { transform: scale(0.95); }
+    .leaflet-popup-content-wrapper{ border-radius:20px; box-shadow:var(--shadow-lg); padding:0; overflow:hidden; }
+    .leaflet-popup-content{ margin:16px 20px; min-width:240px !important; }
+    .leaflet-container a.leaflet-popup-close-button{ top:12px; right:12px; color:#94a3b8; font-size:20px; }
 
-        #legendPanel {
-            position: fixed;
-            bottom: 156px; /* sopra entrambi i pulsanti (fullscreen + info) */
-            right: 20px;
-            width: 280px;
-            max-width: calc(100% - 40px);
-            max-height: 60vh;
-            background: white;
-            border-radius: 24px;
-            box-shadow: var(--shadow-lg);
-            z-index: 1000;
-            overflow-y: auto;
-            display: none;
-            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
+    .popup-header-container{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-bottom:16px;
+      padding-bottom:12px;
+      border-bottom:1px solid #f1f5f9;
+    }
+    .popup-icon-box{
+      background:var(--primary-light);
+      color:var(--primary);
+      width:40px;height:40px;
+      border-radius:12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:20px;
+      flex-shrink:0;
+    }
+    .popup-title{
+      font-size:16px;
+      font-weight:700;
+      color:var(--bg-dark);
+      line-height:1.3;
+    }
+    .popup-section{ margin-bottom:12px; display:flex; flex-direction:column; }
+    .label{
+      color:var(--text-light);
+      font-weight:600;
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      margin-bottom:2px;
+    }
+    .val{ color:var(--text-main); font-weight:500; font-size:14px; line-height:1.5; }
+    .badge-note{
+      background:var(--primary-light);
+      color:var(--primary-dark);
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:8px;
+      margin-top:6px;
+      font-weight:600;
+      display:inline-block;
+    }
+    .badge-note.danger{ background:#fef2f2; color:var(--danger); }
 
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px) scale(0.95); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
+    .popup-links{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
+    .popup-links a{
+      text-align:center;
+      padding:10px;
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+      border-radius:10px;
+      text-decoration:none;
+      font-weight:600;
+      font-size:12px;
+      color:var(--text-main);
+      transition:all .2s;
+    }
+    .popup-links a:hover{ background:var(--text-main); color:#fff; border-color:var(--text-main); }
 
-        .legend-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid #f1f5f9;
-            font-weight: 700;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 16px;
-            color: var(--bg-dark);
-            position: sticky;
-            top: 0;
-            background: white;
-        }
-        .legend-section { padding: 16px 20px; }
-        .legend-section-title {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--text-light);
-            margin-bottom: 12px;
-            font-weight: 800;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-main);
-        }
-        .legend-color {
-            width: 14px;
-            height: 14px;
-            border-radius: 4px;
-            margin-right: 12px;
-            flex-shrink: 0;
-        }
-
-        .leaflet-popup-content-wrapper { border-radius: 20px; box-shadow: var(--shadow-lg); padding: 0; overflow: hidden; }
-        .leaflet-popup-content { margin: 16px 20px; min-width: 240px !important; }
-        .leaflet-container a.leaflet-popup-close-button { top: 12px; right: 12px; color: #94a3b8; font-size: 20px; }
-
-        .popup-header-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #f1f5f9;
-        }
-        .popup-icon-box {
-            background: var(--primary-light);
-            color: var(--primary);
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            flex-shrink: 0;
-        }
-        .popup-title { font-size: 16px; font-weight: 700; color: var(--bg-dark); line-height: 1.3; }
-        .popup-section { margin-bottom: 12px; display: flex; flex-direction: column; }
-        .label { color: var(--text-light); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
-        .val { color: var(--text-main); font-weight: 500; font-size: 14px; line-height: 1.5; }
-        .badge-note {
-            background: var(--primary-light);
-            color: var(--primary-dark);
-            font-size: 12px;
-            padding: 6px 10px;
-            border-radius: 8px;
-            margin-top: 6px;
-            font-weight: 600;
-            display: inline-block;
-        }
-        .badge-note.danger { background: #fef2f2; color: var(--danger); }
-
-        .popup-links { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
-        .popup-links a {
-            text-align: center;
-            padding: 10px;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 12px;
-            color: var(--text-main);
-            transition: all 0.2s;
-        }
-        .popup-links a:hover { background: var(--text-main); color: white; border-color: var(--text-main); }
-
-        @media (max-width: 600px) {
-            #topbar { top: 10px; width: calc(100% - 20px); gap: 8px; }
-            #titleBadge span { display: none; }
-            #titleBadge { padding: 0; width: 48px; justify-content: center; }
-            #searchBtn span.text { display: none; }
-            #searchBtn { padding: 0; width: 36px; height: 36px; justify-content: center; margin-left: 4px; }
-            #searchBox { padding-left: 12px; padding-right: 6px; }
-            #legendPanel { left: 16px; right: 16px; width: auto; bottom: 156px; }
-        }
-    </style>
+    @media (max-width:600px){
+      #topbar{ top:10px; width:calc(100% - 20px); gap:8px; }
+      #titleBadge span{ display:none; }
+      #titleBadge{ padding:0; width:48px; justify-content:center; }
+      #searchBtn span.text{ display:none; }
+      #searchBtn{ padding:0; width:36px; height:36px; justify-content:center; margin-left:4px; }
+      #searchBox{ padding-left:12px; padding-right:6px; }
+      #legendPanel{ left:16px; right:16px; width:auto; bottom:156px; }
+    }
+  </style>
 </head>
-<body>
 
-<div id="topbar">
+<body>
+  <div id="topbar">
     <div id="titleBadge" title="ParkMap"><i data-lucide="square-parking"></i> <span>ParkMap</span></div>
 
     <div id="searchBox">
-        <input id="searchInput" type="text" placeholder="Cerca località..." aria-label="Cerca località">
-        <button id="searchBtn">
-            <i data-lucide="search" style="width: 18px; height: 18px;"></i>
-            <span class="text">Cerca</span>
-        </button>
-        <div id="searchResults"></div>
+      <input id="searchInput" type="text" placeholder="Cerca località..." aria-label="Cerca località" />
+      <button id="searchBtn">
+        <i data-lucide="search" style="width: 18px; height: 18px;"></i>
+        <span class="text">Cerca</span>
+      </button>
+      <div id="searchResults"></div>
     </div>
 
     <div class="control-group">
-        <button id="gpsBtn" class="control-btn" title="La mia posizione">
-            <i data-lucide="locate-fixed"></i>
-        </button>
-        <button id="refreshBtn" class="control-btn" title="Aggiorna dati">
-            <i data-lucide="refresh-cw"></i>
-        </button>
+      <button id="gpsBtn" class="control-btn" title="La mia posizione">
+        <i data-lucide="locate-fixed"></i>
+      </button>
+      <button id="refreshBtn" class="control-btn" title="Aggiorna dati">
+        <i data-lucide="refresh-cw"></i>
+      </button>
     </div>
-</div>
+  </div>
 
-<div id="map"></div>
-<div id="status"></div>
+  <div id="map"></div>
+  <div id="status"></div>
 
-<!-- NUOVO: pulsante schermo intero (sopra info) -->
-<button id="fullscreenBtn" title="Schermo intero">
+  <button id="fullscreenBtn" title="Schermo intero">
     <i data-lucide="maximize-2"></i>
-</button>
+  </button>
 
-<button id="toggleLegend" onclick="toggleLegend()" title="Legenda">
+  <button id="toggleLegend" title="Legenda">
     <i data-lucide="info"></i>
-</button>
+  </button>
 
-<div id="legendPanel">
+  <div id="legendPanel">
     <div class="legend-header">
-        Legenda Mappa
-        <i data-lucide="x" style="cursor:pointer; width: 20px;" onclick="toggleLegend()"></i>
+      Legenda Mappa
+      <i data-lucide="x" style="cursor:pointer; width: 20px;" id="closeLegend"></i>
     </div>
+
     <div class="legend-section">
-        <div class="legend-section-title">Aree di Sosta</div>
-        <div class="legend-item"><div class="legend-color" style="background: #60a5fa; border: 1px solid #1d4ed8;"></div>Pagamento</div>
-        <div class="legend-item"><div class="legend-color" style="background: #4ade80; border: 1px solid #15803d;"></div>Gratuito</div>
-        <div class="legend-item"><div class="legend-color" style="background: #a78bfa; border: 1px solid #7c3aed;"></div>Disco orario</div>
-        <div class="legend-item"><div class="legend-color" style="background: #fb923c; border: 1px solid #ea580c;"></div>Limitato/Privato</div>
-        <div class="legend-item"><div class="legend-color" style="background: #94a3b8; border: 1px solid #64748b;"></div>Non specificato</div>
+      <div class="legend-section-title">Aree di Sosta</div>
+      <div class="legend-item"><div class="legend-color" style="background:#60a5fa; border:1px solid #1d4ed8;"></div>Pagamento</div>
+      <div class="legend-item"><div class="legend-color" style="background:#4ade80; border:1px solid #15803d;"></div>Gratuito</div>
+      <div class="legend-item"><div class="legend-color" style="background:#a78bfa; border:1px solid #7c3aed;"></div>Disco orario</div>
+      <div class="legend-item"><div class="legend-color" style="background:#fb923c; border:1px solid #ea580c;"></div>Limitato/Privato</div>
+      <div class="legend-item"><div class="legend-color" style="background:#94a3b8; border:1px solid #64748b;"></div>Non specificato</div>
     </div>
-    <div class="legend-section" style="background: #f8fafc">
-        <div class="legend-section-title">Stalli Speciali</div>
-        <div class="legend-item"><div class="legend-color" style="background: #fde047; border: 1px solid #eab308;"></div>Disabili</div>
-        <div class="legend-item"><div class="legend-color" style="background: #f0f9ff; border: 1px solid #0284c7;"></div>Ricarica EV</div>
-        <div class="legend-item"><div class="legend-color" style="background: #fed7aa; border: 1px solid #d97706;"></div>Carico/Scarico</div>
-        <div class="legend-item"><div class="legend-color" style="background: #fbcfe8; border: 1px solid #db2777;"></div>Famiglie/Rosa</div>
+
+    <div class="legend-section" style="background:#f8fafc">
+      <div class="legend-section-title">Stalli Speciali</div>
+      <div class="legend-item"><div class="legend-color" style="background:#fde047; border:1px solid #eab308;"></div>Disabili</div>
+      <div class="legend-item"><div class="legend-color" style="background:#f0f9ff; border:1px solid #0284c7;"></div>Ricarica EV</div>
+      <div class="legend-item"><div class="legend-color" style="background:#fed7aa; border:1px solid #d97706;"></div>Carico/Scarico</div>
+      <div class="legend-item"><div class="legend-color" style="background:#fbcfe8; border:1px solid #db2777;"></div>Famiglie/Rosa</div>
     </div>
-</div>
 
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-        crossorigin=""></script>
+    <div class="legend-section">
+      <div class="legend-section-title">Parcometri</div>
+      <div class="legend-item"><div class="legend-color" style="background:var(--meter-fill); border:1px solid var(--meter-stroke);"></div>Parcometro (ticket)</div>
+    </div>
+  </div>
 
-<script>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+          crossorigin=""></script>
+
+  <script>
     lucide.createIcons();
 
     function toggleLegend() {
-        const lp = document.getElementById('legendPanel');
-        lp.style.display = (lp.style.display === 'block' ? 'none' : 'block');
+      const lp = document.getElementById('legendPanel');
+      lp.style.display = (lp.style.display === 'block' ? 'none' : 'block');
     }
+
+    document.getElementById('toggleLegend').onclick = toggleLegend;
+    document.getElementById('closeLegend').onclick = toggleLegend;
 
     var map = L.map('map', { zoomControl: false }).setView([45.4642, 9.19], 15);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-		maxZoom: 20,
-		attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
-	}).addTo(map);
+      maxZoom: 20,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
+    }).addTo(map);
 
     map.createPane('parkingAreasPane');
     map.getPane('parkingAreasPane').style.zIndex = 410;
+
     map.createPane('parkingSpacesPane');
     map.getPane('parkingSpacesPane').style.zIndex = 420;
 
+    /* ✅ Parcometri */
+    map.createPane('parkometersPane');
+    map.getPane('parkometersPane').style.zIndex = 430;
+
     var parkingAreasLayer = L.layerGroup().addTo(map);
     var parkingSpacesLayer = L.layerGroup().addTo(map);
+    var parkometersLayer = L.layerGroup().addTo(map);
 
     L.control.layers(null, {
-        "Aree di sosta": parkingAreasLayer,
-        "Stalli speciali": parkingSpacesLayer
+      "Aree di sosta": parkingAreasLayer,
+      "Stalli speciali": parkingSpacesLayer,
+      "Parcometri": parkometersLayer
     }, { collapsed: true, position: 'bottomleft' }).addTo(map);
 
     var statusEl = document.getElementById('status');
     function setStatus(msg) {
-        statusEl.innerHTML = msg ? `<i data-lucide="info" style="width:16px"></i> ${msg}` : '';
-        if (msg) lucide.createIcons({ root: statusEl });
+      statusEl.innerHTML = msg ? `<i data-lucide="info" style="width:16px"></i> ${msg}` : '';
+      if (msg) lucide.createIcons({ root: statusEl });
     }
 
     function escapeHtml(s) {
-        return (s || '')
-            .replace(/&/g,'&amp;')
-            .replace(/</g,'&lt;')
-            .replace(/>/g,'&gt;')
-            .replace(/"/g,'&quot;')
-            .replace(/'/g,'&#039;');
+      return (s || '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#039;');
     }
 
     function buildGMapsUrl(lat, lon) {
-        return 'https://www.google.com/maps?q=' + encodeURIComponent(lat + ',' + lon);
+      return 'https://www.google.com/maps?q=' + encodeURIComponent(lat + ',' + lon);
     }
 
     function buildIdUrl(osmType, osmId, lat, lon, zoom) {
-        zoom = zoom || map.getZoom() || 18;
-        var base = 'https://www.openstreetmap.org/edit?editor=id';
-        var center = '#map=' + zoom + '/' + lat + '/' + lon;
-        var sel = (osmType && osmId) ? '&' + osmType + '=' + osmId : '';
-        return base + sel + center;
+      zoom = zoom || map.getZoom() || 18;
+      var base = 'https://www.openstreetmap.org/edit?editor=id';
+      var center = '#map=' + zoom + '/' + lat + '/' + lon;
+      var sel = (osmType && osmId) ? '&' + osmType + '=' + osmId : '';
+      return base + sel + center;
     }
 
     function translateOsmTime(str) {
-        if (!str) return '';
-        return str
-            .replace(/Mo/g, 'Lun').replace(/Tu/g, 'Mar').replace(/We/g, 'Mer')
-            .replace(/Th/g, 'Gio').replace(/Fr/g, 'Ven')
-            .replace(/Sa/g, 'Sab')
-            .replace(/Su/g, 'Dom').replace(/PH/g, 'Festivi')
-            .replace(/off/g, 'chiuso').replace(/24\\\/7/g, 'sempre aperto');
+      if (!str) return '';
+      return str
+        .replace(/Mo/g, 'Lun').replace(/Tu/g, 'Mar').replace(/We/g, 'Mer')
+        .replace(/Th/g, 'Gio').replace(/Fr/g, 'Ven')
+        .replace(/Sa/g, 'Sab')
+        .replace(/Su/g, 'Dom').replace(/PH/g, 'Festivi')
+        .replace(/off/g, 'chiuso').replace(/24\\\/7/g, 'sempre aperto');
     }
 
     function buildPopupContent(tags, lat, lon, osmMeta) {
-        var name = tags.name || tags.ref || (tags.amenity === 'parking_space' ? 'Stallo speciale' : 'Area di Sosta');
-        var operator = tags.operator || '';
+      var name = tags.name || tags.ref || (tags.amenity === 'parking_space' ? 'Stallo speciale' : 'Area di Sosta');
+      var operator = tags.operator || '';
 
-        var accessRaw = tags.access || '';
-        var accessConditional = tags['access:conditional'] || '';
-        var vehicleAccess = tags.vehicle || '';
-        var access = 'Pubblico';
-        if (accessRaw === 'private') access = 'Privato';
-        else if (accessRaw === 'customers') access = 'Solo clienti';
-        else if (accessRaw === 'permissive') access = 'Autorizzato';
-        else if (accessRaw === 'destination') access = 'Solo residenti';
-        else if (accessRaw === 'permit' || vehicleAccess === 'permit') access = 'Solo con permesso';
-        else if (accessRaw === 'no') access = 'Vietato';
+      var accessRaw = tags.access || '';
+      var accessConditional = tags['access:conditional'] || '';
+      var vehicleAccess = tags.vehicle || '';
+      var access = 'Pubblico';
+      if (accessRaw === 'private') access = 'Privato';
+      else if (accessRaw === 'customers') access = 'Solo clienti';
+      else if (accessRaw === 'permissive') access = 'Autorizzato';
+      else if (accessRaw === 'destination') access = 'Solo residenti';
+      else if (accessRaw === 'permit' || vehicleAccess === 'permit') access = 'Solo con permesso';
+      else if (accessRaw === 'no') access = 'Vietato';
 
-        var accessNoteHtml = '';
-        if (accessConditional) {
-            accessNoteHtml = accessConditional.split(';').map(p => {
-                p = p.trim();
-                let isDanger = p.includes('no @');
-                let translated = translateOsmTime(p.replace('no @', 'Vietato ').replace('yes @', 'Aperto '));
-                return `<div class="badge-note ${isDanger ? 'danger' : ''}">${translated}</div>`;
-            }).join('');
-        }
+      var accessNoteHtml = '';
+      if (accessConditional) {
+        accessNoteHtml = accessConditional.split(';').map(p => {
+          p = p.trim();
+          let isDanger = p.includes('no @');
+          let translated = translateOsmTime(p.replace('no @', 'Vietato ').replace('yes @', 'Aperto '));
+          return `<div class="badge-note ${isDanger ? 'danger' : ''}">${translated}</div>`;
+        }).join('');
+      }
 
-        var feeRaw = tags.fee || '';
-        var feeConditional = tags['fee:conditional'] || '';
-        var fee = 'Non specificato';
-        var feeNoteHtml = '';
+      var feeRaw = tags.fee || '';
+      var feeConditional = tags['fee:conditional'] || '';
+      var fee = 'Non specificato';
+      var feeNoteHtml = '';
 
-        if (feeRaw === 'no') fee = 'Gratuito';
-        else if (feeRaw === 'yes') fee = 'A pagamento';
-        else if (feeRaw === 'conditional') fee = 'Condizionato:';
+      if (feeRaw === 'no') fee = 'Gratuito';
+      else if (feeRaw === 'yes') fee = 'A pagamento';
+      else if (feeRaw === 'conditional') fee = 'Condizionato:';
 
-        if (feeConditional) {
-            fee = (fee === 'Non specificato') ? 'Condizionato:' : (fee);
+      if (feeConditional) {
+        fee = (fee === 'Non specificato') ? 'Condizionato:' : (fee);
 
-            feeNoteHtml = feeConditional.split(';').map(p => {
-                p = p.trim();
+        feeNoteHtml = feeConditional.split(';').map(p => {
+          p = p.trim();
 
-                let isFree = p.includes('no @');
-                let label = '';
+          let isFree = p.includes('no @');
+          let label = '';
 
-                if (p.includes('yes @')) {
-                    label = 'a pagamento negli orari: ' + translateOsmTime(((p.split('@')[1] || '')).trim());
-                } else if (isFree) {
-                    label = 'gratis negli orari: ' + translateOsmTime(((p.split('@')[1] || '')).trim());
-                } else {
-                    label = translateOsmTime(p);
-                }
+          if (p.includes('yes @')) {
+            label = 'a pagamento negli orari: ' + translateOsmTime(((p.split('@')[1] || '')).trim());
+          } else if (isFree) {
+            label = 'gratis negli orari: ' + translateOsmTime(((p.split('@')[1] || '')).trim());
+          } else {
+            label = translateOsmTime(p);
+          }
 
-                return `<div class="badge-note ${isFree ? 'danger' : ''}">${escapeHtml(label)}</div>`;
-            }).join('');
-        }
+          return `<div class="badge-note ${isFree ? 'danger' : ''}">${escapeHtml(label)}</div>`;
+        }).join('');
+      }
 
-        var notes = [];
-        var cond = tags['parking:condition'] || '';
-        var interval = tags['parking:condition:time_interval'] || '';
-        var maxstay = tags.maxstay || '';
-        if (cond.toLowerCase().includes('disc')) notes.push('Disco orario');
-        if (cond.toLowerCase().includes('ticket')) notes.push('Sosta a ticket');
-        if (cond.toLowerCase().includes('resident')) notes.push('Riservato residenti');
-        if (interval) notes.push('Validità: ' + translateOsmTime(interval));
-        if (maxstay) notes.push('Tempo max: ' + maxstay);
+      var notes = [];
+      var cond = tags['parking:condition'] || '';
+      var interval = tags['parking:condition:time_interval'] || '';
+      var maxstay = tags.maxstay || '';
+      if (cond.toLowerCase().includes('disc')) notes.push('Disco orario');
+      if (cond.toLowerCase().includes('ticket')) notes.push('Sosta a ticket');
+      if (cond.toLowerCase().includes('resident')) notes.push('Riservato residenti');
+      if (interval) notes.push('Validità: ' + translateOsmTime(interval));
+      if (maxstay) notes.push('Tempo max: ' + maxstay);
 
-        var ps = tags.parking_space || '';
-        var typeLabel = ps === 'disabled' ? 'Disabili' : ps === 'charging' ? 'Ricarica EV' :
-                        ps === 'loading' ? 'Carico/Scarico' : ps === 'parent' ? 'Famiglie' : ps || '';
+      var ps = tags.parking_space || '';
+      var typeLabel = ps === 'disabled' ? 'Disabili' : ps === 'charging' ? 'Ricarica EV' :
+                      ps === 'loading' ? 'Carico/Scarico' : ps === 'parent' ? 'Famiglie' : ps || '';
 
-        var html = `
+      /* charge=* e payment:* */
+      var chargeRaw = tags.charge || '';
+      var chargeConditional = tags['charge:conditional'] || '';
+      var chargeHtml = '';
+
+      if (chargeRaw) {
+        chargeHtml += `<div class="badge-note">${escapeHtml(chargeRaw)}</div>`;
+      }
+      if (chargeConditional) {
+        chargeHtml += chargeConditional.split(';').map(p => {
+          p = p.trim();
+          return `<div class="badge-note">${escapeHtml(translateOsmTime(p))}</div>`;
+        }).join('');
+      }
+
+      function paymentLabel(method) {
+        const m = (method || '').toLowerCase();
+        if (m === 'cash') return 'Contanti';
+        if (m === 'coins') return 'Monete';
+        if (m === 'notes') return 'Banconote';
+        if (m === 'credit_cards') return 'Carte di credito';
+        if (m === 'debit_cards') return 'Bancomat / carte di debito';
+        if (m === 'cards') return 'Carte';
+        if (m === 'contactless') return 'Contactless';
+        if (m === 'visa') return 'Visa';
+        if (m === 'mastercard') return 'Mastercard';
+        if (m === 'maestro') return 'Maestro';
+        if (m === 'apple_pay') return 'Apple Pay';
+        if (m === 'google_pay') return 'Google Pay';
+        if (m === 'sms') return 'SMS';
+        if (m === 'phone') return 'Telefono';
+        return (method || '').replace(/_/g, ' ');
+      }
+
+      var paymentMethods = Object.keys(tags)
+        .filter(k => k.startsWith('payment:'))
+        .map(k => ({ method: k.slice('payment:'.length), val: String(tags[k] || '').toLowerCase() }))
+        .filter(x => x.val === 'yes' || x.val === 'only')
+        .map(x => paymentLabel(x.method) + (x.val === 'only' ? ' (solo)' : ''));
+
+      var paymentHtml = paymentMethods.length
+        ? `<div class="badge-note">${escapeHtml(paymentMethods.join(', '))}</div>`
+        : '';
+
+      var html = `
         <div class="popup-header-container">
-            <div class="popup-icon-box">🅿️</div>
-            <div class="popup-title">${name}</div>
+          <div class="popup-icon-box">🅿️</div>
+          <div class="popup-title">${escapeHtml(name)}</div>
         </div>
 
         ${operator ? `
         <div class="popup-section">
-            <span class="label">Gestore</span>
-            <span class="val">${operator}</span>
+          <span class="label">Gestore</span>
+          <span class="val">${escapeHtml(operator)}</span>
         </div>` : ''}
 
         <div class="popup-section">
-            <span class="label">Accesso</span>
-            <span class="val">${access} ${accessNoteHtml}</span>
+          <span class="label">Accesso</span>
+          <span class="val">${escapeHtml(access)} ${accessNoteHtml}</span>
         </div>
 
         <div class="popup-section">
-            <span class="label">Costo</span>
-            <span class="val">${fee} ${feeNoteHtml}</span>
+          <span class="label">Costo</span>
+          <span class="val">${escapeHtml(fee)} ${feeNoteHtml}</span>
         </div>
+
+        ${(chargeHtml) ? `
+        <div class="popup-section">
+          <span class="label">Tariffa</span>
+          <span class="val">${chargeHtml}</span>
+        </div>` : ''}
+
+        ${(paymentHtml) ? `
+        <div class="popup-section">
+          <span class="label">Metodi di pagamento</span>
+          <span class="val">${paymentHtml}</span>
+        </div>` : ''}
 
         ${notes.length > 0 ? `
         <div class="popup-section">
-            <span class="label">Limitazioni</span>
-            <span class="val">${notes.join('<br>')}</span>
+          <span class="label">Limitazioni</span>
+          <span class="val">${notes.map(x => escapeHtml(x)).join('<br>')}</span>
         </div>` : ''}
 
         ${tags.capacity || typeLabel ? `
         <div class="popup-section" style="flex-direction: row; gap: 20px;">
-            ${tags.capacity ? `<div><span class="label">Posti </span><span class="val">${tags.capacity}</span></div>` : ''}
-            ${typeLabel ? `<div><span class="label">Tipo </span><span class="val">${typeLabel}</span></div>` : ''}
+          ${tags.capacity ? `<div><span class="label">Posti </span><span class="val">${escapeHtml(tags.capacity)}</span></div>` : ''}
+          ${typeLabel ? `<div><span class="label">Tipo </span><span class="val">${escapeHtml(typeLabel)}</span></div>` : ''}
         </div>` : ''}
 
         <div class="popup-links">
-            <a href="${buildGMapsUrl(lat, lon)}" target="_blank">Vai a</a>
-            <a href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank">Modifica</a>
-        </div>`;
+          <a href="${buildGMapsUrl(lat, lon)}" target="_blank">Vai a</a>
+          <a href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank">Modifica</a>
+        </div>
+      `;
 
-        return html;
+      return html;
+    }
+
+    function buildParkingMeterPopup(tags, lat, lon, osmMeta){
+      const name = tags.name || tags.ref || 'Parcometro';
+      const operator = tags.operator || '';
+      const paymentMethods = Object.keys(tags)
+        .filter(k => k.startsWith('payment:'))
+        .map(k => ({ method: k.slice('payment:'.length), val: String(tags[k] || '').toLowerCase() }))
+        .filter(x => x.val === 'yes' || x.val === 'only')
+        .map(x => x.method.replace(/_/g,' ') + (x.val === 'only' ? ' (solo)' : ''));
+
+      return `
+        <div class="popup-header-container">
+          <div class="popup-icon-box">🎫</div>
+          <div class="popup-title">${escapeHtml(name)}</div>
+        </div>
+
+        ${operator ? `
+        <div class="popup-section">
+          <span class="label">Gestore</span>
+          <span class="val">${escapeHtml(operator)}</span>
+        </div>` : ''}
+
+        ${paymentMethods.length ? `
+        <div class="popup-section">
+          <span class="label">Metodi di pagamento (raw)</span>
+          <span class="val">${escapeHtml(paymentMethods.join(', '))}</span>
+        </div>` : ''}
+
+        <div class="popup-links">
+          <a href="${buildGMapsUrl(lat, lon)}" target="_blank">Vai a</a>
+          <a href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank">Modifica</a>
+        </div>
+      `;
     }
 
     function fetchParking() {
-        var b = map.getBounds();
-        setStatus('Aggiornamento dati...');
-        var query = `[out:json][timeout:25];(way["amenity"="parking"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});relation["amenity"="parking"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});node["amenity"="parking"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});node["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});way["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()}););out body geom;`;
-        fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query))
-            .then(res => res.json()).then(data => {
-                renderParking(data);
-                setStatus('Dati caricati');
-                setTimeout(() => setStatus(''), 2000);
-            }).catch(() => setStatus('Errore API'));
+      var b = map.getBounds();
+      setStatus('Aggiornamento dati...');
+
+      var query = `[out:json][timeout:25];(
+        way["amenity"="parking"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});
+        relation["amenity"="parking"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});
+        node["amenity"="parking"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});
+
+        node["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});
+        way["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});
+
+        /* ✅ PARCOMETRI (parkomat) */
+        node["amenity"="vending_machine"]["vending"="parking_tickets"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});
+        way["amenity"="vending_machine"]["vending"="parking_tickets"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});
+        relation["amenity"="vending_machine"]["vending"="parking_tickets"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});
+      );out body geom;`;
+
+      fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query))
+        .then(res => res.json()).then(data => {
+          renderParking(data);
+          setStatus('Dati caricati');
+          setTimeout(() => setStatus(''), 2000);
+        }).catch(() => setStatus('Errore API'));
     }
 
     function renderParking(data) {
-        parkingAreasLayer.clearLayers();
-        parkingSpacesLayer.clearLayers();
-        if (!data || !data.elements) return;
+      parkingAreasLayer.clearLayers();
+      parkingSpacesLayer.clearLayers();
+      parkometersLayer.clearLayers();
+      if (!data || !data.elements) return;
 
-        data.elements.forEach(el => {
-            var tags = el.tags || {};
-            var osmMeta = { type: el.type, id: el.id };
+      data.elements.forEach(el => {
+        var tags = el.tags || {};
+        var osmMeta = { type: el.type, id: el.id };
 
-            if (tags.amenity === 'parking') {
-                var color, fillColor;
-                var fee = tags.fee || '', cond = tags['parking:condition'] || '';
-                var accessVal = tags.access || '';
-                var vehicleVal = tags.vehicle || '';
+        /* ===== Aree di sosta ===== */
+        if (tags.amenity === 'parking') {
+          var color, fillColor;
+          var fee = tags.fee || '', cond = tags['parking:condition'] || '';
+          var accessVal = tags.access || '';
+          var vehicleVal = tags.vehicle || '';
 
-                if (['private','customers','destination','permit'].includes(accessVal) || vehicleVal === 'permit') {
-                    color = '#ea580c'; fillColor = '#fb923c';
-                } else if (fee === 'yes' || fee === 'conditional' || tags['fee:conditional']) {
-                    color = '#1d4ed8'; fillColor = '#60a5fa';
-                } else if (fee === 'no') {
-                    color = '#15803d'; fillColor = '#4ade80';
-                } else if (cond.toLowerCase().includes('disc') || tags.maxstay) {
-                    color = '#7c3aed'; fillColor = '#a78bfa';
-                } else {
-                    color = '#64748b'; fillColor = '#94a3b8';
-                }
+          if (['private','customers','destination','permit'].includes(accessVal) || vehicleVal === 'permit') {
+            color = '#ea580c'; fillColor = '#fb923c';
+          } else if (fee === 'yes' || fee === 'conditional' || tags['fee:conditional']) {
+            color = '#1d4ed8'; fillColor = '#60a5fa';
+          } else if (fee === 'no') {
+            color = '#15803d'; fillColor = '#4ade80';
+          } else if ((cond || '').toLowerCase().includes('disc') || tags.maxstay) {
+            color = '#7c3aed'; fillColor = '#a78bfa';
+          } else {
+            color = '#64748b'; fillColor = '#94a3b8';
+          }
 
-                if (el.geometry) {
-                    var pts = el.geometry.map(g => [g.lat, g.lon]);
-                    var layer = (pts[0][0] === pts[pts.length-1][0] && pts.length > 2) ?
-                        L.polygon(pts, { color, weight: 2, fillColor, fillOpacity: 0.4, pane: 'parkingAreasPane' }) :
-                        L.polyline(pts, { color, weight: 3, pane: 'parkingAreasPane' });
-                    layer.bindPopup(buildPopupContent(tags, pts[0][0], pts[0][1], osmMeta)).addTo(parkingAreasLayer);
-                } else if (el.lat) {
-                    L.circleMarker([el.lat, el.lon], { radius: 7, color, fillColor, fillOpacity: 0.7, pane: 'parkingAreasPane' })
-                        .bindPopup(buildPopupContent(tags, el.lat, el.lon, osmMeta)).addTo(parkingAreasLayer);
-                }
-            }
+          if (el.geometry) {
+            var pts = el.geometry.map(g => [g.lat, g.lon]);
+            var layer = (pts[0][0] === pts[pts.length-1][0] && pts.length > 2) ?
+              L.polygon(pts, { color, weight: 2, fillColor, fillOpacity: 0.4, pane: 'parkingAreasPane' }) :
+              L.polyline(pts, { color, weight: 3, pane: 'parkingAreasPane' });
 
-            if (tags.amenity === 'parking_space' && tags.parking_space !== 'normal') {
-                var cPs, fPs, ps = tags.parking_space;
-                if (ps === 'disabled') { cPs = '#eab308'; fPs = '#fde047'; }
-                else if (ps === 'charging') { cPs = '#0284c7'; fPs = '#f0f9ff'; }
-                else if (['emergency','police'].includes(ps)) { cPs = '#1e40af'; fPs = '#60a5fa'; }
-                else if (['delivery','loading'].includes(ps)) { cPs = '#d97706'; fPs = '#fed7aa'; }
-                else if (['parent','women'].includes(ps)) { cPs = '#db2777'; fPs = '#fbcfe8'; }
-                else { cPs = '#374151'; fPs = '#6b7280'; }
+            layer.bindPopup(buildPopupContent(tags, pts[0][0], pts[0][1], osmMeta)).addTo(parkingAreasLayer);
+          } else if (el.lat) {
+            L.circleMarker([el.lat, el.lon], { radius: 7, color, fillColor, fillOpacity: 0.7, pane: 'parkingAreasPane' })
+              .bindPopup(buildPopupContent(tags, el.lat, el.lon, osmMeta)).addTo(parkingAreasLayer);
+          }
+        }
 
-                if (el.geometry) {
-                    var pts2 = el.geometry.map(g => [g.lat, g.lon]);
-                    L.polygon(pts2, { color: cPs, weight: 2, fillColor: fPs, fillOpacity: 0.8, pane: 'parkingSpacesPane' })
-                        .bindPopup(buildPopupContent(tags, pts2[0][0], pts2[0][1], osmMeta)).addTo(parkingSpacesLayer);
-                } else if (el.lat) {
-                    L.circleMarker([el.lat, el.lon], { radius: 8, color: cPs, fillColor: fPs, fillOpacity: 0.9, pane: 'parkingSpacesPane' })
-                        .bindPopup(buildPopupContent(tags, el.lat, el.lon, osmMeta)).addTo(parkingSpacesLayer);
-                }
-            }
-        });
+        /* ===== Stalli speciali ===== */
+        if (tags.amenity === 'parking_space' && tags.parking_space !== 'normal') {
+          var cPs, fPs, ps = tags.parking_space;
+          if (ps === 'disabled') { cPs = '#eab308'; fPs = '#fde047'; }
+          else if (ps === 'charging') { cPs = '#0284c7'; fPs = '#f0f9ff'; }
+          else if (['emergency','police'].includes(ps)) { cPs = '#1e40af'; fPs = '#60a5fa'; }
+          else if (['delivery','loading'].includes(ps)) { cPs = '#d97706'; fPs = '#fed7aa'; }
+          else if (['parent','women'].includes(ps)) { cPs = '#db2777'; fPs = '#fbcfe8'; }
+          else { cPs = '#374151'; fPs = '#6b7280'; }
+
+          if (el.geometry) {
+            var pts2 = el.geometry.map(g => [g.lat, g.lon]);
+            L.polygon(pts2, { color: cPs, weight: 2, fillColor: fPs, fillOpacity: 0.8, pane: 'parkingSpacesPane' })
+              .bindPopup(buildPopupContent(tags, pts2[0][0], pts2[0][1], osmMeta)).addTo(parkingSpacesLayer);
+          } else if (el.lat) {
+            L.circleMarker([el.lat, el.lon], { radius: 8, color: cPs, fillColor: fPs, fillOpacity: 0.9, pane: 'parkingSpacesPane' })
+              .bindPopup(buildPopupContent(tags, el.lat, el.lon, osmMeta)).addTo(parkingSpacesLayer);
+          }
+        }
+
+        /* ===== ✅ Parcometri (vending=parking_tickets) ===== */
+        if (tags.amenity === 'vending_machine' && tags.vending === 'parking_tickets') {
+          let lat = el.lat;
+          let lon = el.lon;
+
+          if ((lat == null || lon == null) && el.geometry && el.geometry.length) {
+            lat = el.geometry[0].lat;
+            lon = el.geometry[0].lon;
+          }
+          if (lat == null || lon == null) return;
+
+          L.circleMarker([lat, lon], {
+            radius: 5,
+            color: getComputedStyle(document.documentElement).getPropertyValue('--meter-stroke').trim() || '#111827',
+            weight: 2,
+            fillColor: getComputedStyle(document.documentElement).getPropertyValue('--meter-fill').trim() || '#f97316',
+            fillOpacity: 0.95,
+            pane: 'parkometersPane'
+          }).bindPopup(buildParkingMeterPopup(tags, lat, lon, osmMeta))
+            .addTo(parkometersLayer);
+        }
+      });
     }
 
     var fetchTimeout = null;
     map.on('moveend', () => {
-        if (fetchTimeout) clearTimeout(fetchTimeout);
-        fetchTimeout = setTimeout(fetchParking, 500);
+      if (fetchTimeout) clearTimeout(fetchTimeout);
+      fetchTimeout = setTimeout(fetchParking, 500);
     });
 
     fetchParking();
 
     function showSearchResults(items) {
-        const box = document.getElementById('searchResults');
-        if (!items.length) {
-            box.style.display = 'none';
-            box.innerHTML = '';
-            return;
-        }
+      const box = document.getElementById('searchResults');
+      if (!items.length) {
+        box.style.display = 'none';
+        box.innerHTML = '';
+        return;
+      }
 
-        box.innerHTML = items.map((r, i) => {
-            return `<div class="search-result-item" data-lat="${r.lat}" data-lon="${r.lon}">
-                        ${i+1}) ${escapeHtml(r.display_name)}
-                    </div>`;
-        }).join('');
-        box.style.display = 'block';
+      box.innerHTML = items.map((r, i) => {
+        return `<div class="search-result-item" data-lat="${r.lat}" data-lon="${r.lon}">
+                  ${i+1}) ${escapeHtml(r.display_name)}
+                </div>`;
+      }).join('');
+      box.style.display = 'block';
 
-        box.querySelectorAll('.search-result-item').forEach(el => {
-            el.onclick = () => {
-                map.setView([parseFloat(el.dataset.lat), parseFloat(el.dataset.lon)], 17);
-                showSearchResults([]);
-                setStatus('Posizione aggiornata');
-            };
-        });
+      box.querySelectorAll('.search-result-item').forEach(el => {
+        el.onclick = () => {
+          map.setView([parseFloat(el.dataset.lat), parseFloat(el.dataset.lon)], 17);
+          showSearchResults([]);
+          setStatus('Posizione aggiornata');
+        };
+      });
     }
 
     function geocode(q) {
-        if (!q) return;
+      if (!q) return;
 
-        showSearchResults([]);
-        setStatus('Cerco località...');
+      showSearchResults([]);
+      setStatus('Cerco località...');
 
-        const url =
-            'https://nominatim.openstreetmap.org/search?format=json' +
-            '&addressdetails=1' +
-            '&countrycodes=it' +
-            '&q=' + encodeURIComponent(q) +
-            '&limit=25';
+      const url =
+        'https://nominatim.openstreetmap.org/search?format=json' +
+        '&addressdetails=1' +
+        '&countrycodes=it' +
+        '&q=' + encodeURIComponent(q) +
+        '&limit=25';
 
-        fetch(url, { headers: { 'Accept-Language': 'it' } })
-            .then(res => res.json())
-            .then(results => {
-                if (!results || !results.length) { setStatus('Nessun risultato'); return; }
+      fetch(url, { headers: { 'Accept-Language': 'it' } })
+        .then(res => res.json())
+        .then(results => {
+          if (!results || !results.length) { setStatus('Nessun risultato'); return; }
 
-                const blocked = new Set(['country', 'state', 'county']);
+          const blocked = new Set(['country', 'state', 'county']);
 
-                const filtered = results.filter(r => {
-                    const at = (r.addresstype || '').toLowerCase();
-                    if (blocked.has(at)) return false;
-                    return true;
-                }).slice(0, 4);
+          const filtered = results.filter(r => {
+            const at = (r.addresstype || '').toLowerCase();
+            if (blocked.has(at)) return false;
+            return true;
+          }).slice(0, 4);
 
-                if (!filtered.length) { setStatus('Nessun risultato utile'); return; }
+          if (!filtered.length) { setStatus('Nessun risultato utile'); return; }
 
-                showSearchResults(filtered);
-                setStatus('Seleziona un risultato');
-            })
-            .catch(() => setStatus('Errore ricerca'));
+          showSearchResults(filtered);
+          setStatus('Seleziona un risultato');
+        })
+        .catch(() => setStatus('Errore ricerca'));
     }
 
     document.getElementById('searchBtn').onclick = () => geocode(document.getElementById('searchInput').value.trim());
     document.getElementById('searchInput').onkeydown = (e) => {
-        if (e.key === 'Enter') geocode(e.target.value.trim());
+      if (e.key === 'Enter') geocode(e.target.value.trim());
     };
 
     document.addEventListener('click', (e) => {
-        const box = document.getElementById('searchResults');
-        const sb = document.getElementById('searchBox');
-        if (box.style.display === 'block' && !sb.contains(e.target)) showSearchResults([]);
+      const box = document.getElementById('searchResults');
+      const sb = document.getElementById('searchBox');
+      if (box.style.display === 'block' && !sb.contains(e.target)) showSearchResults([]);
     });
 
     document.getElementById('gpsBtn').onclick = () => {
-        if (!navigator.geolocation) return setStatus('GPS non disponibile');
-        setStatus('Rilevamento GPS...');
-        navigator.geolocation.getCurrentPosition(p => {
-            map.setView([p.coords.latitude, p.coords.longitude], 17);
-            setStatus('Posizione rilevata');
-        }, () => setStatus('Errore GPS'), { enableHighAccuracy: true });
+      if (!navigator.geolocation) return setStatus('GPS non disponibile');
+      setStatus('Rilevamento GPS...');
+      navigator.geolocation.getCurrentPosition(p => {
+        map.setView([p.coords.latitude, p.coords.longitude], 17);
+        setStatus('Posizione rilevata');
+      }, () => setStatus('Errore GPS'), { enableHighAccuracy: true });
     };
 
     document.getElementById('refreshBtn').onclick = fetchParking;
 
     /* ===== Schermo intero ===== */
     function updateFullscreenIcon() {
-        const btn = document.getElementById('fullscreenBtn');
-        const isFs = !!document.fullscreenElement;
+      const btn = document.getElementById('fullscreenBtn');
+      const isFs = !!document.fullscreenElement;
 
-        btn.innerHTML = isFs
-            ? '<i data-lucide="minimize-2"></i>'
-            : '<i data-lucide="maximize-2"></i>';
+      btn.innerHTML = isFs
+        ? '<i data-lucide="minimize-2"></i>'
+        : '<i data-lucide="maximize-2"></i>';
 
-        lucide.createIcons({ root: btn });
+      lucide.createIcons({ root: btn });
     }
 
     function toggleFullscreen() {
-        const root = document.documentElement;
+      const root = document.documentElement;
 
-        if (!document.fullscreenElement) {
-            if (!root.requestFullscreen) {
-                setStatus('Schermo intero non supportato');
-                return;
-            }
-            root.requestFullscreen()
-                .catch(() => setStatus('Impossibile attivare schermo intero'));
-        } else {
-            if (document.exitFullscreen) document.exitFullscreen();
+      if (!document.fullscreenElement) {
+        if (!root.requestFullscreen) {
+          setStatus('Schermo intero non supportato');
+          return;
         }
+        root.requestFullscreen()
+          .catch(() => setStatus('Impossibile attivare schermo intero'));
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
     }
 
     document.getElementById('fullscreenBtn').onclick = toggleFullscreen;
 
     document.addEventListener('fullscreenchange', () => {
-        updateFullscreenIcon();
-        setTimeout(() => map.invalidateSize(), 200);
+      updateFullscreenIcon();
+      setTimeout(() => map.invalidateSize(), 200);
     });
 
     updateFullscreenIcon();
-</script>
+  </script>
 </body>
 </html>
