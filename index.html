@@ -480,6 +480,7 @@
     var parkingAreasLayer = L.layerGroup().addTo(map);
     var parkingSpacesLayer = L.layerGroup().addTo(map);
     var parkometersLayer = L.layerGroup().addTo(map);
+	var loadedIds = new Set();
 
     L.control.layers(null, {
       "Aree di sosta": parkingAreasLayer,
@@ -800,39 +801,94 @@
       `;
     }
 
-    function fetchParking() {
-      var b = map.getBounds();
-      setStatus('Aggiornamento dati...');
+        function fetchParking(retryCount = 0) {
+      // Se è il primo tentativo, mostriamo lo stato normale, altrimenti lo stato di "ritentativo"
+      if (retryCount === 0) {
+        setStatus('Aggiornamento dati...');
+      } else {
+        setStatus(`Errore API, riprovo (${retryCount}/3)...`);
+      }
+      
+      // 1. Ottieni i confini attuali della mappa (visibili)
+      var bounds = map.getBounds();
+      var south = bounds.getSouth();
+      var west = bounds.getWest();
+      var north = bounds.getNorth();
+      var east = bounds.getEast();
+
+      // 2. Calcola un'area minima di ~1km
+      var center = map.getCenter();
+      var radiusLat = 0.0045; 
+      var radiusLon = 0.006;  
+
+      var minSouth = center.lat - radiusLat;
+      var minNorth = center.lat + radiusLat;
+      var minWest = center.lng - radiusLon;
+      var minEast = center.lng + radiusLon;
+
+      // 3. Estendi i confini di ricerca
+      if (minSouth < south) south = minSouth;
+      if (minNorth > north) north = minNorth;
+      if (minWest < west) west = minWest;
+      if (minEast > east) east = minEast;
 
       var query = `[out:json][timeout:25];(
-        way["amenity"="parking"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});
-        relation["amenity"="parking"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});
-        node["amenity"="parking"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});
+        way["amenity"="parking"](${south},${west},${north},${east});
+        relation["amenity"="parking"](${south},${west},${north},${east});
+        node["amenity"="parking"](${south},${west},${north},${east});
 
-        node["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});
-        way["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});
+        node["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](${south},${west},${north},${east});
+        way["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](${south},${west},${north},${east});
 
-        /* ✅ PARCOMETRI (parkomat) */
-        node["amenity"="vending_machine"]["vending"="parking_tickets"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});
-        way["amenity"="vending_machine"]["vending"="parking_tickets"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});
-        relation["amenity"="vending_machine"]["vending"="parking_tickets"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});
+        /* ✅ PARCOMETRI */
+        node["amenity"="vending_machine"]["vending"="parking_tickets"](${south},${west},${north},${east});
+        way["amenity"="vending_machine"]["vending"="parking_tickets"](${south},${west},${north},${east});
+        relation["amenity"="vending_machine"]["vending"="parking_tickets"](${south},${west},${north},${east});
       );out body geom;`;
 
       fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query))
-        .then(res => res.json()).then(data => {
+        .then(res => {
+          if (!res.ok) throw new Error(res.status); // Lancia errore se il server risponde picche (es. 429, 500)
+          return res.json();
+        })
+        .then(data => {
           renderParking(data);
           setStatus('Dati caricati');
           setTimeout(() => setStatus(''), 2000);
-        }).catch(() => setStatus('Errore API'));
+        })
+        .catch(err => {
+          console.warn('Errore fetch:', err);
+          
+          // Logica di riprova (massimo 3 tentativi)
+          if (retryCount < 3) {
+            // Riprova dopo 1.5 secondi
+            setTimeout(() => {
+              fetchParking(retryCount + 1);
+            }, 1500);
+          } else {
+            setStatus('Errore connessione. Riprova più tardi.');
+          }
+        });
     }
 
-    function renderParking(data) {
-      parkingAreasLayer.clearLayers();
-      parkingSpacesLayer.clearLayers();
-      parkometersLayer.clearLayers();
+
+
+        function renderParking(data) {
+      // NOTA: Ho rimosso i clearLayers() da qui. 
+      // I dati vecchi rimangono sulla mappa.
+      
       if (!data || !data.elements) return;
 
       data.elements.forEach(el => {
+        // Creiamo un ID univoco per OSM (tipo + id)
+        var uniqueId = el.type + ':' + el.id;
+
+        // Se lo abbiamo già disegnato, saltiamo (per evitare duplicati/sovrapposizioni)
+        if (loadedIds.has(uniqueId)) return;
+
+        // Aggiungiamo l'ID al registro
+        loadedIds.add(uniqueId);
+
         var tags = el.tags || {};
         var osmMeta = { type: el.type, id: el.id };
 
@@ -843,14 +899,12 @@
           var accessVal = tags.access || '';
           var vehicleVal = tags.vehicle || '';
 
-          // ---- DISCO / LIMITE TEMPO ----
           var maxstay = (tags.maxstay || '').toString().trim();
           var maxstayLc = maxstay.toLowerCase();
           var hasMaxstay = !!maxstay && !['no','none','unlimited','0'].includes(maxstayLc);
           var hasMaxstayConditional = !!tags['maxstay:conditional'];
           var hasDisc = ((cond || '').toLowerCase().includes('disc')) || hasMaxstay || hasMaxstayConditional;
 
-          // Ordine richiesto: privato -> a pagamento -> disco -> gratuito -> non specificato
           if (['private','customers','destination','permit'].includes(accessVal) || vehicleVal === 'permit') {
             color = '#ea580c'; fillColor = '#fb923c';
           } else if (fee === 'yes' || fee === 'conditional' || tags['fee:conditional']) {
@@ -896,7 +950,7 @@
           }
         }
 
-        /* ===== ✅ Parcometri (vending=parking_tickets) ===== */
+        /* ===== Parcometri ===== */
         if (tags.amenity === 'vending_machine' && tags.vending === 'parking_tickets') {
           let lat = el.lat;
           let lon = el.lon;
@@ -905,20 +959,21 @@
             lat = el.geometry[0].lat;
             lon = el.geometry[0].lon;
           }
-          if (lat == null || lon == null) return;
-
-          L.circleMarker([lat, lon], {
-            radius: 5,
-            color: getComputedStyle(document.documentElement).getPropertyValue('--meter-stroke').trim() || '#111827',
-            weight: 2,
-            fillColor: getComputedStyle(document.documentElement).getPropertyValue('--meter-fill').trim() || '#f97316',
-            fillOpacity: 0.95,
-            pane: 'parkometersPane'
-          }).bindPopup(buildParkingMeterPopup(tags, lat, lon, osmMeta))
-            .addTo(parkometersLayer);
+          if (lat != null && lon != null) {
+            L.circleMarker([lat, lon], {
+              radius: 5,
+              color: getComputedStyle(document.documentElement).getPropertyValue('--meter-stroke').trim() || '#111827',
+              weight: 2,
+              fillColor: getComputedStyle(document.documentElement).getPropertyValue('--meter-fill').trim() || '#f97316',
+              fillOpacity: 0.95,
+              pane: 'parkometersPane'
+            }).bindPopup(buildParkingMeterPopup(tags, lat, lon, osmMeta))
+              .addTo(parkometersLayer);
+          }
         }
       });
     }
+
 
     var fetchTimeout = null;
     map.on('moveend', () => {
@@ -997,16 +1052,42 @@
       if (box.style.display === 'block' && !sb.contains(e.target)) showSearchResults([]);
     });
 
-    document.getElementById('gpsBtn').onclick = () => {
-      if (!navigator.geolocation) return setStatus('GPS non disponibile');
-      setStatus('Rilevamento GPS...');
-      navigator.geolocation.getCurrentPosition(p => {
-        map.setView([p.coords.latitude, p.coords.longitude], 17);
-        setStatus('Posizione rilevata');
-      }, () => setStatus('Errore GPS'), { enableHighAccuracy: true });
+    // --- Nuova funzione per localizzare l'utente ---
+    function locateUser() {
+      if (!navigator.geolocation) {
+        setStatus('GPS non disponibile');
+        return;
+      }
+      setStatus('Cerco la tua posizione...');
+      
+      navigator.geolocation.getCurrentPosition(
+        (p) => {
+          map.setView([p.coords.latitude, p.coords.longitude], 17);
+          setStatus('Posizione trovata');
+        }, 
+        () => setStatus('Errore o permesso negato'), 
+        { enableHighAccuracy: true }
+      );
+    }
+
+    // 1. Collega la funzione al click del pulsante (così puoi usarlo sempre)
+    document.getElementById('gpsBtn').onclick = locateUser;
+
+    // 2. Chiama la funzione SUBITO all'avvio (appena apri il sito)
+    locateUser();
+
+
+        document.getElementById('refreshBtn').onclick = () => {
+      // Svuota tutto (cache e mappa)
+      loadedIds.clear();
+      parkingAreasLayer.clearLayers();
+      parkingSpacesLayer.clearLayers();
+      parkometersLayer.clearLayers();
+      
+      setStatus('Reset dati e aggiornamento...');
+      fetchParking();
     };
 
-    document.getElementById('refreshBtn').onclick = fetchParking;
 
     /* ===== Schermo intero ===== */
     function updateFullscreenIcon() {
