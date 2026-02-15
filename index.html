@@ -801,7 +801,7 @@
       `;
     }
 
-        function fetchParking(retryCount = 0) {
+    function fetchParking(retryCount = 0) {
       // Se è il primo tentativo, mostriamo lo stato normale, altrimenti lo stato di "ritentativo"
       if (retryCount === 0) {
         setStatus('Aggiornamento dati...');
@@ -809,41 +809,25 @@
         setStatus(`Errore API, riprovo (${retryCount}/3)...`);
       }
       
-      // 1. Ottieni i confini attuali della mappa (visibili)
-      var bounds = map.getBounds();
-      var south = bounds.getSouth();
-      var west = bounds.getWest();
-      var north = bounds.getNorth();
-      var east = bounds.getEast();
-
-      // 2. Calcola un'area minima di ~1km
+      // Ottieni il centro della mappa (posizione GPS o cercata)
       var center = map.getCenter();
-      var radiusLat = 0.0045; 
-      var radiusLon = 0.006;  
+      var lat = center.lat;
+      var lon = center.lng;
+      var radius = 1000; // 1 km di raggio
 
-      var minSouth = center.lat - radiusLat;
-      var minNorth = center.lat + radiusLat;
-      var minWest = center.lng - radiusLon;
-      var minEast = center.lng + radiusLon;
-
-      // 3. Estendi i confini di ricerca
-      if (minSouth < south) south = minSouth;
-      if (minNorth > north) north = minNorth;
-      if (minWest < west) west = minWest;
-      if (minEast > east) east = minEast;
-
+      // Costruisci la query usando (around:raggio,lat,lon) invece della BBox
       var query = `[out:json][timeout:25];(
-        way["amenity"="parking"](${south},${west},${north},${east});
-        relation["amenity"="parking"](${south},${west},${north},${east});
-        node["amenity"="parking"](${south},${west},${north},${east});
+        way["amenity"="parking"](around:${radius},${lat},${lon});
+        relation["amenity"="parking"](around:${radius},${lat},${lon});
+        node["amenity"="parking"](around:${radius},${lat},${lon});
 
-        node["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](${south},${west},${north},${east});
-        way["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](${south},${west},${north},${east});
+        node["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](around:${radius},${lat},${lon});
+        way["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](around:${radius},${lat},${lon});
 
         /* ✅ PARCOMETRI */
-        node["amenity"="vending_machine"]["vending"="parking_tickets"](${south},${west},${north},${east});
-        way["amenity"="vending_machine"]["vending"="parking_tickets"](${south},${west},${north},${east});
-        relation["amenity"="vending_machine"]["vending"="parking_tickets"](${south},${west},${north},${east});
+        node["amenity"="vending_machine"]["vending"="parking_tickets"](around:${radius},${lat},${lon});
+        way["amenity"="vending_machine"]["vending"="parking_tickets"](around:${radius},${lat},${lon});
+        relation["amenity"="vending_machine"]["vending"="parking_tickets"](around:${radius},${lat},${lon});
       );out body geom;`;
 
       fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query))
@@ -870,6 +854,7 @@
           }
         });
     }
+
 
 
 
