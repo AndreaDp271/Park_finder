@@ -801,58 +801,117 @@
       `;
     }
 
-    function fetchParking(retryCount = 0) {
-      // Se è il primo tentativo, mostriamo lo stato normale, altrimenti lo stato di "ritentativo"
-      if (retryCount === 0) {
-        setStatus('Aggiornamento dati...');
-      } else {
-        setStatus(`Errore API, riprovo (${retryCount}/3)...`);
+    const overpassCache = new Map();
+    const overpassEndpoints = [
+      'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+      'https://overpass-api.de/api/interpreter',
+      'https://overpass.openstreetmap.ru/cgi/interpreter'
+    ];
+    let activeOverpassController = null;
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function getCacheKey(center, zoom) {
+      const precision = zoom >= 16 ? 4 : 3;
+      return `${center.lat.toFixed(precision)},${center.lng.toFixed(precision)},z${Math.round(zoom)}`;
+    }
+
+    async function fetchOverpassWithFallback(query, signal) {
+      const requestBody = 'data=' + encodeURIComponent(query);
+      const errors = [];
+
+      for (const endpoint of overpassEndpoints) {
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: requestBody,
+            signal
+          });
+
+          if (!response.ok) {
+            errors.push(`${endpoint} -> HTTP ${response.status}`);
+            continue;
+          }
+
+          return await response.json();
+        } catch (error) {
+          if (error.name === 'AbortError') throw error;
+          errors.push(`${endpoint} -> ${error.message}`);
+        }
       }
-      
-      // Ottieni il centro della mappa (posizione GPS o cercata)
-      var center = map.getCenter();
-      var lat = center.lat;
-      var lon = center.lng;
-      var radius = 1000; // 1 km di raggio
 
-      // Costruisci la query usando (around:raggio,lat,lon) invece della BBox
-      var query = `[out:json][timeout:25];(
-        way["amenity"="parking"](around:${radius},${lat},${lon});
-        relation["amenity"="parking"](around:${radius},${lat},${lon});
-        node["amenity"="parking"](around:${radius},${lat},${lon});
+      throw new Error('Overpass fallback failed: ' + errors.join(' | '));
+    }
 
-        node["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](around:${radius},${lat},${lon});
-        way["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](around:${radius},${lat},${lon});
+    async function fetchParking(forceRefresh = false) {
+      if (activeOverpassController) {
+        activeOverpassController.abort();
+      }
+
+      const center = map.getCenter();
+      const zoom = map.getZoom() || 15;
+      const radius = zoom >= 17 ? 700 : (zoom >= 15 ? 1000 : 1400);
+      const cacheKey = getCacheKey(center, zoom);
+
+      if (forceRefresh) {
+        overpassCache.clear();
+      }
+
+      if (!forceRefresh && overpassCache.has(cacheKey)) {
+        renderParking(overpassCache.get(cacheKey));
+        setStatus('Dati da cache');
+        setTimeout(() => setStatus(''), 900);
+        return;
+      }
+
+      setStatus('Aggiornamento dati...');
+
+      const query = `[out:json][timeout:25];(
+        way["amenity"="parking"](around:${radius},${center.lat},${center.lng});
+        relation["amenity"="parking"](around:${radius},${center.lat},${center.lng});
+        node["amenity"="parking"](around:${radius},${center.lat},${center.lng});
+
+        node["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](around:${radius},${center.lat},${center.lng});
+        way["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](around:${radius},${center.lat},${center.lng});
 
         /* ✅ PARCOMETRI */
-        node["amenity"="vending_machine"]["vending"="parking_tickets"](around:${radius},${lat},${lon});
-        way["amenity"="vending_machine"]["vending"="parking_tickets"](around:${radius},${lat},${lon});
-        relation["amenity"="vending_machine"]["vending"="parking_tickets"](around:${radius},${lat},${lon});
-      );out body geom;`;
+        node["amenity"="vending_machine"]["vending"="parking_tickets"](around:${radius},${center.lat},${center.lng});
+        way["amenity"="vending_machine"]["vending"="parking_tickets"](around:${radius},${center.lat},${center.lng});
+        relation["amenity"="vending_machine"]["vending"="parking_tickets"](around:${radius},${center.lat},${center.lng});
+      );out body geom qt;`;
 
-      fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query))
-        .then(res => {
-          if (!res.ok) throw new Error(res.status); // Lancia errore se il server risponde picche (es. 429, 500)
-          return res.json();
-        })
-        .then(data => {
-          renderParking(data);
-          setStatus('Dati caricati');
-          setTimeout(() => setStatus(''), 2000);
-        })
-        .catch(err => {
-          console.warn('Errore fetch:', err);
-          
-          // Logica di riprova (massimo 3 tentativi)
-          if (retryCount < 3) {
-            // Riprova dopo 1.5 secondi
-            setTimeout(() => {
-              fetchParking(retryCount + 1);
-            }, 1500);
-          } else {
-            setStatus('Errore connessione. Riprova più tardi.');
+      activeOverpassController = new AbortController();
+      const maxRetries = 3;
+
+      try {
+        let data = null;
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            if (attempt > 1) {
+              setStatus(`Errore API, riprovo (${attempt}/${maxRetries})...`);
+            }
+            data = await fetchOverpassWithFallback(query, activeOverpassController.signal);
+            break;
+          } catch (error) {
+            if (error.name === 'AbortError') return;
+            if (attempt === maxRetries) throw error;
+            await sleep(600 * attempt);
           }
-        });
+        }
+
+        if (!data) return;
+        overpassCache.set(cacheKey, data);
+        renderParking(data);
+        setStatus('Dati caricati');
+        setTimeout(() => setStatus(''), 1500);
+      } catch (err) {
+        console.warn('Errore fetch:', err);
+        setStatus('Errore connessione. Riprova più tardi.');
+      }
     }
 
 
@@ -963,10 +1022,10 @@
     var fetchTimeout = null;
     map.on('moveend', () => {
       if (fetchTimeout) clearTimeout(fetchTimeout);
-      fetchTimeout = setTimeout(fetchParking, 500);
+      fetchTimeout = setTimeout(() => fetchParking(false), 350);
     });
 
-    fetchParking();
+    fetchParking(false);
 
     function showSearchResults(items) {
       const box = document.getElementById('searchResults');
@@ -1070,7 +1129,7 @@
       parkometersLayer.clearLayers();
       
       setStatus('Reset dati e aggiornamento...');
-      fetchParking();
+      fetchParking(true);
     };
 
 
