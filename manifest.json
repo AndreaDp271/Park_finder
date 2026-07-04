@@ -4,7 +4,7 @@
   "description": "Trova aree di sosta, stalli speciali e parcometri da OpenStreetMap",
   "start_url": "./index.html",
   "scope": "./",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#ffffff",
   "theme_color": "#3b82f6",
   "orientation": "portrait-primary",

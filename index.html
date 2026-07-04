@@ -163,24 +163,23 @@
     .search-result-item:hover{ background:#f8fafc; }
     .search-result-item + .search-result-item{ border-top:1px solid #f1f5f9; }
 
-    .control-group{ display:flex; gap:8px; }
-
-    .control-btn{
-      height:48px;
-      width:48px;
-      background:var(--glass);
-      backdrop-filter:blur(8px);
+    .fab-btn{
+      position:fixed;
+      z-index:1001;
+      background:#fff;
+      color:var(--text-main);
+      width:56px;height:56px;
+      border-radius:50%;
+      box-shadow:var(--shadow-lg);
       border:none;
-      border-radius:var(--radius);
       display:flex;
       align-items:center;
       justify-content:center;
-      color:var(--text-main);
       cursor:pointer;
-      transition:all .2s ease;
+      transition:transform .2s cubic-bezier(0.34,1.56,0.64,1);
     }
-    .control-btn:hover{ color:var(--primary); background:#fff; transform:translateY(-1px); }
-    .control-btn:active{ transform:translateY(0) scale(0.95); }
+    .fab-btn:hover{ transform:scale(1.05); color:var(--primary); }
+    .fab-btn:active{ transform:scale(0.95); }
 
     #status{
       position:fixed;
@@ -206,46 +205,11 @@
     }
     #status:not(:empty){ opacity:1; transform:translateX(-50%) translateY(0); }
 
-    /* Pulsante schermo intero (sopra al pulsante info) */
-    #fullscreenBtn{
-      position:fixed;
-      bottom:90px;
-      right:20px;
-      z-index:1001;
-      background:#fff;
-      color:var(--text-main);
-      width:56px;height:56px;
-      border-radius:50%;
-      box-shadow:var(--shadow-lg);
-      border:none;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      cursor:pointer;
-      transition:transform .2s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    #fullscreenBtn:hover{ transform:scale(1.05); color:var(--primary); }
-    #fullscreenBtn:active{ transform:scale(0.95); }
-
-    #toggleLegend{
-      position:fixed;
-      bottom:24px;
-      right:20px;
-      z-index:1001;
-      background:#fff;
-      color:var(--text-main);
-      width:56px;height:56px;
-      border-radius:50%;
-      box-shadow:var(--shadow-lg);
-      border:none;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      cursor:pointer;
-      transition:transform .2s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    #toggleLegend:hover{ transform:scale(1.05); color:var(--primary); }
-    #toggleLegend:active{ transform:scale(0.95); }
+    /* Pulsanti flottanti: posizione+aggiorna a sinistra, schermo intero+info a destra */
+    #gpsBtn{ bottom:90px; left:20px; }
+    #refreshBtn{ bottom:24px; left:20px; }
+    #fullscreenBtn{ bottom:90px; right:20px; }
+    #toggleLegend{ bottom:24px; right:20px; }
 
     #legendPanel{
       position:fixed;
@@ -400,25 +364,24 @@
       </button>
       <div id="searchResults"></div>
     </div>
-
-    <div class="control-group">
-      <button id="gpsBtn" class="control-btn" title="La mia posizione">
-        <i data-lucide="locate-fixed"></i>
-      </button>
-      <button id="refreshBtn" class="control-btn" title="Aggiorna dati">
-        <i data-lucide="refresh-cw"></i>
-      </button>
-    </div>
   </div>
 
   <div id="map"></div>
   <div id="status"></div>
 
-  <button id="fullscreenBtn" title="Schermo intero">
+  <button id="gpsBtn" class="fab-btn" title="La mia posizione">
+    <i data-lucide="locate-fixed"></i>
+  </button>
+
+  <button id="refreshBtn" class="fab-btn" title="Aggiorna dati">
+    <i data-lucide="refresh-cw"></i>
+  </button>
+
+  <button id="fullscreenBtn" class="fab-btn" title="Schermo intero">
     <i data-lucide="maximize-2"></i>
   </button>
 
-  <button id="toggleLegend" title="Legenda">
+  <button id="toggleLegend" class="fab-btn" title="Legenda">
     <i data-lucide="info"></i>
   </button>
 
@@ -1197,7 +1160,10 @@
 
     // Su iOS Safari la Fullscreen API non è supportata: nascondiamo il pulsante
     // invece di mostrarlo senza che faccia nulla.
-    if (!document.documentElement.requestFullscreen) {
+    // Idem se l'app è già installata come PWA a schermo intero (manifest display:fullscreen):
+    // il pulsante sarebbe ridondante e su alcuni browser innescherebbe comunque il banner nativo.
+    var runningFullscreenPwa = window.matchMedia('(display-mode: fullscreen)').matches || navigator.standalone;
+    if (!document.documentElement.requestFullscreen || runningFullscreenPwa) {
       document.getElementById('fullscreenBtn').style.display = 'none';
     }
 
