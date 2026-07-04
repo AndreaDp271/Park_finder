@@ -39,10 +39,14 @@
       --shadow-sm:0 1px 2px 0 rgb(0 0 0 / 0.05);
       --shadow-md:0 4px 6px -1px rgb(0 0 0 / 0.1),0 2px 4px -2px rgb(0 0 0 / 0.1);
       --shadow-lg:0 10px 15px -3px rgb(0 0 0 / 0.1),0 4px 6px -4px rgb(0 0 0 / 0.1);
-      --glass:rgba(255,255,255,0.95);
+      --glass:rgba(255,255,255,0.85);
       --danger:#ef4444;
       --meter-fill:#f97316;
       --meter-stroke:#111827;
+      --btn-size:46px;
+      --btn-gap:10px;
+      --btn-shadow:0 2px 10px rgb(15 23 42 / 0.10),0 1px 2px rgb(15 23 42 / 0.08);
+      --btn-border:1px solid rgba(15,23,42,0.06);
     }
 
     html,body{
@@ -74,30 +78,34 @@
       gap:10px;
       pointer-events:none;
     }
-    #topbar > *{ pointer-events:auto; box-shadow:var(--shadow-md); }
+    #topbar > *{ pointer-events:auto; box-shadow:var(--btn-shadow); }
 
     #titleBadge{
-      background:var(--bg-dark);
-      color:#fff;
-      height:48px;
+      background:var(--glass);
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
+      border:var(--btn-border);
+      color:var(--text-main);
+      height:46px;
       padding:0 16px;
       border-radius:var(--radius);
       display:flex;
       align-items:center;
       gap:8px;
       font-weight:700;
-      font-size:16px;
+      font-size:15px;
       white-space:nowrap;
       flex-shrink:0;
     }
-    #titleBadge i{ color:var(--primary); width:20px; height:20px; }
+    #titleBadge i{ color:var(--primary); width:19px; height:19px; }
 
     #searchBox{
       flex:1;
       background:var(--glass);
-      backdrop-filter:blur(8px);
-      -webkit-backdrop-filter:blur(8px);
-      height:48px;
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
+      border:var(--btn-border);
+      height:46px;
       border-radius:var(--radius);
       display:flex;
       align-items:center;
@@ -106,7 +114,7 @@
       position:relative;
     }
     #searchBox:focus-within{
-      box-shadow:var(--shadow-lg),0 0 0 2px var(--primary);
+      box-shadow:var(--shadow-md),0 0 0 2px var(--primary);
       transform:translateY(-1px);
     }
 
@@ -115,7 +123,7 @@
       border:none;
       background:transparent;
       font-family:inherit;
-      font-size:15px;
+      font-size:14px;
       color:var(--text-main);
       outline:none;
       min-width:0;
@@ -126,17 +134,18 @@
     #searchBtn{
       background:var(--primary);
       color:#fff;
-      height:40px;
-      padding:0 16px;
+      height:36px;
+      padding:0 14px;
       border-radius:8px;
       font-weight:600;
-      font-size:14px;
+      font-size:13px;
       border:none;
       cursor:pointer;
       display:flex;
       align-items:center;
       gap:6px;
       margin-left:8px;
+      transition:background .15s ease, transform .15s ease;
     }
     #searchBtn:hover{ background:var(--primary-dark); }
     #searchBtn:active{ transform:scale(0.95); }
@@ -166,20 +175,71 @@
     .fab-btn{
       position:fixed;
       z-index:1001;
-      background:#fff;
+      background:var(--glass);
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
       color:var(--text-main);
-      width:56px;height:56px;
+      width:var(--btn-size);height:var(--btn-size);
       border-radius:50%;
-      box-shadow:var(--shadow-lg);
-      border:none;
+      box-shadow:var(--btn-shadow);
+      border:var(--btn-border);
       display:flex;
       align-items:center;
       justify-content:center;
       cursor:pointer;
+      transition:transform .2s cubic-bezier(0.34,1.56,0.64,1), color .15s ease;
+    }
+    .fab-btn i{ width:20px; height:20px; }
+    .fab-btn:hover{ transform:scale(1.06); color:var(--primary); }
+    .fab-btn:active{ transform:scale(0.94); }
+
+    /* Allinea i controlli nativi di Leaflet (zoom, layer) allo stile dei pulsanti flottanti */
+    .leaflet-bottom.leaflet-left{ margin:0 0 16px 16px; }
+    .leaflet-bottom .leaflet-control{ margin:0 0 var(--btn-gap) 0 !important; }
+    .leaflet-control-zoom{ border:none !important; background:transparent !important; box-shadow:none !important; border-radius:0 !important; display:flex; flex-direction:column; gap:var(--btn-gap); }
+    .leaflet-control-zoom a{
+      width:var(--btn-size) !important; height:var(--btn-size) !important; line-height:var(--btn-size) !important;
+      border-radius:50% !important;
+      background:var(--glass) !important;
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
+      box-shadow:var(--btn-shadow);
+      border:var(--btn-border) !important;
+      color:var(--text-main) !important;
+      font-size:19px;
+      transition:transform .2s cubic-bezier(0.34,1.56,0.64,1), color .15s ease;
+    }
+    .leaflet-control-zoom a:hover{ background:var(--glass) !important; color:var(--primary) !important; transform:scale(1.06); }
+    .leaflet-control-zoom a:active{ transform:scale(0.94); }
+
+    .leaflet-control-layers{
+      border:none !important;
+      box-shadow:none !important;
+      background:transparent !important;
+    }
+    .leaflet-control-layers-toggle{
+      width:var(--btn-size) !important; height:var(--btn-size) !important;
+      border-radius:50% !important;
+      background-color:var(--glass) !important;
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
+      box-shadow:var(--btn-shadow);
+      border:var(--btn-border) !important;
+      background-size:20px 20px !important;
       transition:transform .2s cubic-bezier(0.34,1.56,0.64,1);
     }
-    .fab-btn:hover{ transform:scale(1.05); color:var(--primary); }
-    .fab-btn:active{ transform:scale(0.95); }
+    .leaflet-control-layers-toggle:hover{ transform:scale(1.06); }
+
+    .leaflet-control-layers-expanded{
+      border-radius:16px !important;
+      background:var(--glass) !important;
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
+      box-shadow:var(--btn-shadow);
+      border:var(--btn-border) !important;
+      padding:12px 16px !important;
+      color:var(--text-main);
+    }
 
     #status{
       position:fixed;
@@ -205,16 +265,16 @@
     }
     #status:not(:empty){ opacity:1; transform:translateX(-50%) translateY(0); }
 
-    /* Pulsanti flottanti: posizione+aggiorna a sinistra, schermo intero+info a destra */
-    #gpsBtn{ bottom:90px; left:20px; }
-    #refreshBtn{ bottom:24px; left:20px; }
-    #fullscreenBtn{ bottom:90px; right:20px; }
-    #toggleLegend{ bottom:24px; right:20px; }
+    /* Pulsanti flottanti impilati sul lato destro (a sinistra restano zoom/layer di Leaflet) */
+    #toggleLegend{ bottom:16px; right:16px; }
+    #fullscreenBtn{ bottom:calc(16px + (var(--btn-size) + var(--btn-gap)) * 1); right:16px; }
+    #refreshBtn{ bottom:calc(16px + (var(--btn-size) + var(--btn-gap)) * 2); right:16px; }
+    #gpsBtn{ bottom:calc(16px + (var(--btn-size) + var(--btn-gap)) * 3); right:16px; }
 
     #legendPanel{
       position:fixed;
-      bottom:156px;
-      right:20px;
+      bottom:calc(16px + (var(--btn-size) + var(--btn-gap)) * 1);
+      right:16px;
       width:280px;
       max-width:calc(100% - 40px);
       max-height:60vh;
@@ -341,13 +401,16 @@
     .popup-links a:hover{ background:var(--text-main); color:#fff; border-color:var(--text-main); }
 
     @media (max-width:600px){
+      :root{ --btn-size:42px; --btn-gap:8px; }
       #topbar{ top:10px; width:calc(100% - 20px); gap:8px; }
       #titleBadge span{ display:none; }
-      #titleBadge{ padding:0; width:48px; justify-content:center; }
+      #titleBadge{ padding:0; width:46px; justify-content:center; }
       #searchBtn span.text{ display:none; }
       #searchBtn{ padding:0; width:36px; height:36px; justify-content:center; margin-left:4px; }
       #searchBox{ padding-left:12px; padding-right:6px; }
-      #legendPanel{ left:16px; right:16px; width:auto; bottom:156px; }
+      #legendPanel{ left:16px; right:16px; width:auto; }
+      #toggleLegend, #fullscreenBtn, #refreshBtn, #gpsBtn{ right:12px; }
+      .leaflet-bottom.leaflet-left{ margin:0 0 12px 12px; }
     }
   </style>
 </head>
