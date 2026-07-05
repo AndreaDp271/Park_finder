@@ -1214,6 +1214,30 @@
     // amministrativo (lento e spesso in timeout sui mirror pubblici gratuiti).
     const ITALY_BBOX = '35.2,6.6,47.3,18.6';
 
+    // fetchOverpassWithFallback si ferma alla prima risposta HTTP 200, anche se ha 0 risultati:
+    // per le ricerche puntuali (CAP/città) alcuni mirror hanno dati incompleti e rispondono vuoti
+    // pur avendo l'endpoint online, quindi qui proviamo tutti i mirror finché uno non trova qualcosa.
+    async function fetchOverpassPreferNonEmpty(query) {
+      let firstOk = null;
+      for (const endpoint of overpassEndpoints) {
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'data=' + encodeURIComponent(query)
+          });
+          if (!response.ok) continue;
+
+          const data = await response.json();
+          if (data && data.elements && data.elements.length) return data;
+          if (!firstOk) firstOk = data;
+        } catch (err) {
+          console.warn('Overpass mirror fallito:', endpoint, err.message);
+        }
+      }
+      return firstOk || { elements: [] };
+    }
+
     async function geocodeCapFromOsm(cap) {
       const query = `[out:json][timeout:25];
         (
@@ -1223,7 +1247,7 @@
         out body 5;`;
 
       try {
-        const data = await fetchOverpassWithFallback(query);
+        const data = await fetchOverpassPreferNonEmpty(query);
         const el = data && data.elements && data.elements[0];
         if (!el || el.lat == null) return false;
 
@@ -1257,7 +1281,7 @@
         out body 30;`;
 
       try {
-        const data = await fetchOverpassWithFallback(query);
+        const data = await fetchOverpassPreferNonEmpty(query);
         const elements = (data && data.elements) || [];
         const qLower = q.trim().toLowerCase();
 
