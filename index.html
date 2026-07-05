@@ -589,6 +589,26 @@
       return base + sel + center;
     }
 
+    // Come str.split(';'), ma ignora i ';' dentro le parentesi: un valore come
+    // "no @ (Mo-Sa 13:00-15:00,20:00-08:00; Su)" è UNA sola regola condizionale,
+    // non due, anche se contiene un punto e virgola nell'elenco giorni tra parentesi.
+    function splitOsmRules(str) {
+      const parts = [];
+      let depth = 0, current = '';
+      for (const ch of String(str || '')) {
+        if (ch === '(') depth++;
+        if (ch === ')') depth--;
+        if (ch === ';' && depth <= 0) {
+          parts.push(current);
+          current = '';
+        } else {
+          current += ch;
+        }
+      }
+      if (current.trim()) parts.push(current);
+      return parts.map(p => p.trim()).filter(Boolean);
+    }
+
     function translateOsmTime(str) {
       if (!str) return '';
       return str
@@ -624,22 +644,132 @@
       return raw;
     }
 
+    // Analizza una regola OSM del tipo "valore @ (condizione)" (usata da fee/access/maxstay
+    // :conditional) restituendo il valore e la condizione tradotta, oppure null se non riconosciuta.
+    function parseConditionalRule(rule) {
+      let m = rule.match(/^(.+?)\s*@\s*\((.+)\)\s*$/);
+      if (!m) m = rule.match(/^(.+?)\s*@\s*(.+?)\s*$/);
+      if (!m) return null;
+      return { value: m[1].trim(), condition: translateOsmTime(m[2]).trim() };
+    }
+
     function formatMaxstayConditionalItalian(str) {
-      return String(str || '')
-        .split(';')
-        .map(x => x.trim())
-        .filter(Boolean)
-        .map(rule => {
-          let m = rule.match(/^(.+?)\s*@\s*\((.+)\)\s*$/);
-          if (!m) m = rule.match(/^(.+?)\s*@\s*(.+?)\s*$/);
+      return splitOsmRules(str).map(rule => {
+        const parsed = parseConditionalRule(rule);
+        if (!parsed) return 'Tempo massimo (cond): ' + translateOsmTime(rule);
 
-          if (!m) return 'Tempo massimo (cond): ' + translateOsmTime(rule);
+        return `Tempo massimo: ${maxstayValueToItalian(parsed.value)} nei giorni/orari: ${parsed.condition}`;
+      });
+    }
 
-          const valueIt = maxstayValueToItalian(m[1]);
-          const condIt = translateOsmTime(m[2]).trim();
+    // Formatta fee:conditional / access:conditional in modo uniforme:
+    // "<yesLabel> nei giorni/orari: ..." / "<noLabel> nei giorni/orari: ...".
+    // Ritorna { text, danger } per ogni regola, pronto per essere renderizzato come badge.
+    function formatYesNoConditional(str, yesLabel, noLabel) {
+      return splitOsmRules(str).map(rule => {
+        const parsed = parseConditionalRule(rule);
+        if (!parsed) return { text: translateOsmTime(rule), danger: false };
 
-          return `Tempo massimo: ${valueIt} nei giorni/orari: ${condIt}`;
-        });
+        const value = parsed.value.toLowerCase();
+        if (value === 'yes') return { text: `${yesLabel} nei giorni/orari: ${parsed.condition}`, danger: false };
+        if (value === 'no') return { text: `${noLabel} nei giorni/orari: ${parsed.condition}`, danger: true };
+        return { text: `${parsed.value} nei giorni/orari: ${parsed.condition}`, danger: false };
+      });
+    }
+
+    // --- Inversione fasce orarie (per fee:conditional=no @ ...: mostra quando SI PAGA, non quando è gratis) ---
+
+    function parseTimeRangesToMinutes(timeStr) {
+      return timeStr.split(',').map(s => s.trim()).filter(Boolean).map(r => {
+        const m = r.match(/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/);
+        if (!m) return null;
+        return { start: (+m[1]) * 60 + (+m[2]), end: (+m[3]) * 60 + (+m[4]) };
+      }).filter(Boolean);
+    }
+
+    function mergeAndComplementRanges(ranges) {
+      // Un intervallo che "avvolge" la mezzanotte (es. 20:00-08:00) diventa due intervalli separati
+      const expanded = [];
+      ranges.forEach(r => {
+        if (r.end <= r.start) { expanded.push({ start: r.start, end: 1440 }); expanded.push({ start: 0, end: r.end }); }
+        else expanded.push(r);
+      });
+      expanded.sort((a, b) => a.start - b.start);
+
+      const merged = [];
+      expanded.forEach(r => {
+        const last = merged[merged.length - 1];
+        if (last && r.start <= last.end) last.end = Math.max(last.end, r.end);
+        else merged.push({ start: r.start, end: r.end });
+      });
+
+      const complement = [];
+      let cursor = 0;
+      merged.forEach(r => {
+        if (r.start > cursor) complement.push({ start: cursor, end: r.start });
+        cursor = Math.max(cursor, r.end);
+      });
+      if (cursor < 1440) complement.push({ start: cursor, end: 1440 });
+      return complement;
+    }
+
+    function minutesToHHMM(m) {
+      const h = Math.floor(m / 60), mm = m % 60;
+      return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+    }
+
+    function rangesToTimeString(ranges) {
+      return ranges.map(r => minutesToHHMM(r.start) + '-' + (r.end === 1440 ? '24:00' : minutesToHHMM(r.end))).join(',');
+    }
+
+    // Da una condizione tipo "Mo-Sa 13:00-15:00,20:00-08:00; Su" calcola l'orario complementare
+    // (quando NON vale la condizione, cioè quando si paga se la condizione descrive la gratuità).
+    // I gruppi giorno senza fascia oraria (es. "Su" da solo) valgono tutto il giorno: nessun
+    // complemento, quindi quel giorno non compare mai tra gli orari a pagamento.
+    function invertConditionToPaidSchedule(rawCondition) {
+      const groups = rawCondition.split(';').map(s => s.trim()).filter(Boolean);
+      const entries = [];
+
+      groups.forEach(group => {
+        const m = group.match(/^([A-Za-z]{2}(?:-[A-Za-z]{2})?(?:,\s*[A-Za-z]{2}(?:-[A-Za-z]{2})?)*)\s*(.*)$/);
+        if (!m) return;
+        const days = m[1];
+        const timePart = m[2].trim();
+        if (!timePart) return; // tutto il giorno gratis: nessun orario a pagamento quel giorno
+
+        const ranges = parseTimeRangesToMinutes(timePart);
+        if (!ranges.length) return;
+
+        const paidRanges = mergeAndComplementRanges(ranges);
+        if (!paidRanges.length) return;
+
+        entries.push(`${translateOsmTime(days)} ${rangesToTimeString(paidRanges)}`);
+      });
+
+      return entries.join('; ');
+    }
+
+    // fee:conditional=no @ (...) va mostrato come "A pagamento nei giorni/orari: <orario invertito>",
+    // non come "Gratuito nei giorni/orari: <orario dichiarato>": all'utente interessa sapere quando paga.
+    function formatFeeConditional(str) {
+      return splitOsmRules(str).map(rule => {
+        const m = rule.match(/^(.+?)\s*@\s*\((.+)\)\s*$/) || rule.match(/^(.+?)\s*@\s*(.+?)\s*$/);
+        if (!m) return { text: translateOsmTime(rule), danger: false };
+
+        const value = m[1].trim().toLowerCase();
+        const rawCondition = m[2].trim();
+
+        if (value === 'yes') {
+          return { text: `A pagamento nei giorni/orari: ${translateOsmTime(rawCondition)}`, danger: false };
+        }
+        if (value === 'no') {
+          const paidSchedule = invertConditionToPaidSchedule(rawCondition);
+          return paidSchedule
+            ? { text: `A pagamento nei giorni/orari: ${paidSchedule}`, danger: false }
+            : { text: `Gratuito nei giorni/orari: ${translateOsmTime(rawCondition)}`, danger: false };
+        }
+        return { text: `${value} nei giorni/orari: ${translateOsmTime(rawCondition)}`, danger: false };
+      });
     }
 
     // Nome italiano dello stallo speciale, usato come titolo del popup e nel campo "Tipo"
@@ -715,12 +845,9 @@
 
       var accessNoteHtml = '';
       if (accessConditional) {
-        accessNoteHtml = accessConditional.split(';').map(p => {
-          p = p.trim();
-          let isDanger = p.includes('no @');
-          let translated = translateOsmTime(p.replace('no @', 'Vietato ').replace('yes @', 'Aperto '));
-          return `<div class="badge-note ${isDanger ? 'danger' : ''}">${translated}</div>`;
-        }).join('');
+        accessNoteHtml = formatYesNoConditional(accessConditional, 'Aperto', 'Vietato')
+          .map(r => `<div class="badge-note ${r.danger ? 'danger' : ''}">${escapeHtml(r.text)}</div>`)
+          .join('');
       }
 
       var feeRaw = tags.fee || '';
@@ -735,22 +862,9 @@
       if (feeConditional) {
         fee = (fee === 'Non specificato') ? 'Condizionato:' : (fee);
 
-        feeNoteHtml = feeConditional.split(';').map(p => {
-          p = p.trim();
-
-          let isFree = p.includes('no @');
-          let label = '';
-
-          if (p.includes('yes @')) {
-            label = 'a pagamento negli orari: ' + translateOsmTime(((p.split('@')[1] || '')).trim());
-          } else if (isFree) {
-            label = 'gratis negli orari: ' + translateOsmTime(((p.split('@')[1] || '')).trim());
-          } else {
-            label = translateOsmTime(p);
-          }
-
-          return `<div class="badge-note ${isFree ? 'danger' : ''}">${escapeHtml(label)}</div>`;
-        }).join('');
+        feeNoteHtml = formatFeeConditional(feeConditional)
+          .map(r => `<div class="badge-note ${r.danger ? 'danger' : ''}">${escapeHtml(r.text)}</div>`)
+          .join('');
       }
 
       // ===== Limitazioni (badge viola per "a tempo") =====
@@ -806,7 +920,7 @@
         chargeHtml += `<div class="badge-note">${escapeHtml(chargeRaw)}</div>`;
       }
       if (chargeConditional) {
-        chargeHtml += chargeConditional.split(';').map(p => {
+        chargeHtml += splitOsmRules(chargeConditional).map(p => {
           p = p.trim();
           return `<div class="badge-note">${escapeHtml(translateOsmTime(p))}</div>`;
         }).join('');
@@ -889,6 +1003,12 @@
           ${typeLabel ? `<div><span class="label">Tipo </span><span class="val">${escapeHtml(typeLabel)}</span></div>` : ''}
         </div>` : ''}
 
+        ${tags.note ? `
+        <div class="popup-section">
+          <span class="label">Note</span>
+          <span class="val">${escapeHtml(tags.note)}</span>
+        </div>` : ''}
+
         <div class="popup-links">
           <a href="${buildGMapsUrl(lat, lon)}" target="_blank">Vai a</a>
           <a href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank">Modifica</a>
@@ -923,6 +1043,12 @@
         <div class="popup-section">
           <span class="label">Metodi di pagamento (raw)</span>
           <span class="val">${escapeHtml(paymentMethods.join(', '))}</span>
+        </div>` : ''}
+
+        ${tags.note ? `
+        <div class="popup-section">
+          <span class="label">Note</span>
+          <span class="val">${escapeHtml(tags.note)}</span>
         </div>` : ''}
 
         <div class="popup-links">
