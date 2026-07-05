@@ -1210,12 +1210,15 @@
     // Un CAP italiano (5 cifre) viene cercato tra i nodi OSM reali (postal_code/addr:postcode),
     // non tramite Nominatim: quello restituirebbe il centroide calcolato sull'area del CAP,
     // non un punto effettivamente presente sulla mappa.
+    // Bounding box dell'Italia: evita di far calcolare a Overpass l'area del confine
+    // amministrativo (lento e spesso in timeout sui mirror pubblici gratuiti).
+    const ITALY_BBOX = '35.2,6.6,47.3,18.6';
+
     async function geocodeCapFromOsm(cap) {
       const query = `[out:json][timeout:25];
-        area["ISO3166-1"="IT"][admin_level=2]->.it;
         (
-          node["postal_code"="${cap}"](area.it);
-          node["addr:postcode"="${cap}"](area.it);
+          node["postal_code"="${cap}"](${ITALY_BBOX});
+          node["addr:postcode"="${cap}"](${ITALY_BBOX});
         );
         out body 5;`;
 
@@ -1248,22 +1251,26 @@
     async function geocodePlaceFromOsm(q) {
       const safe = escapeOverpassRegex(q);
       const query = `[out:json][timeout:25];
-        area["ISO3166-1"="IT"][admin_level=2]->.it;
         (
-          node["place"]["name"~"${safe}",i](area.it);
+          node["place"]["name"~"${safe}",i](${ITALY_BBOX});
         );
-        out body 15;`;
+        out body 30;`;
 
       try {
         const data = await fetchOverpassWithFallback(query);
         const elements = (data && data.elements) || [];
+        const qLower = q.trim().toLowerCase();
+
         return elements
           .filter(el => el.lat != null && el.tags && el.tags.name)
           .map(el => ({
             lat: el.lat,
             lon: el.lon,
+            name: el.tags.name,
             display_name: el.tags.name + (placeTypeLabels[el.tags.place] ? ` (${placeTypeLabels[el.tags.place]})` : '')
           }))
+          // I nomi identici alla ricerca (es. "Castelfranco Veneto") prima delle frazioni omonime
+          .sort((a, b) => (a.name.toLowerCase() === qLower ? -1 : 0) - (b.name.toLowerCase() === qLower ? -1 : 0))
           .slice(0, 6);
       } catch (err) {
         console.warn('Errore ricerca città OSM:', err);
@@ -1286,38 +1293,10 @@
       }
 
       const placeResults = await geocodePlaceFromOsm(q);
-      if (placeResults.length) {
-        showSearchResults(placeResults);
-        setStatus('Seleziona un risultato');
-        return;
-      }
+      if (!placeResults.length) { setStatus('Nessun risultato'); return; }
 
-      const url =
-        'https://nominatim.openstreetmap.org/search?format=json' +
-        '&addressdetails=1' +
-        '&countrycodes=it' +
-        '&q=' + encodeURIComponent(q) +
-        '&limit=25';
-
-      fetch(url, { headers: { 'Accept-Language': 'it' } })
-        .then(res => res.json())
-        .then(results => {
-          if (!results || !results.length) { setStatus('Nessun risultato'); return; }
-
-          const blocked = new Set(['country', 'state', 'county']);
-
-          const filtered = results.filter(r => {
-            const at = (r.addresstype || '').toLowerCase();
-            if (blocked.has(at)) return false;
-            return true;
-          }).slice(0, 4);
-
-          if (!filtered.length) { setStatus('Nessun risultato utile'); return; }
-
-          showSearchResults(filtered);
-          setStatus('Seleziona un risultato');
-        })
-        .catch(() => setStatus('Errore ricerca'));
+      showSearchResults(placeResults);
+      setStatus('Seleziona un risultato');
     }
 
     document.getElementById('searchBtn').onclick = () => geocode(document.getElementById('searchInput').value.trim());
