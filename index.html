@@ -1261,43 +1261,46 @@
       }
     }
 
-    function escapeOverpassRegex(s) {
-      return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    }
-
     const placeTypeLabels = {
       city: 'Città', town: 'Comune', village: 'Paese', hamlet: 'Frazione',
       suburb: 'Quartiere', municipality: 'Comune', borough: 'Quartiere', locality: 'Località'
     };
 
-    // Cerca il nome tra i nodi OSM reali taggati place=* (es. https://www.openstreetmap.org/node/64778671),
-    // invece di affidarsi al centroide calcolato da Nominatim sul confine amministrativo.
+    // Cerca il nome tra i nodi OSM reali di tipo place=* (es. https://www.openstreetmap.org/node/64778671).
+    // Uno scan Overpass di tutta Italia via regex sul nome va in timeout sui mirror pubblici,
+    // quindi usiamo Nominatim (che indicizza già i nomi) ma teniamo solo i risultati che sono
+    // effettivamente nodi place=* (coordinate del punto reale, non un centroide calcolato).
     async function geocodePlaceFromOsm(q) {
-      const safe = escapeOverpassRegex(q);
-      const query = `[out:json][timeout:25];
-        (
-          node["place"]["name"~"${safe}",i](${ITALY_BBOX});
-        );
-        out body 30;`;
+      const url =
+        'https://nominatim.openstreetmap.org/search?format=json' +
+        '&addressdetails=1' +
+        '&countrycodes=it' +
+        '&q=' + encodeURIComponent(q) +
+        '&limit=25';
 
       try {
-        const data = await fetchOverpassPreferNonEmpty(query);
-        const elements = (data && data.elements) || [];
+        const res = await fetch(url, { headers: { 'Accept-Language': 'it' } });
+        const results = await res.json();
+        if (!results || !results.length) return [];
+
         const qLower = q.trim().toLowerCase();
 
-        return elements
-          .filter(el => el.lat != null && el.tags && el.tags.name)
-          .map(el => ({
-            lat: el.lat,
-            lon: el.lon,
-            name: el.tags.name,
-            display_name: el.tags.name + (placeTypeLabels[el.tags.place] ? ` (${placeTypeLabels[el.tags.place]})` : '')
-          }))
-          // I nomi identici alla ricerca (es. "Castelfranco Veneto") prima delle frazioni omonime
+        return results
+          .filter(r => r.osm_type === 'node' && r.class === 'place' && placeTypeLabels[r.type])
+          .map(r => {
+            const name = (r.display_name.split(',')[0] || '').trim();
+            return {
+              lat: r.lat,
+              lon: r.lon,
+              name,
+              display_name: `${name} (${placeTypeLabels[r.type]})`
+            };
+          })
+          // Il nome identico alla ricerca (es. "Castelfranco Veneto") prima delle frazioni omonime
           .sort((a, b) => (a.name.toLowerCase() === qLower ? -1 : 0) - (b.name.toLowerCase() === qLower ? -1 : 0))
           .slice(0, 6);
       } catch (err) {
-        console.warn('Errore ricerca città OSM:', err);
+        console.warn('Errore ricerca città:', err);
         return [];
       }
     }
