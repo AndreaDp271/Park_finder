@@ -1234,6 +1234,43 @@
       }
     }
 
+    function escapeOverpassRegex(s) {
+      return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    const placeTypeLabels = {
+      city: 'Città', town: 'Comune', village: 'Paese', hamlet: 'Frazione',
+      suburb: 'Quartiere', municipality: 'Comune', borough: 'Quartiere', locality: 'Località'
+    };
+
+    // Cerca il nome tra i nodi OSM reali taggati place=* (es. https://www.openstreetmap.org/node/64778671),
+    // invece di affidarsi al centroide calcolato da Nominatim sul confine amministrativo.
+    async function geocodePlaceFromOsm(q) {
+      const safe = escapeOverpassRegex(q);
+      const query = `[out:json][timeout:25];
+        area["ISO3166-1"="IT"][admin_level=2]->.it;
+        (
+          node["place"]["name"~"${safe}",i](area.it);
+        );
+        out body 15;`;
+
+      try {
+        const data = await fetchOverpassWithFallback(query);
+        const elements = (data && data.elements) || [];
+        return elements
+          .filter(el => el.lat != null && el.tags && el.tags.name)
+          .map(el => ({
+            lat: el.lat,
+            lon: el.lon,
+            display_name: el.tags.name + (placeTypeLabels[el.tags.place] ? ` (${placeTypeLabels[el.tags.place]})` : '')
+          }))
+          .slice(0, 6);
+      } catch (err) {
+        console.warn('Errore ricerca città OSM:', err);
+        return [];
+      }
+    }
+
     async function geocode(q) {
       if (!q) return;
 
@@ -1245,6 +1282,13 @@
         const found = await geocodeCapFromOsm(q);
         if (found) return;
         setStatus('CAP non trovato su OSM');
+        return;
+      }
+
+      const placeResults = await geocodePlaceFromOsm(q);
+      if (placeResults.length) {
+        showSearchResults(placeResults);
+        setStatus('Seleziona un risultato');
         return;
       }
 
