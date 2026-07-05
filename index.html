@@ -342,77 +342,99 @@
       flex-shrink:0;
     }
 
-    .leaflet-popup-content-wrapper{ border-radius:20px; box-shadow:var(--shadow-lg); padding:0; overflow:hidden; }
-    .leaflet-popup-content{ margin:16px 20px; min-width:240px !important; }
-    .leaflet-container a.leaflet-popup-close-button{ top:12px; right:12px; color:#94a3b8; font-size:20px; }
+    @keyframes popIn{ from{ opacity:0; transform:scale(0.92); } to{ opacity:1; transform:scale(1); } }
+    .leaflet-popup-content-wrapper{
+      border-radius:22px;
+      box-shadow:0 20px 40px -12px rgb(15 23 42 / 0.25),0 4px 12px -4px rgb(15 23 42 / 0.1);
+      padding:0; overflow:hidden;
+      animation:popIn .18s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .leaflet-popup-content{ margin:0; min-width:250px !important; }
+    .leaflet-popup-tip{ box-shadow:0 4px 10px rgb(15 23 42 / 0.15); }
+    .leaflet-container a.leaflet-popup-close-button{
+      top:14px; right:14px; color:#fff; font-size:18px; font-family:inherit;
+      width:24px; height:24px; padding:0; margin:0;
+      display:flex; align-items:center; justify-content:center;
+      line-height:1;
+      background:rgba(255,255,255,0.18); border-radius:50%;
+    }
+    .leaflet-container a.leaflet-popup-close-button span{ display:block; transform:translateY(-1px); }
+    .leaflet-container a.leaflet-popup-close-button:hover{ background:rgba(255,255,255,0.32); color:#fff; }
 
     .popup-header-container{
       display:flex;
       align-items:center;
-      gap:12px;
-      margin-bottom:16px;
-      padding-bottom:12px;
-      border-bottom:1px solid #f1f5f9;
+      gap:14px;
+      margin:0;
+      padding:18px 20px;
+      background:linear-gradient(135deg, var(--primary), var(--primary-dark));
+      transition:background .2s ease;
     }
     .popup-icon-box{
-      background:var(--primary-light);
-      color:var(--primary);
-      width:40px;height:40px;
-      border-radius:12px;
+      background:rgba(255,255,255,0.2);
+      color:#fff;
+      width:44px;height:44px;
+      border-radius:13px;
       display:flex;
       align-items:center;
       justify-content:center;
-      font-size:20px;
       flex-shrink:0;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,0.25);
     }
+    .popup-icon-box i{ width:22px; height:22px; }
     .popup-title{
       font-size:16px;
       font-weight:700;
-      color:var(--bg-dark);
+      color:#fff;
       line-height:1.3;
     }
-    .popup-section{ margin-bottom:12px; display:flex; flex-direction:column; }
+    .leaflet-popup-content > div:not(.popup-header-container):not(.popup-links){ padding:0 20px; }
+    .leaflet-popup-content > .popup-header-container + *{ margin-top:18px; }
+    .popup-section{ margin-bottom:14px; padding-bottom:14px; display:flex; flex-direction:column; border-bottom:1px solid #f1f5f9; }
+    .popup-section:last-of-type{ margin-bottom:4px; padding-bottom:0; border-bottom:none; }
     .label{
       color:var(--text-light);
-      font-weight:600;
-      font-size:11px;
+      font-weight:700;
+      font-size:10.5px;
       text-transform:uppercase;
-      letter-spacing:.05em;
-      margin-bottom:2px;
+      letter-spacing:.07em;
+      margin-bottom:4px;
     }
-    .val{ color:var(--text-main); font-weight:500; font-size:14px; line-height:1.5; }
+    .val{ color:var(--text-main); font-weight:600; font-size:14.5px; line-height:1.55; }
 
     .badge-note{
       background:var(--primary-light);
       color:var(--primary-dark);
       font-size:12px;
-      padding:6px 10px;
-      border-radius:8px;
+      padding:6px 11px;
+      border-radius:20px;
       margin-top:6px;
-      font-weight:600;
+      margin-right:6px;
+      font-weight:700;
       display:inline-block;
+      transition:transform .15s ease;
     }
     .badge-note.danger{ background:#fef2f2; color:var(--danger); }
     .badge-note.time{
       background:#f3e8ff;
       color:#6d28d9;
-      border:1px solid #7c3aed;
+      border:1px solid #e9d5ff;
     }
 
-    .popup-links{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
+    .popup-links{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:16px 20px 20px; }
     .popup-links a{
       text-align:center;
-      padding:10px;
+      padding:11px;
       background:#f8fafc;
       border:1px solid #e2e8f0;
-      border-radius:10px;
+      border-radius:12px;
       text-decoration:none;
       font-weight:600;
       font-size:12px;
       color:var(--text-main);
-      transition:all .2s;
+      transition:all .15s ease;
     }
-    .popup-links a:hover{ background:var(--text-main); color:#fff; border-color:var(--text-main); }
+    .popup-links a:hover{ background:var(--primary); color:#fff; border-color:var(--primary); transform:translateY(-1px); }
 
     @media (max-width:600px){
       :root{ --btn-size:42px; --btn-gap:8px; }
@@ -514,6 +536,9 @@
       maxZoom: 20,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
     }).addTo(map);
+
+    // Le icone dei popup sono create dinamicamente: vanno renderizzate ogni volta che si aprono
+    map.on('popupopen', (e) => lucide.createIcons({ root: e.popup._contentNode }));
 
     map.createPane('parkingAreasPane');
     map.getPane('parkingAreasPane').style.zIndex = 410;
@@ -617,8 +642,64 @@
         });
     }
 
+    // Nome italiano dello stallo speciale, usato come titolo del popup e nel campo "Tipo"
+    function getSpecialStallName(ps) {
+      const names = {
+        disabled: 'Disabili',
+        charging: 'Ricarica EV',
+        loading: 'Carico/Scarico',
+        delivery: 'Carico/Scarico',
+        hgv: 'Mezzi pesanti',
+        parent: 'Famiglie',
+        women: 'Donne',
+        emergency: 'Emergenza',
+        police: 'Polizia',
+        motorcycle: 'Moto',
+        bus: 'Bus'
+      };
+      return names[ps] || '';
+    }
+
+    // Stessi colori usati per disegnare i marker sulla mappa, riusati nell'header del popup
+    function getPopupTheme(tags) {
+      var ps = tags.parking_space || '';
+
+      if (tags.amenity === 'parking_space' && ps !== 'normal') {
+        if (ps === 'disabled') return { c1: '#fde047', c2: '#eab308', icon: 'accessibility' };
+        if (ps === 'charging') return { c1: '#7dd3fc', c2: '#0284c7', icon: 'zap' };
+        if (['emergency', 'police'].includes(ps)) return { c1: '#60a5fa', c2: '#1e40af', icon: 'shield' };
+        if (ps === 'motorcycle') return { c1: '#fca5a5', c2: '#dc2626', icon: 'bike' };
+        if (['delivery', 'loading', 'hgv'].includes(ps)) return { c1: '#fed7aa', c2: '#d97706', icon: 'truck' };
+        if (['parent', 'women'].includes(ps)) return { c1: '#fbcfe8', c2: '#db2777', icon: 'baby' };
+        if (ps === 'bus') return { c1: '#67e8f9', c2: '#0e7490', icon: 'bus' };
+        return { c1: '#9ca3af', c2: '#374151', icon: 'square-parking' };
+      }
+
+      var fee = tags.fee || '', cond = tags['parking:condition'] || '';
+      var accessVal = tags.access || '';
+      var vehicleVal = tags.vehicle || '';
+      var maxstay = (tags.maxstay || '').toString().trim().toLowerCase();
+      var hasMaxstay = !!maxstay && !['no', 'none', 'unlimited', '0'].includes(maxstay);
+      var hasDisc = ((cond || '').toLowerCase().includes('disc')) || hasMaxstay || !!tags['maxstay:conditional'];
+
+      if (['private', 'customers', 'destination', 'permit'].includes(accessVal) || vehicleVal === 'permit') {
+        return { c1: '#fb923c', c2: '#ea580c', icon: 'square-parking' };
+      }
+      if (fee === 'yes' || fee === 'conditional' || tags['fee:conditional']) {
+        return { c1: '#60a5fa', c2: '#1d4ed8', icon: 'square-parking' };
+      }
+      if (hasDisc) {
+        return { c1: '#a78bfa', c2: '#7c3aed', icon: 'square-parking' };
+      }
+      if (fee === 'no') {
+        return { c1: '#4ade80', c2: '#15803d', icon: 'square-parking' };
+      }
+      return { c1: '#94a3b8', c2: '#64748b', icon: 'square-parking' };
+    }
+
     function buildPopupContent(tags, lat, lon, osmMeta) {
-      var name = tags.name || tags.ref || (tags.amenity === 'parking_space' ? 'Stallo speciale' : 'Area di Sosta');
+      var name = tags.name || tags.ref ||
+        (tags.amenity === 'parking_space' ? (getSpecialStallName(tags.parking_space) || 'Stallo speciale') : 'Area di Sosta');
       var operator = tags.operator || '';
 
       var accessRaw = tags.access || '';
@@ -714,8 +795,7 @@
       var notesHtml = notesParts.join('<br>');
 
       var ps = tags.parking_space || '';
-      var typeLabel = ps === 'disabled' ? 'Disabili' : ps === 'charging' ? 'Ricarica EV' :
-                      ps === 'loading' ? 'Carico/Scarico' : ps === 'parent' ? 'Famiglie' : ps || '';
+      var typeLabel = getSpecialStallName(ps) || ps || '';
 
       /* charge=* e payment:* */
       var chargeRaw = tags.charge || '';
@@ -761,9 +841,11 @@
         ? `<div class="badge-note">${escapeHtml(paymentMethods.join(', '))}</div>`
         : '';
 
+      var theme = getPopupTheme(tags);
+
       var html = `
-        <div class="popup-header-container">
-          <div class="popup-icon-box">🅿️</div>
+        <div class="popup-header-container" style="background:linear-gradient(135deg, ${theme.c1}, ${theme.c2})">
+          <div class="popup-icon-box"><i data-lucide="${theme.icon}"></i></div>
           <div class="popup-title">${escapeHtml(name)}</div>
         </div>
 
@@ -826,8 +908,8 @@
         .map(x => x.method.replace(/_/g,' ') + (x.val === 'only' ? ' (solo)' : ''));
 
       return `
-        <div class="popup-header-container">
-          <div class="popup-icon-box">🎫</div>
+        <div class="popup-header-container" style="background:linear-gradient(135deg, #fdba74, var(--meter-fill))">
+          <div class="popup-icon-box"><i data-lucide="ticket"></i></div>
           <div class="popup-title">${escapeHtml(name)}</div>
         </div>
 
@@ -1036,8 +1118,10 @@
           if (ps === 'disabled') { cPs = '#eab308'; fPs = '#fde047'; }
           else if (ps === 'charging') { cPs = '#0284c7'; fPs = '#f0f9ff'; }
           else if (['emergency','police'].includes(ps)) { cPs = '#1e40af'; fPs = '#60a5fa'; }
-          else if (['delivery','loading'].includes(ps)) { cPs = '#d97706'; fPs = '#fed7aa'; }
+          else if (ps === 'motorcycle') { cPs = '#dc2626'; fPs = '#fca5a5'; }
+          else if (['delivery','loading','hgv'].includes(ps)) { cPs = '#d97706'; fPs = '#fed7aa'; }
           else if (['parent','women'].includes(ps)) { cPs = '#db2777'; fPs = '#fbcfe8'; }
+          else if (ps === 'bus') { cPs = '#0e7490'; fPs = '#67e8f9'; }
           else { cPs = '#374151'; fPs = '#6b7280'; }
 
           if (el.geometry) {
@@ -1123,11 +1207,46 @@
       });
     }
 
-    function geocode(q) {
+    // Un CAP italiano (5 cifre) viene cercato tra i nodi OSM reali (postal_code/addr:postcode),
+    // non tramite Nominatim: quello restituirebbe il centroide calcolato sull'area del CAP,
+    // non un punto effettivamente presente sulla mappa.
+    async function geocodeCapFromOsm(cap) {
+      const query = `[out:json][timeout:25];
+        area["ISO3166-1"="IT"][admin_level=2]->.it;
+        (
+          node["postal_code"="${cap}"](area.it);
+          node["addr:postcode"="${cap}"](area.it);
+        );
+        out body 5;`;
+
+      try {
+        const data = await fetchOverpassWithFallback(query);
+        const el = data && data.elements && data.elements[0];
+        if (!el || el.lat == null) return false;
+
+        map.setView([el.lat, el.lon], 15);
+        setStatus('CAP trovato');
+        setTimeout(() => setStatus(''), 1200);
+        return true;
+      } catch (err) {
+        console.warn('Errore ricerca CAP:', err);
+        return false;
+      }
+    }
+
+    async function geocode(q) {
       if (!q) return;
 
       showSearchResults([]);
       setStatus('Cerco località...');
+
+      const isCap = /^\d{5}$/.test(q);
+      if (isCap) {
+        const found = await geocodeCapFromOsm(q);
+        if (found) return;
+        setStatus('CAP non trovato su OSM');
+        return;
+      }
 
       const url =
         'https://nominatim.openstreetmap.org/search?format=json' +
