@@ -1501,7 +1501,7 @@
     // pur avendo l'endpoint online, quindi qui proviamo tutti i mirror finché uno non trova qualcosa.
     async function fetchOverpassPreferNonEmpty(query) {
       let firstOk = null;
-      for (const endpoint of overpassEndpoints) {
+      for (const endpoint of OVERPASS_MIRRORS) {
         try {
           const response = await fetch(endpoint, {
             method: 'POST',
