@@ -255,6 +255,51 @@
       color:var(--text-main);
     }
 
+    /* ─── Pannello diagnostico provider dati (pressione prolungata su "Aggiorna") ─── */
+    #diagBackdrop{
+      position:fixed; inset:0; z-index:3000;
+      background:rgba(15,23,42,0.45);
+    }
+    #diagPanel{
+      position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+      z-index:3001;
+      background:#fff;
+      border-radius:var(--radius);
+      box-shadow:var(--shadow-lg);
+      padding:18px;
+      width:340px;
+      max-width:calc(100vw - 32px);
+      max-height:calc(100vh - 32px);
+      overflow:auto;
+      font-family:'Inter',system-ui,sans-serif;
+      animation:slideUp .25s cubic-bezier(0.16,1,0.3,1);
+    }
+    .diag-header{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      margin-bottom:14px; font-weight:800; font-size:15px; color:var(--text-main);
+    }
+    .diag-close{
+      background:#f1f5f9; border:none; border-radius:50%;
+      width:28px; height:28px; cursor:pointer; color:#64748b; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .diag-table-wrap{ overflow-x:auto; }
+    .diag-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+    .diag-table th, .diag-table td{ border:1px solid #e2e8f0; padding:7px 8px; }
+    .diag-table th{ text-align:left; color:var(--text-light); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+    .diag-provider{ font-weight:600; color:var(--text-main); white-space:nowrap; }
+    .diag-icon-cell{ text-align:center; width:36px; }
+    .diag-spin{ animation:diagSpin .8s linear infinite; transform-origin:center; }
+    @keyframes diagSpin{ to{ transform:rotate(360deg); } }
+    .diag-cache-row{ margin-top:12px; font-size:12.5px; color:var(--text-light); display:flex; justify-content:space-between; align-items:center; }
+    .diag-run-btn{
+      margin-top:14px; width:100%; padding:11px; border:none; border-radius:10px;
+      background:var(--primary); color:#fff; font-weight:700; cursor:pointer; font-size:13.5px;
+      transition:background .15s ease, transform .15s ease;
+    }
+    .diag-run-btn:hover{ background:var(--primary-dark); }
+    .diag-run-btn:active{ transform:scale(0.97); }
+
     #status{
       position:fixed;
       bottom:30px;
@@ -472,7 +517,7 @@
     <i data-lucide="locate-fixed"></i>
   </button>
 
-  <button id="refreshBtn" class="fab-btn" title="Aggiorna dati">
+  <button id="refreshBtn" class="fab-btn" title="Aggiorna dati (tieni premuto per lo stato dei provider)">
     <i data-lucide="refresh-cw"></i>
   </button>
 
@@ -1059,15 +1104,39 @@
     }
 
     const overpassCache = new Map();
-    const overpassEndpoints = [
-      'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
-      'https://overpass-api.de/api/interpreter',
-      'https://overpass.openstreetmap.ru/cgi/interpreter'
-    ];
-    let activeOverpassController = null;
 
-    function sleep(ms) {
-      return new Promise(resolve => setTimeout(resolve, ms));
+    // Mirror Overpass pubblici interrogati IN PARALLELO: si aspettano tutte le
+    // risposte (ognuna con il proprio timeout) e si tiene quella con più
+    // elementi, non semplicemente la prima che arriva — un mirror può
+    // rispondere in fretta ma con dati incompleti (replica indietro, query
+    // tagliata per carico interno...). onUpdate permette comunque di mostrare
+    // subito il primo risultato utile sulla mappa e sostituirlo in silenzio
+    // se un mirror più lento risponde con più elementi.
+    const OVERPASS_MIRRORS = [
+      'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+      'https://overpass.kumi.systems/api/interpreter',
+      'https://overpass.monicz.dev/api/interpreter',
+      'https://overpass-api.de/api/interpreter',
+      'https://z.overpass-api.de/api/interpreter'
+      // overpass.private.coffee e lz4.overpass-api.de esclusi: verificato che
+      // al momento non rispondono (rispettivamente connessione che non
+      // chiude mai e timeout di connessione), sprecherebbero solo l'intero
+      // OVERPASS_TIMEOUT_MS ad ogni caricamento senza mai contribuire dati.
+      // overpass.openstreetmap.fr escluso: risponde correttamente da
+      // server-to-server (curl), ma la risposta reale al POST (non alla
+      // preflight OPTIONS) non porta l'header CORS in un browser, quindi la
+      // fetch fallisce sempre con "blocked by CORS policy" — verificato.
+    ];
+    const OVERPASS_TIMEOUT_MS = 25000;
+    let activeOverpassAbort = null;
+
+    // Stato dell'ultimo tentativo per provider, usato dal pannello diagnostico
+    // aperto con la pressione prolungata sul pulsante "Aggiorna".
+    const overpassDiagState = {};      // label -> 'loading' | 'success' | 'failed'
+    const overpassDiagReachable = {};  // label -> true | false | undefined
+
+    function shortOverpassLabel(url) {
+      try { return new URL(url).hostname.replace(/^overpass\./, ''); } catch { return url; }
     }
 
     function getCacheKey(center, zoom) {
@@ -1075,37 +1144,103 @@
       return `${center.lat.toFixed(precision)},${center.lng.toFixed(precision)},z${Math.round(zoom)}`;
     }
 
-    async function fetchOverpassWithFallback(query, signal) {
-      const requestBody = 'data=' + encodeURIComponent(query);
-      const errors = [];
+    // Cache persistente (sopravvive alla ricarica della pagina): usata solo
+    // come ultima spiaggia quando TUTTI i mirror falliscono e non c'è nulla
+    // in cache di sessione, per mostrare comunque un dato (anche vecchio)
+    // invece di una mappa vuota.
+    const OVERPASS_PERSIST_KEY = 'parkOverpassCache_v1';
+    const OVERPASS_PERSIST_MAX_ENTRIES = 20;
 
-      for (const endpoint of overpassEndpoints) {
-        try {
-          const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: requestBody,
-            signal
-          });
-
-          if (!response.ok) {
-            errors.push(`${endpoint} -> HTTP ${response.status}`);
-            continue;
-          }
-
-          return await response.json();
-        } catch (error) {
-          if (error.name === 'AbortError') throw error;
-          errors.push(`${endpoint} -> ${error.message}`);
+    function readPersistentCache(key) {
+      try {
+        const all = JSON.parse(localStorage.getItem(OVERPASS_PERSIST_KEY)) || {};
+        return all[key] || null;
+      } catch (err) { return null; }
+    }
+    function writePersistentCache(key, data) {
+      try {
+        const all = JSON.parse(localStorage.getItem(OVERPASS_PERSIST_KEY)) || {};
+        all[key] = { data, ts: Date.now() };
+        const keys = Object.keys(all);
+        if (keys.length > OVERPASS_PERSIST_MAX_ENTRIES) {
+          keys.sort((a, b) => all[a].ts - all[b].ts);
+          delete all[keys[0]];
         }
-      }
+        localStorage.setItem(OVERPASS_PERSIST_KEY, JSON.stringify(all));
+      } catch (err) { /* quota piena o storage non disponibile, non bloccante */ }
+    }
 
-      throw new Error('Overpass fallback failed: ' + errors.join(' | '));
+    // Combina un AbortSignal "esterno" (pan della mappa) con uno "interno"
+    // (timeout del singolo mirror): basta che uno dei due scatti per abortire
+    // la fetch. AbortSignal.any non è ancora universale sui browser mobili
+    // più vecchi, quindi qui si combina manualmente.
+    function combineSignals(a, b) {
+      if (!a) return b;
+      if (!b) return a;
+      const controller = new AbortController();
+      if (a.aborted || b.aborted) { controller.abort(); return controller.signal; }
+      a.addEventListener('abort', () => controller.abort(), { once: true });
+      b.addEventListener('abort', () => controller.abort(), { once: true });
+      return controller.signal;
+    }
+
+    // Interroga tutti i mirror in parallelo. Ogni fetch ha il proprio timeout
+    // (OVERPASS_TIMEOUT_MS) ed è comunque cancellabile dal segnale esterno
+    // (es. l'utente sposta la mappa mentre la richiesta è in corso). Si
+    // aspettano TUTTI i mirror e si tiene quello con più elementi; onUpdate
+    // (facoltativo) viene richiamato non appena c'è un dato migliore di
+    // quello mostrato finora, senza aspettare gli altri.
+    function fetchOverpassRace(query, externalSignal, onUpdate) {
+      let best = null;
+
+      const requests = OVERPASS_MIRRORS.map(url => {
+        const label = shortOverpassLabel(url);
+        overpassDiagState[label] = 'loading';
+        updateDiagCell(label);
+        let gotResponse = false;
+        const signal = combineSignals(externalSignal, AbortSignal.timeout(OVERPASS_TIMEOUT_MS));
+
+        return fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'data=' + encodeURIComponent(query),
+          signal
+        })
+          .then(res => {
+            gotResponse = true;
+            overpassDiagReachable[label] = true;
+            updateDiagReach(label);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+          })
+          .then(data => {
+            overpassDiagState[label] = 'success';
+            updateDiagCell(label);
+            if (!best || (data.elements?.length || 0) > (best.elements?.length || 0)) {
+              best = data;
+              if (onUpdate) onUpdate(data);
+            }
+            return data;
+          })
+          .catch(error => {
+            overpassDiagState[label] = 'failed';
+            updateDiagCell(label);
+            if (!gotResponse) { overpassDiagReachable[label] = false; updateDiagReach(label); }
+            throw error;
+          });
+      });
+
+      return Promise.allSettled(requests).then(settled => {
+        const anyAborted = externalSignal && externalSignal.aborted;
+        if (anyAborted) { const e = new Error('Aborted'); e.name = 'AbortError'; throw e; }
+        if (!best) throw new Error('Tutti i mirror Overpass hanno fallito o sono scaduti');
+        return best;
+      });
     }
 
     async function fetchParking(forceRefresh = false) {
-      if (activeOverpassController) {
-        activeOverpassController.abort();
+      if (activeOverpassAbort) {
+        activeOverpassAbort.abort();
       }
 
       const center = map.getCenter();
@@ -1141,38 +1276,43 @@
         relation["amenity"="vending_machine"]["vending"="parking_tickets"](around:${radius},${center.lat},${center.lng});
       );out body geom qt;`;
 
-      activeOverpassController = new AbortController();
-      const maxRetries = 3;
+      const controller = new AbortController();
+      activeOverpassAbort = controller;
 
       try {
-        let data = null;
+        const data = await fetchOverpassRace(query, controller.signal, (partial) => {
+          // Mostra subito il primo dato utile, anche prima che tutti i
+          // mirror abbiano risposto: renderParking è additivo (salta gli ID
+          // già disegnati), quindi un secondo render con più elementi
+          // aggiunge solo la differenza, senza duplicati.
+          renderParking(partial);
+          pruneFarElements(center, radius * 3);
+        });
 
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
-          try {
-            if (attempt > 1) {
-              setStatus(`Errore API, riprovo (${attempt}/${maxRetries})...`);
-            }
-            data = await fetchOverpassWithFallback(query, activeOverpassController.signal);
-            break;
-          } catch (error) {
-            if (error.name === 'AbortError') return;
-            if (attempt === maxRetries) throw error;
-            await sleep(600 * attempt);
-          }
-        }
-
-        if (!data) return;
         if (overpassCache.size >= 30) {
           overpassCache.delete(overpassCache.keys().next().value); // scarta la voce più vecchia
         }
         overpassCache.set(cacheKey, data);
+        writePersistentCache(cacheKey, data);
         renderParking(data);
         pruneFarElements(center, radius * 3);
         setStatus('Dati caricati');
         setTimeout(() => setStatus(''), 1500);
       } catch (err) {
+        if (err.name === 'AbortError') return;
         console.warn('Errore fetch:', err);
-        setStatus('Errore connessione. Riprova più tardi.');
+
+        const stale = readPersistentCache(cacheKey);
+        if (stale) {
+          renderParking(stale.data);
+          pruneFarElements(center, radius * 3);
+          setStatus('Dati non aggiornati (offline)');
+          setTimeout(() => setStatus(''), 2200);
+        } else {
+          setStatus('Errore connessione. Riprova più tardi.');
+        }
+      } finally {
+        if (activeOverpassAbort === controller) activeOverpassAbort = null;
       }
     }
 
@@ -1525,17 +1665,121 @@
     locateUser();
 
 
-        document.getElementById('refreshBtn').onclick = () => {
+        function refreshAllData() {
       // Svuota tutto (cache e mappa)
       loadedIds.clear();
       idToLayer.clear();
       parkingAreasLayer.clearLayers();
       parkingSpacesLayer.clearLayers();
       parkometersLayer.clearLayers();
-      
+
       setStatus('Reset dati e aggiornamento...');
       fetchParking(true);
-    };
+    }
+
+    /* ===== Pannello diagnostico provider (pressione prolungata su "Aggiorna") ===== */
+    function diagIconHtml(state) {
+      if (state === 'success') return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-width="1.3" opacity="0.3"/><path d="M6 12.5l4 4 8-9"/></svg>';
+      if (state === 'failed') return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-width="1.3" opacity="0.3"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/></svg>';
+      if (state === 'loading') return '<svg class="diag-spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9" stroke-dasharray="40 16"/></svg>';
+      return '<span style="color:#cbd5e1">—</span>';
+    }
+
+    let diagPanelEl = null, diagBackdropEl = null;
+
+    function updateDiagCell(label) {
+      if (!diagPanelEl) return;
+      const cell = diagPanelEl.querySelector(`.diag-status-cell[data-label="${CSS.escape(label)}"]`);
+      if (cell) cell.innerHTML = diagIconHtml(overpassDiagState[label]);
+    }
+
+    function updateDiagReach(label) {
+      if (!diagPanelEl) return;
+      const cell = diagPanelEl.querySelector(`.diag-reach-cell[data-label="${CSS.escape(label)}"]`);
+      if (cell) cell.innerHTML = diagIconHtml(overpassDiagReachable[label] === true ? 'success' : (overpassDiagReachable[label] === false ? 'failed' : ''));
+    }
+
+    function closeDiagPanel() {
+      if (diagPanelEl) { diagPanelEl.remove(); diagPanelEl = null; }
+      if (diagBackdropEl) { diagBackdropEl.remove(); diagBackdropEl = null; }
+    }
+
+    function openDiagPanel() {
+      closeDiagPanel();
+
+      diagBackdropEl = document.createElement('div');
+      diagBackdropEl.id = 'diagBackdrop';
+      diagBackdropEl.onclick = closeDiagPanel;
+      document.body.appendChild(diagBackdropEl);
+
+      const cacheKey = getCacheKey(map.getCenter(), map.getZoom() || 15);
+      const hasSessionCache = overpassCache.has(cacheKey);
+      const hasPersistentCache = !!readPersistentCache(cacheKey);
+
+      const panel = document.createElement('div');
+      panel.id = 'diagPanel';
+      panel.innerHTML = `
+        <div class="diag-header">
+          <span>Provider dati OSM</span>
+          <button type="button" class="diag-close" aria-label="Chiudi">✕</button>
+        </div>
+        <div class="diag-table-wrap">
+          <table class="diag-table">
+            <thead><tr><th>Provider</th><th>Rete</th><th>Query</th></tr></thead>
+            <tbody>
+              ${OVERPASS_MIRRORS.map(url => {
+                const label = shortOverpassLabel(url);
+                return `<tr>
+                  <td class="diag-provider">${escapeHtml(label)}</td>
+                  <td class="diag-icon-cell diag-reach-cell" data-label="${escapeHtml(label)}">${diagIconHtml(overpassDiagReachable[label] === true ? 'success' : (overpassDiagReachable[label] === false ? 'failed' : ''))}</td>
+                  <td class="diag-icon-cell diag-status-cell" data-label="${escapeHtml(label)}">${diagIconHtml(overpassDiagState[label])}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="diag-cache-row">
+          <span>Cache per questa zona</span>
+          <strong style="color:${hasSessionCache || hasPersistentCache ? '#16a34a' : '#94a3b8'}">${hasSessionCache ? 'attiva' : (hasPersistentCache ? 'disponibile' : 'assente')}</strong>
+        </div>
+        <button type="button" class="diag-run-btn">Aggiorna ora</button>
+      `;
+      document.body.appendChild(panel);
+      diagPanelEl = panel;
+
+      panel.querySelector('.diag-close').onclick = closeDiagPanel;
+      panel.querySelector('.diag-run-btn').onclick = () => {
+        closeDiagPanel();
+        refreshAllData();
+      };
+    }
+
+    // Pressione prolungata (~600ms) sul pulsante "Aggiorna": apre il pannello
+    // diagnostico dei provider invece del refresh normale. Il click "normale"
+    // che segue il rilascio prolungato viene soppresso, altrimenti partirebbe
+    // anche il refresh vero e proprio insieme all'apertura del pannello.
+    const refreshBtnEl = document.getElementById('refreshBtn');
+    let refreshPressTimer = null;
+    let refreshLongPressed = false;
+    const REFRESH_LONG_PRESS_MS = 600;
+    const cancelRefreshPress = () => clearTimeout(refreshPressTimer);
+
+    refreshBtnEl.addEventListener('pointerdown', () => {
+      refreshLongPressed = false;
+      clearTimeout(refreshPressTimer);
+      refreshPressTimer = setTimeout(() => {
+        refreshLongPressed = true;
+        openDiagPanel();
+      }, REFRESH_LONG_PRESS_MS);
+    });
+    refreshBtnEl.addEventListener('pointerup', cancelRefreshPress);
+    refreshBtnEl.addEventListener('pointerleave', cancelRefreshPress);
+    refreshBtnEl.addEventListener('pointercancel', cancelRefreshPress);
+
+    refreshBtnEl.addEventListener('click', () => {
+      if (refreshLongPressed) { refreshLongPressed = false; return; }
+      refreshAllData();
+    });
 
 
     /* ===== Schermo intero ===== */
