@@ -329,6 +329,7 @@
     #fullscreenBtn{ bottom:calc(16px + (var(--btn-size) + var(--btn-gap)) * 1); right:16px; }
     #refreshBtn{ bottom:calc(16px + (var(--btn-size) + var(--btn-gap)) * 2); right:16px; }
     #gpsBtn{ bottom:calc(16px + (var(--btn-size) + var(--btn-gap)) * 3); right:16px; }
+    #shareBtn{ bottom:calc(16px + (var(--btn-size) + var(--btn-gap)) * 4); right:16px; }
 
     #legendPanel{
       position:fixed;
@@ -490,7 +491,7 @@
       #searchBtn{ padding:0; width:36px; height:36px; justify-content:center; margin-left:4px; }
       #searchBox{ padding-left:12px; padding-right:6px; }
       #legendPanel{ left:16px; right:16px; width:auto; }
-      #toggleLegend, #fullscreenBtn, #refreshBtn, #gpsBtn{ right:12px; }
+      #toggleLegend, #fullscreenBtn, #refreshBtn, #gpsBtn, #shareBtn{ right:12px; }
       .leaflet-bottom.leaflet-left{ margin:0 0 12px 12px; }
     }
   </style>
@@ -515,6 +516,10 @@
 
   <button id="gpsBtn" class="fab-btn" title="La mia posizione">
     <i data-lucide="locate-fixed"></i>
+  </button>
+
+  <button id="shareBtn" class="fab-btn" title="Condividi questa posizione">
+    <i data-lucide="share-2"></i>
   </button>
 
   <button id="refreshBtn" class="fab-btn" title="Aggiorna dati (tieni premuto per lo stato dei provider)">
@@ -574,7 +579,18 @@
     document.getElementById('toggleLegend').onclick = toggleLegend;
     document.getElementById('closeLegend').onclick = toggleLegend;
 
-    var map = L.map('map', { zoomControl: false }).setView([45.4642, 9.19], 15);
+    // Se il link è stato aperto da un pulsante "Condividi" (vedi shareCurrentView
+    // più sotto), porta subito sulla posizione condivisa invece che su Milano.
+    const sharedViewParams = new URLSearchParams(window.location.search);
+    const sharedLat = parseFloat(sharedViewParams.get('lat'));
+    const sharedLon = parseFloat(sharedViewParams.get('lon'));
+    const sharedZoom = parseInt(sharedViewParams.get('z'), 10);
+    const hasSharedView = Number.isFinite(sharedLat) && Number.isFinite(sharedLon);
+    const initialView = hasSharedView
+      ? [[sharedLat, sharedLon], Number.isFinite(sharedZoom) ? sharedZoom : 17]
+      : [[45.4642, 9.19], 15];
+
+    var map = L.map('map', { zoomControl: false }).setView(initialView[0], initialView[1]);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -1661,8 +1677,55 @@
     // 1. Collega la funzione al click del pulsante (così puoi usarlo sempre)
     document.getElementById('gpsBtn').onclick = locateUser;
 
-    // 2. Chiama la funzione SUBITO all'avvio (appena apri il sito)
-    locateUser();
+    // 2. Chiama la funzione SUBITO all'avvio (appena apri il sito), a meno che
+    // l'app non sia stata aperta da un link condiviso: in quel caso l'utente
+    // vuole vedere PROPRIO quella posizione, non la propria (la sovrascriverebbe).
+    if (!hasSharedView) locateUser();
+
+    /* ===== Condividi posizione ===== */
+    function buildShareUrl() {
+      const c = map.getCenter();
+      const url = new URL(window.location.href);
+      url.hash = '';
+      url.searchParams.set('lat', c.lat.toFixed(6));
+      url.searchParams.set('lon', c.lng.toFixed(6));
+      url.searchParams.set('z', map.getZoom());
+      return url.toString();
+    }
+
+    function promptCopyUrl(url) {
+      window.prompt('Copia il link:', url);
+    }
+
+    function copyShareUrl(url) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+          setStatus('Link copiato negli appunti');
+          setTimeout(() => setStatus(''), 1800);
+        }).catch(() => promptCopyUrl(url));
+      } else {
+        promptCopyUrl(url);
+      }
+    }
+
+    async function shareCurrentView() {
+      const url = buildShareUrl();
+
+      // Web Share API (mobile): apre il menu di condivisione nativo del
+      // sistema. Se non disponibile (es. desktop), fallback su clipboard.
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: 'ParkMap', text: 'Guarda questa posizione su ParkMap', url });
+          return;
+        } catch (err) {
+          if (err.name === 'AbortError') return; // utente ha annullato la condivisione
+          // Qualunque altro errore (es. share non permesso in questo contesto): fallback su copia.
+        }
+      }
+      copyShareUrl(url);
+    }
+
+    document.getElementById('shareBtn').onclick = shareCurrentView;
 
 
         function refreshAllData() {
