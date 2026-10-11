@@ -12,16 +12,17 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="ParkMap" />
-  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
 
-  <link rel="icon" type="image/svg+xml" sizes="any"
-    href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Crect%20width%3D%2724%27%20height%3D%2724%27%20fill%3D%27%23ffffff%27/%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%233b82f6%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Crect%20x%3D%273%27%20y%3D%273%27%20width%3D%2718%27%20height%3D%2718%27%20rx%3D%272%27/%3E%3Cpath%20d%3D%27M9%2017V7h4a3%203%200%200%201%200%206H9%27/%3E%3C/g%3E%3C/svg%3E" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
 
   <!-- Apre subito le connessioni verso tile e mirror Overpass, prima che il JS le richieda -->
   <link rel="preconnect" href="https://unpkg.com" crossorigin />
   <link rel="preconnect" href="https://a.tile.openstreetmap.org" />
   <link rel="preconnect" href="https://b.tile.openstreetmap.org" />
   <link rel="preconnect" href="https://c.tile.openstreetmap.org" />
+  <link rel="preconnect" href="https://postpass.geofabrik.de" crossorigin />
   <link rel="preconnect" href="https://maps.mail.ru" crossorigin />
   <link rel="preconnect" href="https://overpass.kumi.systems" crossorigin />
   <link rel="preconnect" href="https://overpass-api.de" crossorigin />
@@ -112,7 +113,8 @@
       white-space:nowrap;
       flex-shrink:0;
     }
-    #titleBadge i{ color:var(--primary); width:19px; height:19px; }
+    #titleBadge{ cursor:pointer; }
+    #titleBadge .brand-mark{ width:24px; height:24px; flex-shrink:0; display:block; }
 
     #searchBox{
       flex:1;
@@ -208,7 +210,7 @@
     .fab-btn:hover{ transform:scale(1.06); color:var(--primary); }
     .fab-btn:active{ transform:scale(0.94); }
 
-    /* Allinea i controlli nativi di Leaflet (zoom, layer) allo stile dei pulsanti flottanti */
+    /* Allinea lo zoom di Leaflet allo stile dei pulsanti flottanti */
     .leaflet-bottom.leaflet-left{ margin:0 0 var(--fab-bottom) calc(16px + var(--safe-left)); }
     .leaflet-bottom .leaflet-control{ margin:0 0 var(--btn-gap) 0 !important; }
     .leaflet-control-zoom{ border:none !important; background:transparent !important; box-shadow:none !important; border-radius:0 !important; display:flex; flex-direction:column; gap:var(--btn-gap); }
@@ -224,28 +226,16 @@
       font-size:19px;
       transition:transform .2s cubic-bezier(0.34,1.56,0.64,1), color .15s ease;
     }
-    .leaflet-control-zoom a:hover{ background:var(--glass) !important; color:var(--primary) !important; transform:scale(1.06); }
+    .leaflet-control-zoom a:hover{ background-color:var(--glass) !important; transform:scale(1.06); }
+    /* Stesse icone Lucide (plus/minus) dei pulsanti flottanti al posto dei caratteri +/− */
+    .leaflet-control-zoom a span{ display:none; }
+    .leaflet-control-zoom a{ background-repeat:no-repeat !important; background-position:center !important; background-size:20px 20px !important; }
+    .leaflet-control-zoom a.leaflet-control-zoom-in{ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231e293b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='M12 5v14'/%3E%3C/svg%3E") !important; }
+    .leaflet-control-zoom a.leaflet-control-zoom-out{ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231e293b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3C/svg%3E") !important; }
+    .leaflet-control-zoom a.leaflet-disabled{ opacity:.45; }
     .leaflet-control-zoom a:active{ transform:scale(0.94); }
 
-    .leaflet-control-layers{
-      border:none !important;
-      box-shadow:none !important;
-      background:transparent !important;
-    }
-    .leaflet-control-layers-toggle{
-      width:var(--btn-size) !important; height:var(--btn-size) !important;
-      border-radius:50% !important;
-      background-color:var(--glass) !important;
-      backdrop-filter:blur(10px);
-      -webkit-backdrop-filter:blur(10px);
-      box-shadow:var(--btn-shadow);
-      border:var(--btn-border) !important;
-      background-size:20px 20px !important;
-      transition:transform .2s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    .leaflet-control-layers-toggle:hover{ transform:scale(1.06); }
-
-    /* Sposta la scritta Leaflet/OpenStreetMap in basso al centro, così non finisce sotto il pulsante info */
+    /* Sposta la scritta Leaflet/OpenStreetMap in basso al centro, così non finisce sotto i pulsanti */
     .leaflet-control-attribution{
       position:fixed !important;
       left:50% !important;
@@ -257,17 +247,6 @@
       font-size:10px;
       padding:2px 8px;
       box-shadow:none;
-    }
-
-    .leaflet-control-layers-expanded{
-      border-radius:16px !important;
-      background:var(--glass) !important;
-      backdrop-filter:blur(10px);
-      -webkit-backdrop-filter:blur(10px);
-      box-shadow:var(--btn-shadow);
-      border:var(--btn-border) !important;
-      padding:12px 16px !important;
-      color:var(--text-main);
     }
 
     /* ─── Pannello diagnostico provider dati (pressione prolungata su "Aggiorna") ─── */
@@ -339,47 +318,18 @@
     }
     #status:not(:empty){ opacity:1; transform:translateX(-50%) translateY(0); }
 
-    /* Pulsanti flottanti impilati sul lato destro (a sinistra restano zoom/layer di Leaflet) */
-    #toggleLegend{ bottom:var(--fab-bottom); right:var(--fab-right); }
+    /* Pulsanti flottanti impilati sul lato destro (a sinistra resta lo zoom di Leaflet) */
+    #settingsBtn{ bottom:var(--fab-bottom); right:var(--fab-right); }
     #fullscreenBtn{ bottom:calc(var(--fab-bottom) + (var(--btn-size) + var(--btn-gap)) * 1); right:var(--fab-right); }
     #refreshBtn{ bottom:calc(var(--fab-bottom) + (var(--btn-size) + var(--btn-gap)) * 2); right:var(--fab-right); }
     #gpsBtn{ bottom:calc(var(--fab-bottom) + (var(--btn-size) + var(--btn-gap)) * 3); right:var(--fab-right); }
     #shareBtn{ bottom:calc(var(--fab-bottom) + (var(--btn-size) + var(--btn-gap)) * 4); right:var(--fab-right); }
 
-    #legendPanel{
-      position:fixed;
-      bottom:calc(var(--fab-bottom) + (var(--btn-size) + var(--btn-gap)) * 1);
-      right:var(--fab-right);
-      width:280px;
-      max-width:calc(100% - 40px);
-      max-height:60vh;
-      background:#fff;
-      border-radius:24px;
-      box-shadow:var(--shadow-lg);
-      z-index:1000;
-      overflow-y:auto;
-      display:none;
-      animation:slideUp .3s cubic-bezier(0.16,1,0.3,1);
-    }
     @keyframes slideUp{
       from{ opacity:0; transform:translateY(20px) scale(0.95); }
       to{ opacity:1; transform:translateY(0) scale(1); }
     }
 
-    .legend-header{
-      padding:16px 20px;
-      border-bottom:1px solid #f1f5f9;
-      font-weight:700;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      font-size:16px;
-      color:var(--bg-dark);
-      position:sticky;
-      top:0;
-      background:#fff;
-    }
-    .legend-section{ padding:16px 20px; }
     .legend-section-title{
       font-size:11px;
       text-transform:uppercase;
@@ -401,6 +351,102 @@
       border-radius:4px;
       margin-right:12px;
       flex-shrink:0;
+    }
+
+    /* ─── Impostazioni (foglio dal basso su telefono, finestra al centro su desktop) ─── */
+    #settingsBtn{ overflow:visible; }
+    .fab-badge{
+      position:absolute; top:6px; right:6px; width:10px; height:10px; border-radius:50%;
+      background:var(--danger); box-shadow:0 0 0 2px #fff;
+    }
+    .fab-badge[hidden]{ display:none; }
+    #settingsBackdrop{ position:fixed; inset:0; z-index:2500; background:rgba(15,23,42,0.4); animation:fadeIn .2s ease; }
+    #settingsSheet{
+      position:fixed; z-index:2600; left:50%; bottom:0; transform:translateX(-50%);
+      width:min(100%, 480px); max-height:88vh; max-height:88dvh;
+      display:flex; flex-direction:column;
+      background:#f1f5f9; border-radius:24px 24px 0 0;
+      box-shadow:0 -10px 40px rgb(15 23 42 / 0.25);
+      animation:sheetUp .28s cubic-bezier(0.16,1,0.3,1);
+      font-family:'Inter',system-ui,sans-serif; color:var(--text-main);
+    }
+    #settingsBackdrop[hidden], #settingsSheet[hidden]{ display:none; }
+    @keyframes sheetUp{ from{ transform:translate(-50%, 40px); opacity:0; } to{ transform:translate(-50%, 0); opacity:1; } }
+    @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+    .sheet-header{
+      position:relative; display:flex; align-items:center; justify-content:space-between;
+      padding:20px 20px 12px; flex-shrink:0;
+    }
+    .sheet-header h2{ margin:0; font-size:20px; font-weight:800; letter-spacing:-.01em; }
+    .sheet-header::before{
+      content:''; position:absolute; top:8px; left:50%; transform:translateX(-50%);
+      width:40px; height:4px; border-radius:2px; background:#cbd5e1;
+    }
+    .sheet-close{
+      width:34px; height:34px; border-radius:50%; border:none; background:#e2e8f0; color:var(--text-main);
+      display:flex; align-items:center; justify-content:center; cursor:pointer;
+    }
+    .sheet-close i, .sheet-close svg{ width:18px; height:18px; }
+    .sheet-body{ overflow-y:auto; padding:0 16px calc(20px + var(--safe-bottom)); overscroll-behavior:contain; }
+    .set-group{ margin-bottom:18px; }
+    .set-title{
+      font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:800;
+      color:var(--text-light); margin:0 6px 8px;
+    }
+    .set-card{ background:#fff; border-radius:16px; overflow:hidden; box-shadow:var(--shadow-sm); }
+    .set-row{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      min-height:52px; padding:10px 16px; box-sizing:border-box;
+      font-size:14.5px; font-weight:500; color:var(--text-main); text-decoration:none;
+    }
+    .set-row + .set-row, .set-row + .set-actions{ border-top:1px solid #f1f5f9; }
+    .set-row.column{ flex-direction:column; align-items:stretch; gap:10px; padding-top:14px; padding-bottom:14px; }
+    .set-row.link{ cursor:pointer; }
+    .set-row.link:active{ background:#f8fafc; }
+    label.set-row{ cursor:pointer; }
+    .set-row[hidden], .set-actions [hidden]{ display:none !important; }
+    .set-label{ display:flex; align-items:center; gap:12px; min-width:0; }
+    .set-label > i, .set-label > svg{ width:20px; height:20px; color:var(--primary-dark); flex-shrink:0; }
+    .set-value{ color:var(--text-light); font-size:13.5px; text-align:right; }
+    .set-note{ color:var(--text-light); font-size:13.5px; line-height:1.45; }
+    .set-note.ok{ color:#15803d; }
+    .set-note.warn{ color:#b45309; }
+    .set-note.new{ color:var(--primary-dark); font-weight:600; }
+    .chev{ width:18px; height:18px; color:#94a3b8; flex-shrink:0; }
+    .set-actions{ display:flex; flex-wrap:wrap; gap:8px; padding:12px 16px 14px; }
+    .set-btn{
+      display:inline-flex; align-items:center; gap:8px; justify-content:center;
+      height:38px; padding:0 14px; border-radius:10px; border:1px solid #e2e8f0;
+      background:#f8fafc; color:var(--text-main); font:600 13px 'Inter',system-ui,sans-serif;
+      cursor:pointer; text-decoration:none; transition:background .15s ease, transform .15s ease;
+    }
+    .set-btn i, .set-btn svg{ width:16px; height:16px; }
+    .set-btn:active{ transform:scale(0.97); }
+    .set-btn:disabled{ opacity:.6; cursor:default; }
+    .set-btn.primary{ background:var(--primary-dark); border-color:var(--primary-dark); color:#fff; }
+    .segmented{ display:flex; background:#f1f5f9; border-radius:12px; padding:3px; gap:3px; }
+    .segmented button{
+      flex:1; height:36px; border:none; border-radius:9px; background:transparent;
+      font:600 13px 'Inter',system-ui,sans-serif; color:var(--text-light); cursor:pointer;
+    }
+    .segmented button.active{ background:#fff; color:var(--text-main); box-shadow:var(--shadow-sm); }
+    input.switch{
+      appearance:none; -webkit-appearance:none; flex-shrink:0; margin:0; cursor:pointer;
+      width:46px; height:28px; border-radius:14px; background:#cbd5e1; position:relative;
+      transition:background .2s ease;
+    }
+    input.switch::after{
+      content:''; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%;
+      background:#fff; box-shadow:0 1px 3px rgb(15 23 42 / 0.3); transition:transform .2s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    input.switch:checked{ background:var(--primary-dark); }
+    input.switch:checked::after{ transform:translateX(18px); }
+    .layer-dot{ width:14px; height:14px; border-radius:4px; border:1.5px solid; box-sizing:border-box; flex-shrink:0; margin:0 3px; }
+    .legend-card{ padding:14px 16px 6px; }
+    .legend-grid{ display:grid; grid-template-columns:1fr 1fr; column-gap:12px; margin-bottom:8px; }
+    @media (min-width:700px){
+      #settingsSheet{ top:50%; bottom:auto; transform:translate(-50%,-50%); border-radius:24px; max-height:min(84vh, 760px); animation:fadeIn .2s ease; }
+      .sheet-header::before{ display:none; }
     }
 
     @keyframes popIn{ from{ opacity:0; transform:scale(0.92); } to{ opacity:1; transform:scale(1); } }
@@ -542,8 +588,7 @@
       #searchBtn span.text{ display:none; }
       #searchBtn{ padding:0; width:36px; height:36px; justify-content:center; margin-left:4px; }
       #searchBox{ padding-left:12px; padding-right:6px; }
-      #legendPanel{ left:16px; right:16px; width:auto; }
-      #toggleLegend, #fullscreenBtn, #refreshBtn, #gpsBtn, #shareBtn{ right:calc(12px + var(--safe-right)); }
+      #settingsBtn, #fullscreenBtn, #refreshBtn, #gpsBtn, #shareBtn{ right:calc(12px + var(--safe-right)); }
       .leaflet-bottom.leaflet-left{ margin:0 0 calc(12px + var(--safe-bottom)) calc(12px + var(--safe-left)); }
     }
   </style>
@@ -551,7 +596,7 @@
 
 <body>
   <div id="topbar">
-    <div id="titleBadge" title="ParkMap"><i data-lucide="square-parking"></i> <span>ParkMap</span></div>
+    <div id="titleBadge" title="Impostazioni" role="button" tabindex="0"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient></defs><rect width="24" height="24" rx="5.5" fill="url(#brandGrad)"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9" transform="translate(12 12) scale(1.32) translate(-12.5 -12)" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>ParkMap</span></div>
 
     <div id="searchBox">
       <input id="searchInput" type="text" placeholder="Cerca località..." aria-label="Cerca località" />
@@ -582,38 +627,111 @@
     <i data-lucide="maximize-2"></i>
   </button>
 
-  <button id="toggleLegend" class="fab-btn" title="Legenda">
-    <i data-lucide="info"></i>
+  <button id="settingsBtn" class="fab-btn" title="Impostazioni" aria-label="Impostazioni">
+    <i data-lucide="settings"></i>
+    <span class="fab-badge" id="settingsBadge" hidden></span>
   </button>
 
-  <div id="legendPanel">
-    <div class="legend-header">
-      Legenda Mappa
-      <i data-lucide="x" style="cursor:pointer; width: 20px;" id="closeLegend"></i>
-    </div>
+  <div id="settingsBackdrop" hidden></div>
+  <section id="settingsSheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
+    <header class="sheet-header">
+      <h2 id="settingsTitle">Impostazioni</h2>
+      <button type="button" class="sheet-close" id="settingsClose" aria-label="Chiudi"><i data-lucide="x"></i></button>
+    </header>
+    <div class="sheet-body">
+      <div class="set-group">
+        <div class="set-title">Mappa</div>
+        <div class="set-card">
+          <div class="set-row column">
+            <span class="set-label"><i data-lucide="palette"></i> Stile della mappa</span>
+            <div class="segmented" id="mapStyleControl">
+              <button type="button" data-style="osm">Standard</button>
+              <button type="button" data-style="voyager">Essenziale</button>
+              <button type="button" data-style="light">Chiaro</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-    <div class="legend-section">
-      <div class="legend-section-title">Aree di Sosta</div>
-      <div class="legend-item"><div class="legend-color" style="background:#60a5fa; border:1px solid #1d4ed8;"></div>Pagamento</div>
-      <div class="legend-item"><div class="legend-color" style="background:#4ade80; border:1px solid #15803d;"></div>Gratuito</div>
-      <div class="legend-item"><div class="legend-color" style="background:#a78bfa; border:1px solid #7c3aed;"></div>Disco orario</div>
-      <div class="legend-item"><div class="legend-color" style="background:#fb923c; border:1px solid #ea580c;"></div>Limitato/Privato</div>
-      <div class="legend-item"><div class="legend-color" style="background:#94a3b8; border:1px solid #64748b;"></div>Non specificato</div>
-    </div>
+      <div class="set-group">
+        <div class="set-title">Livelli visibili</div>
+        <div class="set-card">
+          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#60a5fa; border-color:#1d4ed8"></span> Aree di sosta</span><input type="checkbox" class="switch" data-layer="areas"></label>
+          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#fde047; border-color:#eab308"></span> Stalli speciali</span><input type="checkbox" class="switch" data-layer="spaces"></label>
+          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:var(--meter-fill); border-color:var(--meter-stroke); border-radius:50%"></span> Parcometri</span><input type="checkbox" class="switch" data-layer="meters"></label>
+        </div>
+      </div>
 
-    <div class="legend-section" style="background:#f8fafc">
-      <div class="legend-section-title">Stalli Speciali</div>
-      <div class="legend-item"><div class="legend-color" style="background:#fde047; border:1px solid #eab308;"></div>Disabili</div>
-      <div class="legend-item"><div class="legend-color" style="background:#f0f9ff; border:1px solid #0284c7;"></div>Ricarica EV</div>
-      <div class="legend-item"><div class="legend-color" style="background:#fed7aa; border:1px solid #d97706;"></div>Carico/Scarico</div>
-      <div class="legend-item"><div class="legend-color" style="background:#fbcfe8; border:1px solid #db2777;"></div>Famiglie/Rosa</div>
-    </div>
+      <div class="set-group">
+        <div class="set-title">Posizione</div>
+        <div class="set-card">
+          <label class="set-row"><span class="set-label"><i data-lucide="locate-fixed"></i> Centra sulla mia posizione all'avvio</span><input type="checkbox" class="switch" id="setLocateOnStart"></label>
+          <label class="set-row"><span class="set-label"><i data-lucide="circle-dashed"></i> Mostra la precisione del GPS</span><input type="checkbox" class="switch" id="setShowAccuracy"></label>
+        </div>
+      </div>
 
-    <div class="legend-section">
-      <div class="legend-section-title">Parcometri</div>
-      <div class="legend-item"><div class="legend-color" style="background:var(--meter-fill); border:1px solid var(--meter-stroke);"></div>Parcometro (ticket)</div>
+      <div class="set-group">
+        <div class="set-title">Dati</div>
+        <div class="set-card">
+          <div class="set-row"><span class="set-label"><i data-lucide="database"></i> Fonte in questa zona</span><span class="set-value" id="setDataSource">—</span></div>
+          <div class="set-row"><span class="set-label"><i data-lucide="hard-drive"></i> Salvati sul dispositivo</span><span class="set-value" id="setCacheInfo">—</span></div>
+          <div class="set-actions">
+            <button type="button" class="set-btn" id="setRefreshData"><i data-lucide="refresh-cw"></i> Aggiorna dati</button>
+            <button type="button" class="set-btn" id="setClearCache"><i data-lucide="trash-2"></i> Svuota cache</button>
+            <button type="button" class="set-btn" id="setProviders"><i data-lucide="activity"></i> Stato provider</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="set-group">
+        <div class="set-title">Aggiornamenti</div>
+        <div class="set-card">
+          <div class="set-row"><span class="set-label"><i data-lucide="smartphone"></i> <span id="setVersionLabel">Versione installata</span></span><span class="set-value" id="setVersion">—</span></div>
+          <div class="set-row" id="updateStatusRow" hidden><span class="set-note" id="updateStatus"></span></div>
+          <label class="set-row" id="autoUpdateRow"><span class="set-label"><i data-lucide="bell"></i> Controlla aggiornamenti all'avvio</span><input type="checkbox" class="switch" id="setAutoUpdate"></label>
+          <div class="set-actions">
+            <button type="button" class="set-btn primary" id="updateCheckBtn"><i data-lucide="github"></i> Controlla su GitHub</button>
+            <button type="button" class="set-btn primary" id="updateInstallBtn" hidden><i data-lucide="download"></i> Scarica e installa</button>
+            <a class="set-btn" id="updateNotesLink" target="_blank" rel="noopener" hidden><i data-lucide="file-text"></i> Novità</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="set-group">
+        <div class="set-title">Legenda</div>
+        <div class="set-card legend-card">
+          <div class="legend-section-title">Aree di sosta</div>
+          <div class="legend-grid">
+            <div class="legend-item"><div class="legend-color" style="background:#60a5fa; border:1px solid #1d4ed8;"></div>Pagamento</div>
+            <div class="legend-item"><div class="legend-color" style="background:#4ade80; border:1px solid #15803d;"></div>Gratuito</div>
+            <div class="legend-item"><div class="legend-color" style="background:#a78bfa; border:1px solid #7c3aed;"></div>Disco orario</div>
+            <div class="legend-item"><div class="legend-color" style="background:#fb923c; border:1px solid #ea580c;"></div>Limitato/Privato</div>
+            <div class="legend-item"><div class="legend-color" style="background:#94a3b8; border:1px solid #64748b;"></div>Non specificato</div>
+          </div>
+          <div class="legend-section-title">Stalli speciali</div>
+          <div class="legend-grid">
+            <div class="legend-item"><div class="legend-color" style="background:#fde047; border:1px solid #eab308;"></div>Disabili</div>
+            <div class="legend-item"><div class="legend-color" style="background:#f0f9ff; border:1px solid #0284c7;"></div>Ricarica EV</div>
+            <div class="legend-item"><div class="legend-color" style="background:#fed7aa; border:1px solid #d97706;"></div>Carico/Scarico</div>
+            <div class="legend-item"><div class="legend-color" style="background:#fbcfe8; border:1px solid #db2777;"></div>Famiglie/Rosa</div>
+          </div>
+          <div class="legend-section-title">Parcometri</div>
+          <div class="legend-grid">
+            <div class="legend-item"><div class="legend-color" style="background:var(--meter-fill); border:1px solid var(--meter-stroke);"></div>Parcometro (ticket)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="set-group">
+        <div class="set-title">Informazioni</div>
+        <div class="set-card">
+          <a class="set-row link" href="https://github.com/AndreaDp271/Park_finder" target="_blank" rel="noopener"><span class="set-label"><i data-lucide="github"></i> Codice sorgente</span><i data-lucide="chevron-right" class="chev"></i></a>
+          <a class="set-row link" href="https://github.com/AndreaDp271/Park_finder/issues/new" target="_blank" rel="noopener"><span class="set-label"><i data-lucide="message-circle"></i> Segnala un problema</span><i data-lucide="chevron-right" class="chev"></i></a>
+          <a class="set-row link" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener"><span class="set-label"><i data-lucide="map"></i> Dati © OpenStreetMap contributors</span><i data-lucide="chevron-right" class="chev"></i></a>
+        </div>
+      </div>
     </div>
-  </div>
+  </section>
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -630,13 +748,31 @@
     const IS_NATIVE_APP = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
     const PUBLIC_SITE_URL = 'https://andreadp271.github.io/Park_finder/';
 
-    function toggleLegend() {
-      const lp = document.getElementById('legendPanel');
-      lp.style.display = (lp.style.display === 'block' ? 'none' : 'block');
-    }
+    const GITHUB_REPO = 'AndreaDp271/Park_finder';
+    // Versione dell'APK, scritta qui da app/prepare-www.sh durante la build
+    // (es. '1.0.12'); sul sito resta null.
+    const APP_VERSION = null;
 
-    document.getElementById('toggleLegend').onclick = toggleLegend;
-    document.getElementById('closeLegend').onclick = toggleLegend;
+    // ─── Impostazioni (salvate sul dispositivo) ───
+    const SETTINGS_KEY = 'parkSettings_v1';
+    const DEFAULT_SETTINGS = {
+      mapStyle: 'osm',
+      layers: { areas: true, spaces: true, meters: true },
+      locateOnStart: true,
+      showAccuracy: true,
+      autoUpdateCheck: true
+    };
+    const settings = (() => {
+      try {
+        const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
+        return { ...DEFAULT_SETTINGS, ...saved, layers: { ...DEFAULT_SETTINGS.layers, ...(saved.layers || {}) } };
+      } catch (err) {
+        return { ...DEFAULT_SETTINGS, layers: { ...DEFAULT_SETTINGS.layers } };
+      }
+    })();
+    function saveSettings() {
+      try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (err) {}
+    }
 
     // Se il link è stato aperto da un pulsante "Condividi" (vedi shareCurrentView
     // più sotto), porta subito sulla posizione condivisa invece che su Milano.
@@ -672,10 +808,25 @@
     var map = L.map('map', { zoomControl: false }).setView(initialView[0], initialView[1]);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 20,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
-    }).addTo(map);
+    const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>';
+    const CARTO_ATTRIBUTION = OSM_ATTRIBUTION + ' &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>';
+    const MAP_STYLES = {
+      osm: { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', maxNativeZoom: 19, attribution: OSM_ATTRIBUTION },
+      voyager: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', subdomains: 'abcd', maxNativeZoom: 20, attribution: CARTO_ATTRIBUTION },
+      light: { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', subdomains: 'abcd', maxNativeZoom: 20, attribution: CARTO_ATTRIBUTION }
+    };
+    let baseLayer = null;
+    function applyMapStyle(name) {
+      const style = MAP_STYLES[name] || MAP_STYLES.osm;
+      if (baseLayer) map.removeLayer(baseLayer);
+      baseLayer = L.tileLayer(style.url, {
+        maxZoom: 20,
+        maxNativeZoom: style.maxNativeZoom,
+        subdomains: style.subdomains || 'abc',
+        attribution: style.attribution
+      }).addTo(map);
+    }
+    applyMapStyle(settings.mapStyle);
 
     // Le icone dei popup sono create dinamicamente: vanno renderizzate ogni volta che si aprono
     map.on('popupopen', (e) => lucide.createIcons({ root: e.popup._contentNode }));
@@ -700,11 +851,15 @@
 	var loadedIds = new Set();
 	var idToLayer = new Map(); // uniqueId -> { layer, group, lat, lon }
 
-    L.control.layers(null, {
-      "Aree di sosta": parkingAreasLayer,
-      "Stalli speciali": parkingSpacesLayer,
-      "Parcometri": parkometersLayer
-    }, { collapsed: true, position: 'bottomleft' }).addTo(map);
+    // Livelli accesi/spenti dalla pagina Impostazioni
+    const LAYER_GROUPS = { areas: parkingAreasLayer, spaces: parkingSpacesLayer, meters: parkometersLayer };
+    function applyLayerVisibility() {
+      Object.entries(LAYER_GROUPS).forEach(([key, group]) => {
+        if (settings.layers[key]) { if (!map.hasLayer(group)) group.addTo(map); }
+        else if (map.hasLayer(group)) map.removeLayer(group);
+      });
+    }
+    applyLayerVisibility();
 
     var statusEl = document.getElementById('status');
     function setStatus(msg) {
@@ -1483,6 +1638,13 @@
       } catch (err) { /* storage non disponibile, non bloccante */ }
     }
 
+    function clearPersistedTiles() {
+      try {
+        Object.keys(readTileIndex()).forEach(k => localStorage.removeItem(TILE_PERSIST_PREFIX + k));
+        localStorage.removeItem(TILE_INDEX_KEY);
+      } catch (err) {}
+    }
+
     // Tessere che coprono la vista attuale con un margine ampio (prefetch: le
     // zone attorno sono già pronte quando si scorre), ordinate dal centro
     function tilesForView() {
@@ -1954,7 +2116,7 @@
       clearTimeout(initialLoadTimer);
       loadVisibleTiles();
     }
-    const initialLoadTimer = setTimeout(triggerInitialLoad, hasSharedView ? 0 : 1500);
+    const initialLoadTimer = setTimeout(triggerInitialLoad, (hasSharedView || !settings.locateOnStart) ? 0 : 1500);
 
     function showSearchResults(items) {
       const box = document.getElementById('searchResults');
@@ -2181,6 +2343,12 @@
     let userMarker = null, userAccuracyCircle = null, lastFix = null;
     let geoWatchId = null, centerOnNextFix = false;
 
+    function applyAccuracyVisibility() {
+      if (!userAccuracyCircle) return;
+      if (settings.showAccuracy) { if (!map.hasLayer(userAccuracyCircle)) userAccuracyCircle.addTo(map); }
+      else if (map.hasLayer(userAccuracyCircle)) map.removeLayer(userAccuracyCircle);
+    }
+
     function onUserPosition(p) {
       const ll = [p.coords.latitude, p.coords.longitude];
       const acc = p.coords.accuracy || 0;
@@ -2192,7 +2360,8 @@
         userAccuracyCircle = L.circle(ll, {
           radius: acc, pane: 'userLocationPane', interactive: false,
           color: '#2563eb', weight: 1, opacity: 0.35, fillColor: '#3b82f6', fillOpacity: 0.12
-        }).addTo(map);
+        });
+        applyAccuracyVisibility();
         userMarker = L.marker(ll, { icon: userLocIcon, pane: 'userLocationPane', interactive: false, keyboard: false }).addTo(map);
       } else {
         userMarker.setLatLng(ll);
@@ -2258,8 +2427,11 @@
     // l'app non sia stata aperta da un link condiviso: in quel caso l'utente
     // vuole vedere PROPRIO quella posizione, non la propria (la sovrascriverebbe).
     // Il pallino compare comunque, ma la mappa resta sulla posizione condivisa.
-    if (!hasSharedView) locateUser();
-    else if (navigator.geolocation) startWatchingPosition();
+    // Disattivabile dalle impostazioni: in quel caso il GPS parte solo col pulsante.
+    if (settings.locateOnStart) {
+      if (!hasSharedView) locateUser();
+      else if (navigator.geolocation) startWatchingPosition();
+    }
 
     /* ===== Condividi posizione ===== */
     function buildShareUrl() {
@@ -2486,6 +2658,220 @@
       updateFullscreenIcon();
       setTimeout(() => map.invalidateSize(), 200);
     });
+
+    /* ===== Pagina Impostazioni ===== */
+    const settingsSheetEl = document.getElementById('settingsSheet');
+    const settingsBackdropEl = document.getElementById('settingsBackdrop');
+
+    function formatBytes(n) {
+      if (n < 1024) return n + ' B';
+      if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
+      return (n / 1024 / 1024).toFixed(1) + ' MB';
+    }
+
+    function refreshDataInfo() {
+      const c = map.getCenter();
+      const ck = cellKeyOfTile(latToTile(c.lat), lonToTile(c.lng));
+      let source = 'Postpass (in tempo reale)';
+      if (staticIndex && staticIndex.covered.has(ck)) {
+        const d = staticIndex.osmTimestamp ? new Date(staticIndex.osmTimestamp) : null;
+        source = 'Precalcolati' + (d ? ' · OSM del ' + d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) : '');
+      }
+      document.getElementById('setDataSource').textContent = source;
+
+      let zones = 0, bytes = 0;
+      try {
+        Object.keys(readTileIndex()).forEach(k => {
+          const v = localStorage.getItem(TILE_PERSIST_PREFIX + k);
+          if (v) { zones++; bytes += v.length * 2; }
+        });
+      } catch (err) {}
+      document.getElementById('setCacheInfo').textContent = zones ? `${zones} zone · ${formatBytes(bytes)}` : 'nessuna zona';
+    }
+
+    function refreshSettingsUI() {
+      document.querySelectorAll('#mapStyleControl button').forEach(b => b.classList.toggle('active', b.dataset.style === settings.mapStyle));
+      document.querySelectorAll('#settingsSheet input[data-layer]').forEach(i => { i.checked = !!settings.layers[i.dataset.layer]; });
+      document.getElementById('setLocateOnStart').checked = settings.locateOnStart;
+      document.getElementById('setShowAccuracy').checked = settings.showAccuracy;
+      document.getElementById('setAutoUpdate').checked = settings.autoUpdateCheck;
+      refreshDataInfo();
+      renderUpdateInfo();
+    }
+
+    function openSettings() {
+      refreshSettingsUI();
+      settingsBackdropEl.hidden = false;
+      settingsSheetEl.hidden = false;
+      settingsSheetEl.querySelector('.sheet-body').scrollTop = 0;
+      // Il tasto "indietro" di Android (e del browser) chiude il foglio invece di uscire
+      history.pushState({ settings: true }, '');
+    }
+
+    function closeSettings(fromHistory) {
+      if (settingsSheetEl.hidden) return;
+      settingsSheetEl.hidden = true;
+      settingsBackdropEl.hidden = true;
+      if (!fromHistory && history.state && history.state.settings) history.back();
+    }
+
+    window.addEventListener('popstate', () => closeSettings(true));
+    document.getElementById('settingsBtn').onclick = openSettings;
+    const titleBadgeEl = document.getElementById('titleBadge');
+    titleBadgeEl.onclick = openSettings;
+    titleBadgeEl.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSettings(); } };
+    document.getElementById('settingsClose').onclick = () => closeSettings();
+    settingsBackdropEl.onclick = () => closeSettings();
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !diagPanelEl) closeSettings(); });
+
+    document.querySelectorAll('#mapStyleControl button').forEach(btn => {
+      btn.onclick = () => {
+        settings.mapStyle = btn.dataset.style;
+        saveSettings();
+        applyMapStyle(settings.mapStyle);
+        refreshSettingsUI();
+      };
+    });
+    document.querySelectorAll('#settingsSheet input[data-layer]').forEach(input => {
+      input.onchange = () => {
+        settings.layers[input.dataset.layer] = input.checked;
+        saveSettings();
+        applyLayerVisibility();
+      };
+    });
+    document.getElementById('setLocateOnStart').onchange = (e) => { settings.locateOnStart = e.target.checked; saveSettings(); };
+    document.getElementById('setShowAccuracy').onchange = (e) => { settings.showAccuracy = e.target.checked; saveSettings(); applyAccuracyVisibility(); };
+    document.getElementById('setAutoUpdate').onchange = (e) => { settings.autoUpdateCheck = e.target.checked; saveSettings(); };
+
+    document.getElementById('setRefreshData').onclick = () => { closeSettings(); refreshAllData(); };
+    document.getElementById('setClearCache').onclick = () => {
+      clearPersistedTiles();
+      tileStore.clear();
+      refreshDataInfo();
+      setStatus('Cache svuotata');
+      setTimeout(() => setStatus(''), 1500);
+      refreshAllData();
+    };
+    document.getElementById('setProviders').onclick = () => openDiagPanel();
+
+    /* ===== Aggiornamenti da GitHub ===== */
+    // L'app Android controlla le Releases del repository: se c'è un APK con un
+    // numero di build più alto lo scarica dal browser di sistema, e Android lo
+    // installa sopra la versione attuale (stessa chiave di firma, vedi
+    // .github/workflows/android.yml). Il sito invece è sempre all'ultima versione.
+    const UPDATE_CHECK_KEY = 'parkUpdateCheck_v1';
+    const UPDATE_CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000;
+    let latestRelease = null;
+    let updateState = 'idle'; // idle | checking | latest | available | error | downloading
+
+    function buildNumber(version) {
+      const m = String(version || '').match(/(\d+)\s*$/);
+      return m ? parseInt(m[1], 10) : 0;
+    }
+
+    async function fetchLatestAndroidRelease() {
+      const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases?per_page=10`, {
+        headers: { Accept: 'application/vnd.github+json' },
+        cache: 'no-store'
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const release = (await res.json()).find(r => !r.draft && !r.prerelease && /^android-v/.test(r.tag_name));
+      if (!release) return null;
+      const apk = (release.assets || []).find(a => a.name.endsWith('.apk'));
+      return {
+        version: release.tag_name.replace(/^android-v/, ''),
+        apkUrl: apk ? apk.browser_download_url : null,
+        notesUrl: release.html_url,
+        publishedAt: release.published_at
+      };
+    }
+
+    function isUpdateAvailable() {
+      return IS_NATIVE_APP && !!latestRelease && !!latestRelease.apkUrl &&
+        buildNumber(latestRelease.version) > buildNumber(APP_VERSION);
+    }
+
+    function renderUpdateInfo() {
+      const statusRow = document.getElementById('updateStatusRow');
+      const statusEl2 = document.getElementById('updateStatus');
+      const checkBtn = document.getElementById('updateCheckBtn');
+      const installBtn = document.getElementById('updateInstallBtn');
+      const notesLink = document.getElementById('updateNotesLink');
+
+      if (!IS_NATIVE_APP) {
+        document.getElementById('setVersionLabel').textContent = 'Versione web';
+        document.getElementById('setVersion').textContent = 'sempre aggiornata';
+        document.getElementById('autoUpdateRow').hidden = true;
+        statusRow.hidden = false;
+        statusEl2.className = 'set-note';
+        statusEl2.textContent = "Su Android puoi installare l'app: si apre subito e usa il GPS del telefono.";
+        checkBtn.innerHTML = '<i data-lucide="download"></i> Scarica l\'app Android';
+        checkBtn.onclick = () => window.open(`https://github.com/${GITHUB_REPO}/releases/latest`, '_blank');
+        installBtn.hidden = true;
+        notesLink.hidden = true;
+        lucide.createIcons({ root: checkBtn });
+        return;
+      }
+
+      document.getElementById('setVersion').textContent = APP_VERSION || 'sviluppo';
+      const messages = {
+        idle: null,
+        checking: ['Controllo in corso…', ''],
+        latest: ["Hai già l'ultima versione.", 'ok'],
+        error: ['Impossibile contattare GitHub. Riprova più tardi.', 'warn'],
+        downloading: ["Download avviato: al termine apri il file .apk e conferma l'aggiornamento.", 'ok']
+      };
+      let msg = messages[updateState];
+      if (updateState === 'available') {
+        const d = latestRelease.publishedAt ? new Date(latestRelease.publishedAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : '';
+        msg = [`Nuova versione ${latestRelease.version} disponibile${d ? ' (' + d + ')' : ''}.`, 'new'];
+      }
+      statusRow.hidden = !msg;
+      if (msg) { statusEl2.textContent = msg[0]; statusEl2.className = 'set-note ' + msg[1]; }
+      checkBtn.disabled = updateState === 'checking';
+      installBtn.hidden = !(updateState === 'available' || updateState === 'downloading');
+      notesLink.hidden = !latestRelease || !(updateState === 'available' || updateState === 'downloading');
+      if (latestRelease) notesLink.href = latestRelease.notesUrl;
+    }
+
+    function setUpdateBadge() {
+      document.getElementById('settingsBadge').hidden = !isUpdateAvailable();
+    }
+
+    async function checkForUpdate(silent) {
+      updateState = 'checking';
+      renderUpdateInfo();
+      try {
+        latestRelease = await fetchLatestAndroidRelease();
+        try { localStorage.setItem(UPDATE_CHECK_KEY, String(Date.now())); } catch (err) {}
+        updateState = isUpdateAvailable() ? 'available' : 'latest';
+      } catch (err) {
+        console.warn('Controllo aggiornamenti non riuscito:', err.message);
+        updateState = silent ? 'idle' : 'error';
+      }
+      renderUpdateInfo();
+      setUpdateBadge();
+      if (silent && updateState === 'available') {
+        setStatus(`Nuova versione ${latestRelease.version}: apri le impostazioni`);
+        setTimeout(() => setStatus(''), 3500);
+      }
+    }
+
+    document.getElementById('updateCheckBtn').onclick = () => checkForUpdate(false);
+    document.getElementById('updateInstallBtn').onclick = () => {
+      if (!latestRelease || !latestRelease.apkUrl) return;
+      // Link esterno: Capacitor lo apre nel browser di sistema, che scarica l'APK
+      window.open(latestRelease.apkUrl, '_blank');
+      updateState = 'downloading';
+      renderUpdateInfo();
+    };
+
+    // Controllo automatico all'avvio dell'app (al massimo ogni 12 ore)
+    if (IS_NATIVE_APP && settings.autoUpdateCheck) {
+      let last = 0;
+      try { last = parseInt(localStorage.getItem(UPDATE_CHECK_KEY), 10) || 0; } catch (err) {}
+      if (Date.now() - last > UPDATE_CHECK_INTERVAL_MS) setTimeout(() => checkForUpdate(true), 4000);
+    }
 
     updateFullscreenIcon();
   </script>

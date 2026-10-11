@@ -77,6 +77,7 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html manifest.json icon-192.png icon-512.png _site/
+          mkdir -p _site/icons && cp icons/*.svg icons/*.png _site/icons/
           cp -r data _site/data
 
       - uses: actions/upload-pages-artifact@v3

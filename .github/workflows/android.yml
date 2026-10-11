@@ -15,6 +15,7 @@ on:
       - manifest.json
       - icon-192.png
       - icon-512.png
+      - icons/**
       - app/**
       - .github/workflows/android.yml
   workflow_dispatch:
@@ -42,7 +43,7 @@ jobs:
           java-version: 21
 
       - name: Prepara i file dell'app
-        run: bash app/prepare-www.sh
+        run: bash app/prepare-www.sh "${{ github.run_number }}"
 
       - name: Genera il progetto Android
         working-directory: app

@@ -16,30 +16,41 @@ grep -q ACCESS_FINE_LOCATION "$MANIFEST" || { echo "permessi non inseriti nel ma
 sed -i -E "s/versionCode [0-9]+/versionCode ${BUILD}/; s/versionName \"[^\"]*\"/versionName \"1.0.${BUILD}\"/" app/build.gradle
 grep -q "versionCode ${BUILD}" app/build.gradle || { echo "versionCode non aggiornato" >&2; exit 1; }
 
-# Icone: legacy (quadrata e tonda) e adattiva (primo piano con margine di
-# sicurezza su sfondo bianco, che Android ritaglia nella forma del launcher)
+# Icone e schermata di avvio, tutte generate da icons/icon.svg
+# (icons/render-icons.js): legacy quadrata e tonda, adattiva (sfondo +
+# primo piano nella zona sicura) e monocromatica per le icone a tema di Android 13+
 command -v convert >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q imagemagick; }
-SRC=../../icon-512.png
+ICONS=../../icons
 RES=app/src/main/res
+BRAND="#2563EB"
 for pair in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
   d=${pair%%:*}; px=${pair##*:}
-  fg=$((px * 108 / 48)); inner=$((fg * 62 / 100))
+  fg=$((px * 108 / 48))
   mkdir -p "$RES/mipmap-$d"
-  convert "$SRC" -resize "${px}x${px}" "$RES/mipmap-$d/ic_launcher.png"
-  convert "$SRC" -resize "${px}x${px}" \
-    \( -size "${px}x${px}" xc:black -fill white -draw "circle $((px/2)),$((px/2)) $((px/2)),0" \) \
-    -alpha off -compose CopyOpacity -composite "$RES/mipmap-$d/ic_launcher_round.png"
-  convert -size "${fg}x${fg}" xc:none \( "$SRC" -resize "${inner}x${inner}" \) -gravity center -composite \
-    "$RES/mipmap-$d/ic_launcher_foreground.png"
+  convert "$ICONS/android-legacy.png" -resize "${px}x${px}" "$RES/mipmap-$d/ic_launcher.png"
+  convert "$ICONS/android-round.png" -resize "${px}x${px}" "$RES/mipmap-$d/ic_launcher_round.png"
+  convert "$ICONS/android-foreground.png" -resize "${fg}x${fg}" "$RES/mipmap-$d/ic_launcher_foreground.png"
+  convert "$ICONS/android-background.png" -resize "${fg}x${fg}" "$RES/mipmap-$d/ic_launcher_background.png"
+  convert "$ICONS/android-monochrome.png" -resize "${fg}x${fg}" "$RES/mipmap-$d/ic_launcher_monochrome.png"
 done
-if [ -f "$RES/values/ic_launcher_background.xml" ]; then
-  sed -i -E 's#<color name="ic_launcher_background">[^<]*</color>#<color name="ic_launcher_background">\#FFFFFF</color>#' "$RES/values/ic_launcher_background.xml"
-fi
+for xml in "$RES/mipmap-anydpi-v26/ic_launcher.xml" "$RES/mipmap-anydpi-v26/ic_launcher_round.xml"; do
+  cat > "$xml" <<'XML'
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@mipmap/ic_launcher_background"/>
+    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+    <monochrome android:drawable="@mipmap/ic_launcher_monochrome"/>
+</adaptive-icon>
+XML
+done
 
-# Schermata di avvio: icona al centro su sfondo bianco
+# Schermata di avvio: logo bianco su blu. Su Android 12+ il sistema mostra
+# prima l'icona su windowSplashScreenBackground: stesso colore, nessuno stacco.
 for f in $(find "$RES" -name 'splash.png'); do
   size=$(identify -format '%wx%h' "$f")
-  w=${size%x*}; h=${size#*x}; m=$(( (w < h ? w : h) / 4 ))
-  convert -size "$size" xc:white \( "$SRC" -resize "${m}x${m}" \) -gravity center -composite "$f"
+  w=${size%x*}; h=${size#*x}; m=$(( (w < h ? w : h) * 6 / 10 ))
+  convert -size "$size" "xc:$BRAND" \( "$ICONS/splash-logo.png" -resize "${m}x${m}" \) -gravity center -composite "$f"
 done
+sed -i "s|<item name=\"android:background\">@drawable/splash</item>|&\n        <item name=\"windowSplashScreenBackground\">$BRAND</item>\n        <item name=\"windowSplashScreenAnimatedIcon\">@mipmap/ic_launcher_foreground</item>|" "$RES/values/styles.xml"
+grep -q windowSplashScreenBackground "$RES/values/styles.xml" || { echo "tema di avvio non aggiornato" >&2; exit 1; }
 echo "progetto Android personalizzato (build ${BUILD})"
