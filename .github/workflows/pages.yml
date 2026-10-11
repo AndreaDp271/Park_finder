@@ -76,7 +76,7 @@ jobs:
       - name: Prepara il sito
         run: |
           mkdir -p _site
-          cp index.html manifest.json icon-192.png icon-512.png _site/
+          cp index.html manifest.json sw.js icon-192.png icon-512.png _site/
           mkdir -p _site/icons && cp icons/*.svg icons/*.png _site/icons/
           cp -r data _site/data
 

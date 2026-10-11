@@ -33,6 +33,13 @@ for pair in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
   convert "$ICONS/android-background.png" -resize "${fg}x${fg}" "$RES/mipmap-$d/ic_launcher_background.png"
   convert "$ICONS/android-monochrome.png" -resize "${fg}x${fg}" "$RES/mipmap-$d/ic_launcher_monochrome.png"
 done
+# Icona piccola delle notifiche (promemoria sosta): sagoma bianca su trasparente
+for pair in mdpi:24 hdpi:36 xhdpi:48 xxhdpi:72 xxxhdpi:96; do
+  d=${pair%%:*}; px=${pair##*:}; inner=$((px * 84 / 100))
+  mkdir -p "$RES/drawable-$d"
+  convert "$ICONS/android-monochrome.png" -trim -resize "${inner}x${inner}" -background none -gravity center \
+    -extent "${px}x${px}" "$RES/drawable-$d/ic_stat_parkmap.png"
+done
 for xml in "$RES/mipmap-anydpi-v26/ic_launcher.xml" "$RES/mipmap-anydpi-v26/ic_launcher_round.xml"; do
   cat > "$xml" <<'XML'
 <?xml version="1.0" encoding="utf-8"?>

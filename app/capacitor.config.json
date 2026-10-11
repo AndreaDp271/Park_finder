@@ -12,6 +12,10 @@
     "SystemBars": {
       "insetsHandling": "css",
       "initialViewportFitValueHint": "cover"
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_parkmap",
+      "iconColor": "#2563EB"
     }
   }
 }

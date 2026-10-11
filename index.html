@@ -5,6 +5,14 @@
   <title>ParkMap - OSM Parking</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#ffffff" />
+  <script>
+    // Tema applicato subito, prima del primo disegno (niente lampo bianco al buio)
+    try {
+      var savedTheme = (JSON.parse(localStorage.getItem('parkSettings_v1')) || {}).theme || 'auto';
+      if (savedTheme === 'auto') savedTheme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.dataset.theme = savedTheme;
+    } catch (e) {}
+  </script>
 
   <!-- PWA / "Aggiungi a Home" -->
   <link rel="manifest" href="manifest.json" />
@@ -63,6 +71,16 @@
       --safe-right:env(safe-area-inset-right, 0px);
       --fab-bottom:calc(16px + var(--safe-bottom));
       --fab-right:calc(16px + var(--safe-right));
+      --fab-left:calc(16px + var(--safe-left));
+      /* Superfici e bordi: ridefiniti dal tema scuro (html[data-theme="dark"]) */
+      --surface:#fff;
+      --surface-2:#f8fafc;
+      --surface-3:#f1f5f9;
+      --border:#e2e8f0;
+      --border-soft:#f1f5f9;
+      --muted:#94a3b8;
+      --switch-off:#cbd5e1;
+      --attr-bg:rgba(255,255,255,0.75);
     }
 
     html,body{
@@ -71,7 +89,7 @@
       padding:0;
       overflow:hidden;
       font-family:'Inter',system-ui,-apple-system,sans-serif;
-      background:#f8fafc;
+      background:var(--surface-2);
       -webkit-tap-highlight-color:transparent;
     }
 
@@ -146,7 +164,7 @@
       min-width:0;
       padding:0;
     }
-    #searchInput::placeholder{ color:#94a3b8; }
+    #searchInput::placeholder{ color:var(--muted); }
 
     #searchBtn{
       background:var(--primary);
@@ -171,23 +189,23 @@
       position:absolute;
       left:0;right:0;
       top:calc(100% + 8px);
-      background:#fff;
+      background:var(--surface);
       border-radius:14px;
       box-shadow:var(--shadow-lg);
       overflow:hidden;
       display:none;
       z-index:2000;
-      border:1px solid #e2e8f0;
+      border:1px solid var(--border);
     }
     .search-result-item{
       padding:10px 12px;
       font-size:14px;
       cursor:pointer;
       color:var(--text-main);
-      background:#fff;
+      background:var(--surface);
     }
-    .search-result-item:hover{ background:#f8fafc; }
-    .search-result-item + .search-result-item{ border-top:1px solid #f1f5f9; }
+    .search-result-item:hover{ background:var(--surface-2); }
+    .search-result-item + .search-result-item{ border-top:1px solid var(--border-soft); }
 
     .fab-btn{
       position:relative;
@@ -210,7 +228,7 @@
     .fab-btn:active{ transform:scale(0.94); }
 
     /* Allinea lo zoom di Leaflet allo stile dei pulsanti flottanti */
-    .leaflet-bottom.leaflet-left{ margin:0 0 var(--fab-bottom) calc(16px + var(--safe-left)); }
+    .leaflet-bottom.leaflet-left{ margin:0 0 var(--fab-bottom) var(--fab-left); }
     .leaflet-bottom .leaflet-control{ margin:0 0 var(--btn-gap) 0 !important; }
     .leaflet-control-zoom{ border:none !important; background:transparent !important; box-shadow:none !important; border-radius:0 !important; display:flex; flex-direction:column; gap:var(--btn-gap); }
     .leaflet-control-zoom a{
@@ -241,7 +259,7 @@
       right:auto !important;
       bottom:calc(4px + var(--safe-bottom)) !important;
       transform:translateX(-50%);
-      background:rgba(255,255,255,0.75) !important;
+      background:var(--attr-bg) !important;
       border-radius:8px;
       font-size:10px;
       padding:2px 8px;
@@ -256,7 +274,7 @@
     #diagPanel{
       position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
       z-index:3001;
-      background:#fff;
+      background:var(--surface);
       border-radius:var(--radius);
       box-shadow:var(--shadow-lg);
       padding:18px;
@@ -272,13 +290,13 @@
       margin-bottom:14px; font-weight:800; font-size:15px; color:var(--text-main);
     }
     .diag-close{
-      background:#f1f5f9; border:none; border-radius:50%;
+      background:var(--surface-3); border:none; border-radius:50%;
       width:28px; height:28px; cursor:pointer; color:#64748b; flex-shrink:0;
       display:flex; align-items:center; justify-content:center;
     }
     .diag-table-wrap{ overflow-x:auto; }
     .diag-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
-    .diag-table th, .diag-table td{ border:1px solid #e2e8f0; padding:7px 8px; }
+    .diag-table th, .diag-table td{ border:1px solid var(--border); padding:7px 8px; }
     .diag-table th{ text-align:left; color:var(--text-light); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
     .diag-provider{ font-weight:600; color:var(--text-main); white-space:nowrap; }
     .diag-icon-cell{ text-align:center; width:36px; }
@@ -356,7 +374,7 @@
     /* ─── Impostazioni e Legenda (foglio dal basso su telefono, finestra al centro su desktop) ─── */
     .fab-badge{
       position:absolute; top:6px; right:6px; width:10px; height:10px; border-radius:50%;
-      background:var(--danger); box-shadow:0 0 0 2px #fff;
+      background:var(--danger); box-shadow:0 0 0 2px var(--surface);
     }
     .fab-badge[hidden]{ display:none; }
     .sheet-backdrop{ position:fixed; inset:0; z-index:2500; background:rgba(15,23,42,0.4); animation:fadeIn .2s ease; }
@@ -364,7 +382,7 @@
       position:fixed; z-index:2600; left:50%; bottom:0; transform:translateX(-50%);
       width:min(100%, 480px); max-height:88vh; max-height:88dvh;
       display:flex; flex-direction:column;
-      background:#f1f5f9; border-radius:24px 24px 0 0;
+      background:var(--surface-3); border-radius:24px 24px 0 0;
       box-shadow:0 -10px 40px rgb(15 23 42 / 0.25);
       animation:sheetUp .28s cubic-bezier(0.16,1,0.3,1);
       font-family:'Inter',system-ui,sans-serif; color:var(--text-main);
@@ -379,10 +397,10 @@
     .sheet-header h2{ margin:0; font-size:20px; font-weight:800; letter-spacing:-.01em; }
     .sheet-header::before{
       content:''; position:absolute; top:8px; left:50%; transform:translateX(-50%);
-      width:40px; height:4px; border-radius:2px; background:#cbd5e1;
+      width:40px; height:4px; border-radius:2px; background:var(--switch-off);
     }
     .sheet-close{
-      width:34px; height:34px; border-radius:50%; border:none; background:#e2e8f0; color:var(--text-main);
+      width:34px; height:34px; border-radius:50%; border:none; background:var(--border); color:var(--text-main);
       display:flex; align-items:center; justify-content:center; cursor:pointer;
     }
     .sheet-close i, .sheet-close svg{ width:18px; height:18px; }
@@ -392,16 +410,16 @@
       font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:800;
       color:var(--text-light); margin:0 6px 8px;
     }
-    .set-card{ background:#fff; border-radius:16px; overflow:hidden; box-shadow:var(--shadow-sm); }
+    .set-card{ background:var(--surface); border-radius:16px; overflow:hidden; box-shadow:var(--shadow-sm); }
     .set-row{
       display:flex; align-items:center; justify-content:space-between; gap:12px;
       min-height:52px; padding:10px 16px; box-sizing:border-box;
       font-size:14.5px; font-weight:500; color:var(--text-main); text-decoration:none;
     }
-    .set-row + .set-row, .set-row + .set-actions{ border-top:1px solid #f1f5f9; }
+    .set-row + .set-row, .set-row + .set-actions{ border-top:1px solid var(--border-soft); }
     .set-row.column{ flex-direction:column; align-items:stretch; gap:10px; padding-top:14px; padding-bottom:14px; }
     .set-row.link{ cursor:pointer; }
-    .set-row.link:active{ background:#f8fafc; }
+    .set-row.link:active{ background:var(--surface-2); }
     label.set-row{ cursor:pointer; }
     .set-row[hidden], .set-actions [hidden]{ display:none !important; }
     .set-label{ display:flex; align-items:center; gap:12px; min-width:0; }
@@ -411,27 +429,27 @@
     .set-note.ok{ color:#15803d; }
     .set-note.warn{ color:#b45309; }
     .set-note.new{ color:var(--primary-dark); font-weight:600; }
-    .chev{ width:18px; height:18px; color:#94a3b8; flex-shrink:0; }
+    .chev{ width:18px; height:18px; color:var(--muted); flex-shrink:0; }
     .set-actions{ display:flex; flex-wrap:wrap; gap:8px; padding:12px 16px 14px; }
     .set-btn{
       display:inline-flex; align-items:center; gap:8px; justify-content:center;
-      height:38px; padding:0 14px; border-radius:10px; border:1px solid #e2e8f0;
-      background:#f8fafc; color:var(--text-main); font:600 13px 'Inter',system-ui,sans-serif;
+      height:38px; padding:0 14px; border-radius:10px; border:1px solid var(--border);
+      background:var(--surface-2); color:var(--text-main); font:600 13px 'Inter',system-ui,sans-serif;
       cursor:pointer; text-decoration:none; transition:background .15s ease, transform .15s ease;
     }
     .set-btn i, .set-btn svg{ width:16px; height:16px; }
     .set-btn:active{ transform:scale(0.97); }
     .set-btn:disabled{ opacity:.6; cursor:default; }
     .set-btn.primary{ background:var(--primary-dark); border-color:var(--primary-dark); color:#fff; }
-    .segmented{ display:flex; background:#f1f5f9; border-radius:12px; padding:3px; gap:3px; }
+    .segmented{ display:flex; background:var(--surface-3); border-radius:12px; padding:3px; gap:3px; }
     .segmented button{
       flex:1; height:36px; border:none; border-radius:9px; background:transparent;
       font:600 13px 'Inter',system-ui,sans-serif; color:var(--text-light); cursor:pointer;
     }
-    .segmented button.active{ background:#fff; color:var(--text-main); box-shadow:var(--shadow-sm); }
+    .segmented button.active{ background:var(--surface); color:var(--text-main); box-shadow:var(--shadow-sm); }
     input.switch{
       appearance:none; -webkit-appearance:none; flex-shrink:0; margin:0; cursor:pointer;
-      width:46px; height:28px; border-radius:14px; background:#cbd5e1; position:relative;
+      width:46px; height:28px; border-radius:14px; background:var(--switch-off); position:relative;
       transition:background .2s ease;
     }
     input.switch::after{
@@ -496,7 +514,7 @@
     }
     .leaflet-popup-content > div:not(.popup-header-container):not(.popup-links){ padding:0 20px; }
     .leaflet-popup-content > .popup-header-container + *{ margin-top:18px; }
-    .popup-section{ margin-bottom:14px; padding-bottom:14px; display:flex; flex-direction:column; border-bottom:1px solid #f1f5f9; }
+    .popup-section{ margin-bottom:14px; padding-bottom:14px; display:flex; flex-direction:column; border-bottom:1px solid var(--border-soft); }
     .popup-section:last-of-type{ margin-bottom:4px; padding-bottom:0; border-bottom:none; }
     .label{
       color:var(--text-light);
@@ -531,8 +549,8 @@
     .popup-links a{
       text-align:center;
       padding:11px;
-      background:#f8fafc;
-      border:1px solid #e2e8f0;
+      background:var(--surface-2);
+      border:1px solid var(--border);
       border-radius:12px;
       text-decoration:none;
       font-weight:600;
@@ -580,16 +598,159 @@
     #refreshBtn.loading svg{ animation:diagSpin 1s linear infinite; }
 
     @media (max-width:600px){
-      :root{ --btn-size:42px; --btn-gap:8px; }
+      :root{ --btn-size:42px; --btn-gap:8px; --fab-bottom:calc(12px + var(--safe-bottom)); --fab-right:calc(12px + var(--safe-right)); --fab-left:calc(12px + var(--safe-left)); }
+      #chipBar{ top:calc(var(--safe-top) + 10px + 46px + 8px); width:calc(100% - 20px); }
       #topbar{ top:calc(10px + var(--safe-top)); width:calc(100% - 20px); gap:8px; }
       #titleBadge span{ display:none; }
       #titleBadge{ padding:0; width:46px; justify-content:center; }
       #searchBtn span.text{ display:none; }
       #searchBtn{ padding:0; width:36px; height:36px; justify-content:center; margin-left:4px; }
       #searchBox{ padding-left:12px; padding-right:6px; }
-      #fabStack{ right:calc(12px + var(--safe-right)); }
-      .leaflet-bottom.leaflet-left{ margin:0 0 calc(12px + var(--safe-bottom)) calc(12px + var(--safe-left)); }
     }
+    /* ─── Barra filtri (sotto la ricerca) ─── */
+    #chipBar{
+      position:fixed; z-index:999;
+      top:calc(var(--safe-top) + 12px + 46px + 8px);
+      left:50%; transform:translateX(-50%);
+      width:calc(100% - 24px); max-width:600px;
+      display:flex; gap:8px; overflow-x:auto; padding:2px 2px 6px;
+      scrollbar-width:none; pointer-events:none;
+    }
+    #chipBar::-webkit-scrollbar{ display:none; }
+    .chip{
+      pointer-events:auto; flex-shrink:0;
+      height:34px; padding:0 12px; border-radius:17px;
+      display:inline-flex; align-items:center; gap:6px; white-space:nowrap; cursor:pointer;
+      background:var(--glass); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+      border:var(--btn-border); box-shadow:var(--btn-shadow);
+      font:600 13px 'Inter',system-ui,sans-serif; color:var(--text-main);
+      transition:background .15s ease, color .15s ease, transform .15s ease;
+    }
+    .chip i, .chip svg{ width:15px; height:15px; flex-shrink:0; }
+    .chip:active{ transform:scale(0.96); }
+    .chip.active{ background:var(--primary-dark); color:#fff; border-color:transparent; }
+    .chip.car{ background:#1d4ed8; color:#fff; border-color:transparent; }
+    .chip.car.warn{ background:#d97706; }
+    .chip.car.expired{ background:var(--danger); }
+    .chip[hidden]{ display:none; }
+
+    /* ─── Pulsanti a sinistra (auto, elenco), sopra lo zoom ─── */
+    #fabStackLeft{
+      position:fixed; z-index:1001;
+      left:var(--fab-left);
+      bottom:calc(var(--fab-bottom) + (var(--btn-size) + var(--btn-gap)) * 2);
+      display:flex; flex-direction:column; gap:var(--btn-gap);
+    }
+    .fab-btn.filled{ background:var(--primary-dark); color:#fff; border-color:transparent; }
+    .fab-btn.filled:hover{ color:#fff; }
+
+    /* ─── Marcatore dell'auto ─── */
+    .car-marker-icon{ background:none; border:none; }
+    .car-marker{
+      width:36px; height:36px; border-radius:50%; box-sizing:border-box;
+      background:#1d4ed8; color:#fff; border:3px solid #fff;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow:0 3px 10px rgb(15 23 42 / 0.35);
+    }
+    .car-marker svg{ width:18px; height:18px; }
+
+    /* ─── Elenco parcheggi e preferiti ─── */
+    .list-tabs{ margin-bottom:12px; }
+    .list-row{
+      display:flex; align-items:center; gap:12px; padding:12px 16px; cursor:pointer;
+      color:var(--text-main); text-decoration:none;
+    }
+    .list-row + .list-row{ border-top:1px solid var(--border-soft); }
+    .list-row:active{ background:var(--surface-2); }
+    .list-dot{ width:14px; height:14px; border-radius:4px; border:1.5px solid; box-sizing:border-box; flex-shrink:0; }
+    .list-main{ flex:1; min-width:0; }
+    .list-title, .list-sub{ display:block; }
+    .list-title{ font-weight:600; font-size:14.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .list-sub{ font-size:12.5px; color:var(--text-light); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .list-dist{ font-size:13px; font-weight:600; color:var(--text-light); flex-shrink:0; }
+    .list-del{
+      width:32px; height:32px; border-radius:50%; border:none; background:transparent; color:var(--muted);
+      display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;
+    }
+    .list-del svg{ width:17px; height:17px; }
+    .list-empty{ padding:26px 18px; text-align:center; color:var(--text-light); font-size:14px; line-height:1.5; }
+
+    /* ─── Opzioni a scelta, campi di testo ─── */
+    .opt-chips{ display:flex; flex-wrap:wrap; gap:8px; }
+    .opt-chip{
+      height:34px; padding:0 13px; border-radius:17px; cursor:pointer;
+      border:1px solid var(--border); background:var(--surface-2); color:var(--text-main);
+      font:600 13px 'Inter',system-ui,sans-serif;
+    }
+    .opt-chip.active{ background:var(--primary-dark); border-color:var(--primary-dark); color:#fff; }
+    .set-textarea, .set-input{
+      width:100%; box-sizing:border-box; border:1px solid var(--border); border-radius:12px;
+      background:var(--surface-2); color:var(--text-main);
+      font:500 14px 'Inter',system-ui,sans-serif; padding:10px 12px;
+    }
+    .set-textarea{ min-height:96px; resize:vertical; line-height:1.45; }
+    .set-input{ height:38px; width:auto; padding:0 10px; }
+    .set-btn.danger{ color:var(--danger); }
+    .set-hint{ color:var(--text-light); font-size:12.5px; line-height:1.45; margin:8px 6px 0; }
+    .inline-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+
+    /* ─── Pulsanti nel popup di un parcheggio ─── */
+    .popup-links a, .popup-links button{ display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+    .popup-links a svg, .popup-links button svg{ width:15px; height:15px; }
+    .popup-links button{
+      padding:11px; background:var(--surface-2); border:1px solid var(--border); border-radius:12px;
+      font:600 12px 'Inter',system-ui,sans-serif; color:var(--text-main); cursor:pointer; transition:all .15s ease;
+    }
+    .popup-links button:hover{ background:var(--primary); color:#fff; border-color:var(--primary); }
+    .popup-links button.fav.on{ color:#d97706; border-color:#fcd34d; background:#fffbeb; }
+    .popup-links button.fav.on svg{ fill:currentColor; }
+
+    /* ─── Menu della pressione prolungata sulla mappa ─── */
+    .ctx-popup .leaflet-popup-content{ min-width:230px !important; }
+    .ctx-popup a.leaflet-popup-close-button{ color:var(--text-light) !important; background:transparent !important; top:8px !important; right:8px !important; }
+    .ctx-menu{ padding:14px; display:flex; flex-direction:column; gap:8px; }
+    .ctx-title{ font-weight:700; font-size:13px; color:var(--text-light); margin:0 2px 2px; }
+    .ctx-menu .set-btn{ justify-content:flex-start; width:100%; box-sizing:border-box; }
+    .leaflet-container .ctx-menu a.set-btn{ color:var(--text-main); }
+
+    /* In orizzontale con poco spazio la colonna di destra va su due colonne */
+    @media (max-height:520px){
+      #fabStack{ flex-wrap:wrap-reverse; max-height:calc(100vh - var(--safe-top) - 110px); align-content:flex-start; }
+    }
+
+    /* ─── Tema scuro ─── */
+    html[data-theme="dark"]{
+      --surface:#1e293b;
+      --surface-2:#172033;
+      --surface-3:#0f172a;
+      --border:#334155;
+      --border-soft:#26334a;
+      --muted:#64748b;
+      --switch-off:#475569;
+      --text-main:#e2e8f0;
+      --text-light:#94a3b8;
+      --bg-dark:#e2e8f0;
+      --primary-light:#1e3a5f;
+      --glass:rgba(30,41,59,0.88);
+      --btn-border:1px solid rgba(255,255,255,0.08);
+      --btn-shadow:0 2px 10px rgb(0 0 0 / 0.35),0 1px 2px rgb(0 0 0 / 0.3);
+      --attr-bg:rgba(15,23,42,0.72);
+      color-scheme:dark;
+    }
+    html[data-theme="dark"] .leaflet-container{ background:#0f172a; }
+    /* Mappa scurita (non per il satellite, che è già un'immagine scura) */
+    html[data-theme="dark"]:not([data-map="satellite"]) .leaflet-tile-pane{
+      filter:invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88) saturate(0.8);
+    }
+    html[data-theme="dark"] .leaflet-popup-content-wrapper,
+    html[data-theme="dark"] .leaflet-popup-tip{ background:var(--surface); color:var(--text-main); }
+    html[data-theme="dark"] .leaflet-control-attribution a{ color:#93c5fd; }
+    html[data-theme="dark"] .badge-note.danger{ background:#3f1d1d; }
+    html[data-theme="dark"] .badge-note.time{ background:#2e1f4d; color:#c4b5fd; border-color:#4c1d95; }
+    html[data-theme="dark"] .popup-links button.fav.on{ background:#3a2a0a; border-color:#92400e; color:#fbbf24; }
+    html[data-theme="dark"] input.switch::after{ background:#f8fafc; }
+    html[data-theme="dark"] .leaflet-control-zoom a.leaflet-control-zoom-in{ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e2e8f0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='M12 5v14'/%3E%3C/svg%3E") !important; }
+    html[data-theme="dark"] .leaflet-control-zoom a.leaflet-control-zoom-out{ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e2e8f0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3C/svg%3E") !important; }
   </style>
 </head>
 
@@ -614,6 +775,20 @@
 
 
 
+
+  <div id="chipBar" role="toolbar" aria-label="Filtri">
+    <button type="button" class="chip car" id="carChip" hidden><i data-lucide="car"></i><span id="carChipText">Auto</span></button>
+    <button type="button" class="chip" data-filter="freeNow" aria-pressed="false"><i data-lucide="clock"></i> Gratis adesso</button>
+    <button type="button" class="chip" data-filter="free" aria-pressed="false"><i data-lucide="circle-check"></i> Gratuiti</button>
+    <button type="button" class="chip" data-filter="disc" aria-pressed="false"><i data-lucide="timer"></i> Disco orario</button>
+    <button type="button" class="chip" data-filter="disabled" aria-pressed="false"><i data-lucide="accessibility"></i> Disabili</button>
+    <button type="button" class="chip" data-filter="ev" aria-pressed="false"><i data-lucide="zap"></i> Ricarica EV</button>
+  </div>
+
+  <div id="fabStackLeft">
+    <button id="carBtn" class="fab-btn" title="La mia auto" aria-label="La mia auto"><i data-lucide="car"></i></button>
+    <button id="listBtn" class="fab-btn" title="Parcheggi vicini e preferiti" aria-label="Parcheggi vicini e preferiti"><i data-lucide="list"></i></button>
+  </div>
 
   <div id="fabStack">
     <button id="shareBtn" class="fab-btn" title="Condividi questa posizione">
@@ -653,6 +828,28 @@
               <button type="button" data-style="osm">Standard</button>
               <button type="button" data-style="light">Chiaro</button>
               <button type="button" data-style="satellite">Satellite</button>
+            </div>
+          </div>
+          <div class="set-row column">
+            <span class="set-label"><i data-lucide="sun-moon"></i> Tema</span>
+            <div class="segmented" id="themeControl">
+              <button type="button" data-theme-opt="auto">Automatico</button>
+              <button type="button" data-theme-opt="light">Chiaro</button>
+              <button type="button" data-theme-opt="dark">Scuro</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="set-group">
+        <div class="set-title">Navigazione</div>
+        <div class="set-card">
+          <div class="set-row column">
+            <span class="set-label"><i data-lucide="navigation"></i> App per "Vai a"</span>
+            <div class="segmented" id="navAppControl">
+              <button type="button" data-nav="google">Google Maps</button>
+              <button type="button" data-nav="waze">Waze</button>
+              <button type="button" data-nav="system">Predefinita</button>
             </div>
           </div>
         </div>
@@ -746,6 +943,60 @@
     </div>
   </section>
 
+  <section id="carSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="carTitle" hidden>
+    <header class="sheet-header">
+      <h2 id="carTitle">La mia auto</h2>
+      <button type="button" class="sheet-close" aria-label="Chiudi"><i data-lucide="x"></i></button>
+    </header>
+    <div class="sheet-body" id="carBody"></div>
+  </section>
+
+  <section id="listSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="listTitle" hidden>
+    <header class="sheet-header">
+      <h2 id="listTitle">Parcheggi</h2>
+      <button type="button" class="sheet-close" aria-label="Chiudi"><i data-lucide="x"></i></button>
+    </header>
+    <div class="sheet-body">
+      <div class="segmented list-tabs" id="listTabs">
+        <button type="button" data-tab="near">Vicini</button>
+        <button type="button" data-tab="fav">Preferiti</button>
+      </div>
+      <div class="set-card" id="listCard"></div>
+      <p class="set-hint" id="listHint"></p>
+    </div>
+  </section>
+
+  <section id="reportSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="reportTitle" hidden>
+    <header class="sheet-header">
+      <h2 id="reportTitle">Segnala su OpenStreetMap</h2>
+      <button type="button" class="sheet-close" aria-label="Chiudi"><i data-lucide="x"></i></button>
+    </header>
+    <div class="sheet-body">
+      <div class="set-group">
+        <div class="set-card">
+          <div class="set-row column">
+            <span class="set-label"><i data-lucide="flag"></i> Cosa vuoi segnalare?</span>
+            <div class="opt-chips" id="reportTypes">
+              <button type="button" class="opt-chip" data-type="missing">Parcheggio mancante</button>
+              <button type="button" class="opt-chip" data-type="wrong">Informazioni sbagliate</button>
+              <button type="button" class="opt-chip" data-type="gone">Non esiste più</button>
+              <button type="button" class="opt-chip" data-type="other">Altro</button>
+            </div>
+          </div>
+          <div class="set-row column">
+            <textarea class="set-textarea" id="reportText" maxlength="1500"></textarea>
+          </div>
+          <div class="set-row"><span class="set-label"><i data-lucide="map-pin"></i> <span id="reportWhere">—</span></span></div>
+          <div class="set-actions">
+            <button type="button" class="set-btn primary" id="reportSend"><i data-lucide="send"></i> Invia segnalazione</button>
+          </div>
+          <div class="set-row" id="reportResultRow" hidden><span class="set-note" id="reportResult"></span></div>
+        </div>
+        <p class="set-hint">La segnalazione diventa una nota pubblica e anonima su OpenStreetMap: i volontari che curano la mappa la verificano e correggono i dati, per tutti.</p>
+      </div>
+    </div>
+  </section>
+
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
@@ -773,7 +1024,9 @@
       layers: { areas: true, spaces: true, meters: true },
       locateOnStart: true,
       showAccuracy: true,
-      autoUpdateCheck: true
+      autoUpdateCheck: true,
+      theme: 'auto',          // auto | light | dark
+      navApp: 'google'        // google | waze | system
     };
     const settings = (() => {
       try {
@@ -785,6 +1038,169 @@
     })();
     function saveSettings() {
       try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (err) {}
+    }
+
+    // ─── Tema chiaro/scuro ───
+    const darkSchemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    function resolvedTheme() {
+      return settings.theme === 'auto' ? (darkSchemeQuery.matches ? 'dark' : 'light') : settings.theme;
+    }
+    function applyTheme() {
+      const theme = resolvedTheme();
+      document.documentElement.dataset.theme = theme;
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', theme === 'dark' ? '#0f172a' : '#ffffff');
+    }
+    darkSchemeQuery.addEventListener('change', () => { if (settings.theme === 'auto') applyTheme(); });
+    applyTheme();
+
+    // ─── App di navigazione per "Vai a" ───
+    const IS_APPLE_DEVICE = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const IS_ANDROID = /Android/.test(navigator.userAgent);
+    function buildNavUrl(lat, lon, travel) {
+      const dest = lat + ',' + lon;
+      const walking = travel === 'walking';
+      // Waze non ha la navigazione a piedi: per raggiungere l'auto si usa Google Maps
+      if (settings.navApp === 'waze' && !walking) return `https://waze.com/ul?ll=${dest}&navigate=yes`;
+      if (settings.navApp === 'system') {
+        if (IS_APPLE_DEVICE) return `https://maps.apple.com/?daddr=${dest}&dirflg=${walking ? 'w' : 'd'}`;
+        if (IS_ANDROID) return `geo:${dest}?q=${dest}`;
+      }
+      return `https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=${walking ? 'walking' : 'driving'}`;
+    }
+
+    // ─── Orari OSM: "gratis/a pagamento in questo momento" ───
+    // Interpreta le condizioni più comuni di fee:conditional, ad esempio
+    // "no @ (Mo-Sa 13:00-15:00,20:00-08:00; Su)" o "yes @ (Mo-Fr 08:00-19:00)".
+    // I festivi (PH) non si possono sapere qui e vengono ignorati.
+    const OSM_DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+    function osmDaysMatch(daysStr, day) {
+      if (!daysStr) return true;
+      return daysStr.split(',').some(seg => {
+        const [a, b] = seg.trim().split('-');
+        const ia = OSM_DAYS.indexOf(a), ib = b ? OSM_DAYS.indexOf(b) : ia;
+        if (ia < 0 || ib < 0) return false;
+        return ia <= ib ? (day >= ia && day <= ib) : (day >= ia || day <= ib);
+      });
+    }
+    function osmConditionMatches(cond, date) {
+      const day = date.getDay(), prevDay = (day + 6) % 7;
+      const mins = date.getHours() * 60 + date.getMinutes();
+      return String(cond).split(';').some(raw => {
+        const part = raw.trim();
+        if (!part || /^PH\b/.test(part)) return false;
+        if (part === '24/7') return true;
+        const m = part.match(/^((?:Mo|Tu|We|Th|Fr|Sa|Su)(?:-(?:Mo|Tu|We|Th|Fr|Sa|Su))?(?:\s*,\s*(?:Mo|Tu|We|Th|Fr|Sa|Su)(?:-(?:Mo|Tu|We|Th|Fr|Sa|Su))?)*)?\s*(.*)$/);
+        if (!m) return false;
+        const daysStr = m[1], times = (m[2] || '').replace(/^,?\s*PH\s*/, '').trim();
+        if (/^(off|closed)$/i.test(times)) return false;
+        if (!times) return osmDaysMatch(daysStr, day);
+        return times.split(',').some(r => {
+          const t = r.trim().match(/^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/);
+          if (!t) return false;
+          const start = +t[1] * 60 + +t[2], end = +t[3] * 60 + +t[4];
+          if (end > start) return osmDaysMatch(daysStr, day) && mins >= start && mins < end;
+          // Fascia che attraversa la mezzanotte (es. 20:00-08:00)
+          return (osmDaysMatch(daysStr, day) && mins >= start) || (osmDaysMatch(daysStr, prevDay) && mins < end);
+        });
+      });
+    }
+
+    const RESTRICTED_ACCESS = ['private', 'customers', 'destination', 'permit', 'no'];
+    function isRestricted(tags) {
+      return RESTRICTED_ACCESS.includes(tags.access) || tags.vehicle === 'permit';
+    }
+    function hasDiscRule(tags) {
+      const maxstay = String(tags.maxstay || '').trim().toLowerCase();
+      return String(tags['parking:condition'] || '').toLowerCase().includes('disc') ||
+        (!!maxstay && !['no', 'none', 'unlimited', '0'].includes(maxstay)) || !!tags['maxstay:conditional'];
+    }
+    // 'free' | 'paid' | 'unknown' in questo momento
+    function feeStateAt(tags, date) {
+      let state = tags.fee === 'no' ? 'free' : (tags.fee === 'yes' ? 'paid' : null);
+      const conditional = tags['fee:conditional'];
+      if (conditional) {
+        let matched = false;
+        splitOsmRules(conditional).forEach(rule => {
+          const m = rule.match(/^(yes|no)\s*@\s*\(?(.+?)\)?\s*$/i);
+          if (!m || matched) return;
+          const value = m[1].toLowerCase() === 'yes' ? 'paid' : 'free';
+          if (osmConditionMatches(m[2], date)) { state = value; matched = true; }
+          else if (state === null) state = value === 'paid' ? 'free' : 'paid';
+        });
+      }
+      if (state === null && hasDiscRule(tags)) state = 'free';
+      return state || 'unknown';
+    }
+
+    // ─── Filtri (barra sotto la ricerca) ───
+    // Un elemento è visibile se soddisfa almeno uno dei filtri attivi; senza
+    // filtri attivi si vede tutto. I parcometri si vedono solo senza filtri.
+    let activeFilters = new Set();
+    function capacityFlag(value) {
+      return value === 'yes' || (parseInt(value, 10) || 0) > 0;
+    }
+    function elementMatchesFilter(tags, filter, now) {
+      if (tags.amenity === 'vending_machine') return false;
+      const restricted = isRestricted(tags);
+      switch (filter) {
+        case 'free':
+          return !restricted && ((tags.fee === 'no' && !tags['fee:conditional']) ||
+            (!tags.fee && !tags['fee:conditional'] && hasDiscRule(tags)));
+        case 'freeNow': return !restricted && feeStateAt(tags, now) === 'free';
+        case 'disc': return !restricted && hasDiscRule(tags);
+        case 'disabled': return tags.parking_space === 'disabled' || capacityFlag(tags['capacity:disabled']);
+        case 'ev': return tags.parking_space === 'charging' || capacityFlag(tags['capacity:charging']);
+        default: return true;
+      }
+    }
+    function matchesFilters(entry) {
+      if (!activeFilters.size) return true;
+      const now = new Date();
+      for (const f of activeFilters) if (elementMatchesFilter(entry.tags, f, now)) return true;
+      return false;
+    }
+    // Registra un elemento disegnato e lo mostra solo se passa i filtri attivi
+    function registerElement(uniqueId, layer, group, tile, tags) {
+      const center = layer.getLatLng ? layer.getLatLng() : layer.getBounds().getCenter();
+      const entry = { layer, group, tile, tags, center };
+      idToLayer.set(uniqueId, entry);
+      if (matchesFilters(entry)) group.addLayer(layer);
+    }
+    function applyFilters() {
+      idToLayer.forEach(entry => {
+        const show = matchesFilters(entry), shown = entry.group.hasLayer(entry.layer);
+        if (show && !shown) entry.group.addLayer(entry.layer);
+        else if (!show && shown) entry.group.removeLayer(entry.layer);
+      });
+    }
+
+    // ─── Preferiti ───
+    const FAVORITES_KEY = 'parkFavorites_v1';
+    let favorites = [];
+    try { favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY)) || []; } catch (err) { favorites = []; }
+    function saveFavorites() {
+      try { localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites)); } catch (err) {}
+    }
+    function isFavorite(key) { return favorites.some(f => f.id === key); }
+
+    function elementTitle(tags) {
+      if (tags.amenity === 'vending_machine') return tags.name || tags.ref || 'Parcometro';
+      return tags.name || tags.ref ||
+        (tags.amenity === 'parking_space' ? (getSpecialStallName(tags.parking_space) || 'Stallo speciale') : 'Area di sosta');
+    }
+    // Riassunto di una riga: costo (anche "in questo momento"), disco, posti
+    function elementSummary(tags) {
+      const parts = [];
+      if (tags.amenity === 'parking_space') parts.push(getSpecialStallName(tags.parking_space) || 'Stallo speciale');
+      if (isRestricted(tags)) parts.push('Accesso limitato');
+      else if (tags['fee:conditional']) parts.push(feeStateAt(tags, new Date()) === 'free' ? 'Gratis adesso' : 'A pagamento adesso');
+      else if (tags.fee === 'no') parts.push('Gratuito');
+      else if (tags.fee === 'yes') parts.push('A pagamento');
+      if (hasDiscRule(tags)) parts.push('Disco orario');
+      if (tags.capacity) parts.push(tags.capacity + ' posti');
+      return parts.join(' · ') || 'Costo non indicato';
     }
 
     // Se il link è stato aperto da un pulsante "Condividi" (vedi shareCurrentView
@@ -818,6 +1234,8 @@
     // singoli path interattivi li ricevono). In più il canvas, a parità di
     // margine, occupa molta memoria sui telefoni ad alta densità.
     L.SVG.mergeOptions({ padding: 0.5 });
+    // I popup si aprono sotto la barra di ricerca e i filtri, non dietro
+    L.Popup.mergeOptions({ autoPanPaddingTopLeft: L.point(12, 130), autoPanPaddingBottomRight: L.point(70, 24) });
     var map = L.map('map', { zoomControl: false }).setView(initialView[0], initialView[1]);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
@@ -844,6 +1262,7 @@
         saveSettings();
       }
       const style = MAP_STYLES[name];
+      document.documentElement.dataset.map = name;
       if (baseLayer) map.removeLayer(baseLayer);
       baseLayer = L.tileLayer(style.url, {
         maxZoom: 20,
@@ -900,10 +1319,6 @@
         .replace(/>/g,'&gt;')
         .replace(/"/g,'&quot;')
         .replace(/'/g,'&#039;');
-    }
-
-    function buildGMapsUrl(lat, lon) {
-      return 'https://www.google.com/maps?q=' + encodeURIComponent(lat + ',' + lon);
     }
 
     function buildIdUrl(osmType, osmId, lat, lon, zoom) {
@@ -1335,8 +1750,10 @@
         </div>` : ''}
 
         <div class="popup-links">
-          <a href="${buildGMapsUrl(lat, lon)}" target="_blank">Vai a</a>
-          <a href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank">Modifica</a>
+          <a href="${buildNavUrl(lat, lon, 'driving')}" target="_blank" rel="noopener"><i data-lucide="navigation"></i> Vai a</a>
+          <a href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank" rel="noopener"><i data-lucide="pencil"></i> Modifica</a>
+          ${favButtonHtml(osmMeta, lat, lon)}
+          ${reportButtonHtml(osmMeta, lat, lon)}
         </div>
       `;
 
@@ -1377,8 +1794,10 @@
         </div>` : ''}
 
         <div class="popup-links">
-          <a href="${buildGMapsUrl(lat, lon)}" target="_blank">Vai a</a>
-          <a href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank">Modifica</a>
+          <a href="${buildNavUrl(lat, lon, 'driving')}" target="_blank" rel="noopener"><i data-lucide="navigation"></i> Vai a</a>
+          <a href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank" rel="noopener"><i data-lucide="pencil"></i> Modifica</a>
+          ${favButtonHtml(osmMeta, lat, lon)}
+          ${reportButtonHtml(osmMeta, lat, lon)}
         </div>
       `;
     }
@@ -2040,12 +2459,12 @@
               L.polygon(pts, { color, weight: 2, fillColor, fillOpacity: 0.4, pane: 'parkingAreasPane' }) :
               L.polyline(pts, { color, weight: 3, pane: 'parkingAreasPane' });
 
-            layer.bindPopup(() => buildPopupContent(tags, pts[0][0], pts[0][1], osmMeta)).addTo(parkingAreasLayer);
-            idToLayer.set(uniqueId, { layer, group: parkingAreasLayer, tile });
+            layer.bindPopup(() => buildPopupContent(tags, pts[0][0], pts[0][1], osmMeta));
+            registerElement(uniqueId, layer, parkingAreasLayer, tile, tags);
           } else if (el.lat) {
             let layer = L.circleMarker([el.lat, el.lon], { radius: 7, color, fillColor, fillOpacity: 0.7, pane: 'parkingAreasPane' })
-              .bindPopup(() => buildPopupContent(tags, el.lat, el.lon, osmMeta)).addTo(parkingAreasLayer);
-            idToLayer.set(uniqueId, { layer, group: parkingAreasLayer, tile });
+              .bindPopup(() => buildPopupContent(tags, el.lat, el.lon, osmMeta));
+            registerElement(uniqueId, layer, parkingAreasLayer, tile, tags);
           }
         }
 
@@ -2064,12 +2483,12 @@
           if (el.geometry) {
             let pts2 = el.geometry.map(g => [g.lat, g.lon]);
             let layer2 = L.polygon(pts2, { color: cPs, weight: 2, fillColor: fPs, fillOpacity: 0.8, pane: 'parkingSpacesPane' })
-              .bindPopup(() => buildPopupContent(tags, pts2[0][0], pts2[0][1], osmMeta)).addTo(parkingSpacesLayer);
-            idToLayer.set(uniqueId, { layer: layer2, group: parkingSpacesLayer, tile });
+              .bindPopup(() => buildPopupContent(tags, pts2[0][0], pts2[0][1], osmMeta));
+            registerElement(uniqueId, layer2, parkingSpacesLayer, tile, tags);
           } else if (el.lat) {
             let layer2 = L.circleMarker([el.lat, el.lon], { radius: 8, color: cPs, fillColor: fPs, fillOpacity: 0.9, pane: 'parkingSpacesPane' })
-              .bindPopup(() => buildPopupContent(tags, el.lat, el.lon, osmMeta)).addTo(parkingSpacesLayer);
-            idToLayer.set(uniqueId, { layer: layer2, group: parkingSpacesLayer, tile });
+              .bindPopup(() => buildPopupContent(tags, el.lat, el.lon, osmMeta));
+            registerElement(uniqueId, layer2, parkingSpacesLayer, tile, tags);
           }
         }
 
@@ -2091,8 +2510,8 @@
               fillOpacity: 0.95,
               pane: 'parkometersPane'
             }).bindPopup(() => buildParkingMeterPopup(tags, lat, lon, osmMeta))
-              .addTo(parkometersLayer);
-            idToLayer.set(uniqueId, { layer: meterLayer, group: parkometersLayer, tile });
+              ;
+            registerElement(uniqueId, meterLayer, parkometersLayer, tile, tags);
           }
         }
       });
@@ -2394,6 +2813,8 @@
         userAccuracyCircle.setLatLng(ll).setRadius(acc);
       }
       gpsBtnEl.classList.add('active');
+      renderCarOnMap();
+      updateCarChip();
 
       if (centerOnNextFix) {
         centerOnNextFix = false;
@@ -2749,6 +3170,7 @@
 
     function openSettings() {
       refreshSettingsUI();
+      refreshExtraSettingsUI();
       openSheet(settingsSheetEl);
     }
 
@@ -2910,6 +3332,546 @@
       try { last = parseInt(localStorage.getItem(UPDATE_CHECK_KEY), 10) || 0; } catch (err) {}
       if (Date.now() - last > UPDATE_CHECK_INTERVAL_MS) setTimeout(() => checkForUpdate(true), 4000);
     }
+
+    /* ===== Barra filtri ===== */
+    document.querySelectorAll('#chipBar [data-filter]').forEach(chip => {
+      chip.onclick = () => {
+        const f = chip.dataset.filter;
+        if (activeFilters.has(f)) activeFilters.delete(f); else activeFilters.add(f);
+        chip.classList.toggle('active', activeFilters.has(f));
+        chip.setAttribute('aria-pressed', activeFilters.has(f) ? 'true' : 'false');
+        applyFilters();
+        if (!listSheetEl.hidden) renderList();
+      };
+    });
+    // "Gratis adesso" dipende dall'ora: si ricalcola ogni minuto
+    setInterval(() => { if (activeFilters.has('freeNow')) applyFilters(); }, 60000);
+
+    function formatDistance(m) {
+      if (m < 1000) return Math.round(m / 10) * 10 + ' m';
+      return (m / 1000).toFixed(m < 10000 ? 1 : 0).replace('.', ',') + ' km';
+    }
+
+    // Punto da cui misurare le distanze: la mia posizione se è nella zona
+    // che sto guardando, altrimenti il centro della mappa
+    function referencePoint() {
+      const c = map.getCenter();
+      if (lastFix && map.distance(c, L.latLng(lastFix.ll)) < 30000) return L.latLng(lastFix.ll);
+      return c;
+    }
+
+    /* ===== Elenco parcheggi vicini e preferiti ===== */
+    const listSheetEl = document.getElementById('listSheet');
+    let listTab = 'near';
+
+    function listRowHtml({ key, tags, name, summary, dist, removable }) {
+      const theme = getPopupTheme(tags || {});
+      return `<div class="list-row" data-key="${escapeHtml(key)}" role="button" tabindex="0">
+        <span class="list-dot" style="background:${theme.c1}; border-color:${theme.c2}"></span>
+        <span class="list-main"><span class="list-title">${escapeHtml(name)}</span><span class="list-sub">${escapeHtml(summary)}</span></span>
+        ${dist != null ? `<span class="list-dist">${formatDistance(dist)}</span>` : ''}
+        ${removable ? `<button type="button" class="list-del" data-del="${escapeHtml(key)}" aria-label="Rimuovi dai preferiti"><i data-lucide="trash-2"></i></button>` : ''}
+      </div>`;
+    }
+
+    function openElementOnMap(key, latlng) {
+      closeSheet();
+      map.setView(latlng, Math.max(map.getZoom(), 17));
+      // L'elemento potrebbe non essere ancora caricato (preferito lontano): lo si attende un po'
+      let tries = 0;
+      const tryOpen = () => {
+        const entry = idToLayer.get(key);
+        if (entry && entry.group.hasLayer(entry.layer) && map.hasLayer(entry.group)) { entry.layer.openPopup(); return; }
+        if (++tries < 30) setTimeout(tryOpen, 250);
+      };
+      setTimeout(tryOpen, 300);
+    }
+
+    function renderList() {
+      document.querySelectorAll('#listTabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === listTab));
+      const card = document.getElementById('listCard');
+      const hint = document.getElementById('listHint');
+      const ref = referencePoint();
+
+      if (listTab === 'near') {
+        const rows = [];
+        idToLayer.forEach((entry, key) => {
+          if (entry.tags.amenity === 'vending_machine') return;
+          if (!map.hasLayer(entry.group) || !entry.group.hasLayer(entry.layer)) return;
+          rows.push({ key, entry, dist: map.distance(ref, entry.center) });
+        });
+        rows.sort((a, b) => a.dist - b.dist);
+        card.innerHTML = rows.length
+          ? rows.slice(0, 60).map(r => listRowHtml({ key: r.key, tags: r.entry.tags, name: elementTitle(r.entry.tags), summary: elementSummary(r.entry.tags), dist: r.dist })).join('')
+          : '<div class="list-empty">Nessun parcheggio in questa zona' + (activeFilters.size ? ' con i filtri scelti.' : '. Sposta la mappa o allarga la vista.') + '</div>';
+        hint.textContent = (lastFix && ref.equals(L.latLng(lastFix.ll)) ? 'Distanze dalla tua posizione' : 'Distanze dal centro della mappa') +
+          (activeFilters.size ? ' · filtri attivi' : '') + (rows.length > 60 ? ` · i 60 più vicini su ${rows.length}` : '');
+        card.querySelectorAll('.list-row').forEach(row => {
+          row.onclick = () => { const e = idToLayer.get(row.dataset.key); if (e) openElementOnMap(row.dataset.key, e.center); };
+        });
+      } else {
+        const rows = favorites.map(f => ({ ...f, dist: map.distance(ref, L.latLng(f.lat, f.lon)) })).sort((a, b) => a.dist - b.dist);
+        card.innerHTML = rows.length
+          ? rows.map(f => listRowHtml({ key: f.id, tags: f.tags, name: f.name, summary: f.summary, dist: f.dist, removable: true })).join('')
+          : '<div class="list-empty">Nessun preferito.<br>Apri un parcheggio sulla mappa e tocca <b>Salva</b> per ritrovarlo qui.</div>';
+        hint.textContent = rows.length ? 'I preferiti restano salvati su questo dispositivo.' : '';
+        card.querySelectorAll('.list-row').forEach(row => {
+          row.onclick = (ev) => {
+            if (ev.target.closest('.list-del')) return;
+            const f = favorites.find(x => x.id === row.dataset.key);
+            if (f) openElementOnMap(f.id, L.latLng(f.lat, f.lon));
+          };
+        });
+        card.querySelectorAll('.list-del').forEach(btn => {
+          btn.onclick = () => { favorites = favorites.filter(f => f.id !== btn.dataset.del); saveFavorites(); renderList(); };
+        });
+      }
+      lucide.createIcons({ root: card });
+    }
+
+    document.querySelectorAll('#listTabs button').forEach(b => { b.onclick = () => { listTab = b.dataset.tab; renderList(); }; });
+    document.getElementById('listBtn').onclick = () => { renderList(); openSheet(listSheetEl); };
+
+    /* ===== Pulsanti nel popup: preferito e segnalazione ===== */
+    function favButtonHtml(osmMeta, lat, lon) {
+      const key = osmMeta.type + ':' + osmMeta.id;
+      const on = isFavorite(key);
+      return `<button type="button" class="fav${on ? ' on' : ''}" data-pm-action="fav" data-key="${key}" data-lat="${lat}" data-lon="${lon}">` +
+        `<i data-lucide="star"></i> ${on ? 'Salvato' : 'Salva'}</button>`;
+    }
+    function reportButtonHtml(osmMeta, lat, lon) {
+      return `<button type="button" data-pm-action="report" data-osm="${osmMeta.type}/${osmMeta.id}" data-lat="${lat}" data-lon="${lon}">` +
+        `<i data-lucide="flag"></i> Segnala</button>`;
+    }
+
+    map.on('popupopen', (e) => {
+      const root = e.popup._contentNode;
+      root.querySelectorAll('[data-pm-action="fav"]').forEach(btn => {
+        btn.onclick = () => {
+          const key = btn.dataset.key;
+          if (isFavorite(key)) {
+            favorites = favorites.filter(f => f.id !== key);
+          } else {
+            const entry = idToLayer.get(key);
+            const tags = entry ? entry.tags : {};
+            favorites.push({
+              id: key, name: elementTitle(tags), summary: elementSummary(tags),
+              lat: +btn.dataset.lat, lon: +btn.dataset.lon, savedAt: Date.now(),
+              tags: { amenity: tags.amenity, parking_space: tags.parking_space, fee: tags.fee, access: tags.access, vehicle: tags.vehicle,
+                      'fee:conditional': tags['fee:conditional'], 'parking:condition': tags['parking:condition'], maxstay: tags.maxstay }
+            });
+          }
+          saveFavorites();
+          const on = isFavorite(key);
+          btn.classList.toggle('on', on);
+          btn.innerHTML = `<i data-lucide="star"></i> ${on ? 'Salvato' : 'Salva'}`;
+          lucide.createIcons({ root: btn });
+        };
+      });
+      root.querySelectorAll('[data-pm-action="report"]').forEach(btn => {
+        btn.onclick = () => {
+          map.closePopup();
+          const entry = idToLayer.get(btn.dataset.osm.replace('/', ':'));
+          openReport({ lat: +btn.dataset.lat, lon: +btn.dataset.lon, osmRef: btn.dataset.osm,
+                       title: entry ? elementTitle(entry.tags) : null, type: 'wrong' });
+        };
+      });
+    });
+
+    /* ===== Segnalazioni su OpenStreetMap (note) ===== */
+    // Note anonime tramite l'API ufficiale: chiunque può crearle, i mappatori
+    // volontari le vedono sulla mappa e correggono i dati.
+    const OSM_NOTES_API = 'https://api.openstreetmap.org/api/0.6/notes.json';
+    const REPORT_TYPES = {
+      missing: { label: 'Parcheggio mancante', placeholder: 'Es. parcheggio gratuito con circa 20 posti, ingresso da via Roma.' },
+      wrong: { label: 'Informazioni sbagliate', placeholder: 'Cosa non è corretto? Es. ora è a pagamento dal lunedì al sabato, 8–20.' },
+      gone: { label: 'Non esiste più', placeholder: 'Es. il parcheggio è stato chiuso per lavori / trasformato in area pedonale.' },
+      other: { label: 'Altro', placeholder: 'Descrivi la situazione.' }
+    };
+    const reportSheetEl = document.getElementById('reportSheet');
+    let reportCtx = null;
+
+    function renderReportType() {
+      document.querySelectorAll('#reportTypes .opt-chip').forEach(c => c.classList.toggle('active', c.dataset.type === reportCtx.type));
+      document.getElementById('reportText').placeholder = REPORT_TYPES[reportCtx.type].placeholder;
+    }
+
+    function openReport(ctx) {
+      reportCtx = { type: 'missing', ...ctx };
+      document.getElementById('reportText').value = '';
+      document.getElementById('reportResultRow').hidden = true;
+      const sendBtn = document.getElementById('reportSend');
+      sendBtn.disabled = false;
+      document.getElementById('reportWhere').textContent =
+        (reportCtx.title ? reportCtx.title + ' · ' : '') + reportCtx.lat.toFixed(5) + ', ' + reportCtx.lon.toFixed(5);
+      renderReportType();
+      openSheet(reportSheetEl);
+    }
+
+    document.querySelectorAll('#reportTypes .opt-chip').forEach(c => { c.onclick = () => { reportCtx.type = c.dataset.type; renderReportType(); }; });
+
+    document.getElementById('reportSend').onclick = async () => {
+      const text = document.getElementById('reportText').value.trim();
+      const resultRow = document.getElementById('reportResultRow');
+      const result = document.getElementById('reportResult');
+      const sendBtn = document.getElementById('reportSend');
+      if (text.length < 10) {
+        resultRow.hidden = false;
+        result.className = 'set-note warn';
+        result.textContent = 'Scrivi qualche dettaglio in più (almeno 10 caratteri): aiuta chi dovrà correggere la mappa.';
+        return;
+      }
+      const body = [
+        `${REPORT_TYPES[reportCtx.type].label} (segnalato con l'app ParkMap)`,
+        '',
+        text,
+        reportCtx.osmRef ? `\nElemento: https://www.openstreetmap.org/${reportCtx.osmRef}` : '',
+        '#ParkMap'
+      ].join('\n');
+      sendBtn.disabled = true;
+      resultRow.hidden = false;
+      result.className = 'set-note';
+      result.textContent = 'Invio in corso…';
+      try {
+        const res = await fetch(OSM_NOTES_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ lat: reportCtx.lat.toFixed(6), lon: reportCtx.lon.toFixed(6), text: body })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const note = await res.json();
+        const id = note && note.properties && note.properties.id;
+        result.className = 'set-note ok';
+        result.innerHTML = 'Grazie! Segnalazione inviata' +
+          (id ? `: <a href="https://www.openstreetmap.org/note/${id}" target="_blank" rel="noopener">nota #${id}</a>` : '.');
+      } catch (err) {
+        console.warn('Nota OSM non inviata:', err.message);
+        sendBtn.disabled = false;
+        result.className = 'set-note warn';
+        result.textContent = 'Invio non riuscito. Controlla la connessione e riprova.';
+      }
+    };
+
+    /* ===== La mia auto + promemoria della sosta ===== */
+    const CAR_KEY = 'parkCar_v1';
+    const CAR_NOTIFY_IDS = [7101, 7102];       // 10 minuti prima, alla scadenza
+    const CAR_WARNING_MS = 10 * 60 * 1000;
+    const carSheetEl = document.getElementById('carSheet');
+    let car = null;
+    try { car = JSON.parse(localStorage.getItem(CAR_KEY)); } catch (err) { car = null; }
+    let carMarker = null, carLine = null, carWebTimers = [];
+
+    function saveCar() {
+      try { car ? localStorage.setItem(CAR_KEY, JSON.stringify(car)) : localStorage.removeItem(CAR_KEY); } catch (err) {}
+    }
+
+    // Plugin nativi di Capacitor senza bundler: si chiama il bridge direttamente
+    function nativeCall(plugin, method, options) {
+      const cap = window.Capacitor;
+      if (cap && typeof cap.nativePromise === 'function') return cap.nativePromise(plugin, method, options || {});
+      if (cap && cap.Plugins && cap.Plugins[plugin]) return cap.Plugins[plugin][method](options || {});
+      return Promise.reject(new Error('Plugin ' + plugin + ' non disponibile'));
+    }
+
+    function formatDuration(ms) {
+      const totalMin = Math.max(0, Math.round(ms / 60000));
+      const h = Math.floor(totalMin / 60), m = totalMin % 60;
+      return h ? `${h} h${m ? ' ' + m + ' min' : ''}` : `${m} min`;
+    }
+    function formatClock(ts) {
+      return new Date(ts).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    }
+    function formatParkedAt(ts) {
+      const d = new Date(ts), today = new Date();
+      const sameDay = d.toDateString() === today.toDateString();
+      return (sameDay ? 'oggi' : d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })) + ' alle ' + formatClock(ts);
+    }
+
+    function renderCarOnMap() {
+      if (!car) {
+        if (carMarker) { map.removeLayer(carMarker); carMarker = null; }
+        if (carLine) { map.removeLayer(carLine); carLine = null; }
+        return;
+      }
+      const ll = [car.lat, car.lon];
+      if (!carMarker) {
+        carMarker = L.marker(ll, {
+          pane: 'userLocationPane', keyboard: false, title: 'La mia auto', zIndexOffset: 1000, // sopra al pallino della posizione
+          icon: L.divIcon({ className: 'car-marker-icon', html: '<div class="car-marker"><i data-lucide="car"></i></div>', iconSize: [36, 36], iconAnchor: [18, 18] })
+        }).addTo(map);
+        carMarker.on('click', openCarSheet);
+        lucide.createIcons({ root: carMarker.getElement() });
+      } else {
+        carMarker.setLatLng(ll);
+      }
+      // Linea tratteggiata dalla mia posizione all'auto
+      if (lastFix && map.distance(L.latLng(lastFix.ll), L.latLng(ll)) < 50000) {
+        const pts = [lastFix.ll, ll];
+        if (!carLine) carLine = L.polyline(pts, { pane: 'userLocationPane', color: '#1d4ed8', weight: 3, opacity: 0.6, dashArray: '2 8', interactive: false }).addTo(map);
+        else carLine.setLatLngs(pts);
+      } else if (carLine) { map.removeLayer(carLine); carLine = null; }
+    }
+
+    function updateCarChip() {
+      const chip = document.getElementById('carChip');
+      const btn = document.getElementById('carBtn');
+      btn.classList.toggle('filled', !!car);
+      if (!car) { chip.hidden = true; return; }
+      chip.hidden = false;
+      chip.classList.remove('warn', 'expired');
+      let text = 'Auto';
+      if (car.expiry) {
+        const left = car.expiry - Date.now();
+        if (left <= 0) { text = 'Sosta scaduta da ' + formatDuration(-left); chip.classList.add('expired'); }
+        else { text = 'Sosta: ' + formatDuration(left); if (left <= CAR_WARNING_MS) chip.classList.add('warn'); }
+      } else if (lastFix) {
+        text = 'Auto a ' + formatDistance(map.distance(L.latLng(lastFix.ll), L.latLng(car.lat, car.lon)));
+      }
+      document.getElementById('carChipText').textContent = text;
+    }
+
+    async function scheduleCarNotifications() {
+      carWebTimers.forEach(clearTimeout);
+      carWebTimers = [];
+      const now = Date.now();
+      const plan = [];
+      if (car && car.expiry) {
+        if (car.expiry - CAR_WARNING_MS > now + 30000) {
+          plan.push({ id: CAR_NOTIFY_IDS[0], at: car.expiry - CAR_WARNING_MS, title: 'Sosta in scadenza', body: `Il tuo parcheggio scade alle ${formatClock(car.expiry)}: mancano 10 minuti.` });
+        }
+        if (car.expiry > now) {
+          plan.push({ id: CAR_NOTIFY_IDS[1], at: car.expiry, title: 'Sosta scaduta', body: 'Il tempo del parcheggio è finito.' });
+        }
+      }
+
+      if (IS_NATIVE_APP) {
+        try { await nativeCall('LocalNotifications', 'cancel', { notifications: CAR_NOTIFY_IDS.map(id => ({ id })) }); } catch (err) {}
+        if (!plan.length) return true;
+        try {
+          const perm = await nativeCall('LocalNotifications', 'requestPermissions');
+          if (perm && perm.display && perm.display !== 'granted') return false;
+          await nativeCall('LocalNotifications', 'schedule', {
+            notifications: plan.map(p => ({ id: p.id, title: p.title, body: p.body, schedule: { at: new Date(p.at), allowWhileIdle: true } }))
+          });
+          return true;
+        } catch (err) {
+          console.warn('Notifiche non programmate:', err && err.message);
+          return false;
+        }
+      }
+
+      // Sito: avviso solo con la pagina aperta (senza server push non si può fare di più)
+      if (!plan.length) return true;
+      let allowed = false;
+      if ('Notification' in window) {
+        if (Notification.permission === 'default') { try { await Notification.requestPermission(); } catch (err) {} }
+        allowed = Notification.permission === 'granted';
+      }
+      plan.forEach(p => {
+        carWebTimers.push(setTimeout(() => {
+          setStatus(p.body);
+          setTimeout(() => setStatus(''), 8000);
+          if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+          if (allowed) { try { new Notification(p.title, { body: p.body, icon: 'icon-192.png', tag: 'parkmap-car-' + p.id }); } catch (err) {} }
+          updateCarChip();
+        }, p.at - Date.now()));
+      });
+      return allowed;
+    }
+
+    let carNotifyWarning = '';
+    async function setCarExpiry(expiry) {
+      if (!car) return;
+      car.expiry = expiry;
+      saveCar();
+      updateCarChip();
+      renderCarSheet();
+      const ok = await scheduleCarNotifications();
+      carNotifyWarning = (expiry && !ok)
+        ? (IS_NATIVE_APP ? 'Le notifiche sono disattivate per ParkMap: abilitale nelle impostazioni di Android per ricevere il promemoria.'
+                         : 'Il browser non consente le notifiche: vedrai l\'avviso solo dentro la pagina.')
+        : '';
+      renderCarSheet();
+    }
+
+    function saveCarAt(lat, lon, source) {
+      car = { lat, lon, ts: Date.now(), expiry: null, source };
+      carNotifyWarning = '';
+      saveCar();
+      scheduleCarNotifications();
+      renderCarOnMap();
+      updateCarChip();
+      renderCarSheet();
+      setStatus('Posizione dell\'auto salvata');
+      setTimeout(() => setStatus(''), 1800);
+    }
+
+    function saveCarFromGps() {
+      if (lastFix && Date.now() - lastFix.ts < 120000 && lastFix.acc < 150) {
+        saveCarAt(lastFix.ll[0], lastFix.ll[1], 'gps');
+        return;
+      }
+      if (!navigator.geolocation) { setStatus('GPS non disponibile: usa il centro della mappa'); return; }
+      setStatus('Cerco la tua posizione…');
+      navigator.geolocation.getCurrentPosition(
+        p => { onUserPosition(p); saveCarAt(p.coords.latitude, p.coords.longitude, 'gps'); },
+        () => { setStatus('Posizione non disponibile: usa il centro della mappa'); setTimeout(() => setStatus(''), 2500); },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
+      );
+      startWatchingPosition();
+    }
+
+    function renderCarSheet() {
+      const body = document.getElementById('carBody');
+      if (!car) {
+        body.innerHTML = `
+          <div class="set-group">
+            <div class="set-card">
+              <div class="set-row"><span class="set-note">Salva dove hai lasciato l'auto: la ritrovi sulla mappa, con la strada a piedi per tornarci e un promemoria per il ticket o il disco orario.</span></div>
+              <div class="set-actions">
+                <button type="button" class="set-btn primary" data-car="gps"><i data-lucide="locate-fixed"></i> Salva la mia posizione</button>
+                <button type="button" class="set-btn" data-car="center"><i data-lucide="map-pin"></i> Usa il centro della mappa</button>
+              </div>
+            </div>
+            <p class="set-hint">Puoi anche tenere premuto un punto della mappa e scegliere "Ho parcheggiato qui".</p>
+          </div>`;
+      } else {
+        const dist = lastFix ? map.distance(L.latLng(lastFix.ll), L.latLng(car.lat, car.lon)) : null;
+        const left = car.expiry ? car.expiry - Date.now() : null;
+        const timerText = !car.expiry ? 'Nessun promemoria impostato.'
+          : left > 0 ? `Scade alle <b>${formatClock(car.expiry)}</b> · tra ${formatDuration(left)}`
+          : `<b>Scaduta</b> alle ${formatClock(car.expiry)} (${formatDuration(-left)} fa)`;
+        const defaultTime = formatClock((car.expiry && left > 0 ? car.expiry : Date.now() + 3600000));
+        body.innerHTML = `
+          <div class="set-group">
+            <div class="set-card">
+              <div class="set-row"><span class="set-label"><i data-lucide="car"></i> Parcheggiata ${formatParkedAt(car.ts)}</span></div>
+              ${dist != null ? `<div class="set-row"><span class="set-label"><i data-lucide="footprints"></i> A ${formatDistance(dist)} da te · circa ${Math.max(1, Math.round(dist / 80))} min a piedi</span></div>` : ''}
+              <div class="set-actions">
+                <a class="set-btn primary" href="${buildNavUrl(car.lat, car.lon, 'walking')}" target="_blank" rel="noopener"><i data-lucide="navigation"></i> Portami all'auto</a>
+                <button type="button" class="set-btn" data-car="show"><i data-lucide="map-pin"></i> Mostra sulla mappa</button>
+              </div>
+            </div>
+          </div>
+          <div class="set-group">
+            <div class="set-title">Promemoria sosta</div>
+            <div class="set-card">
+              <div class="set-row"><span class="set-note">${timerText}</span></div>
+              <div class="set-row column">
+                <div class="opt-chips">
+                  <button type="button" class="opt-chip" data-car-min="30">30 min</button>
+                  <button type="button" class="opt-chip" data-car-min="60">1 ora</button>
+                  <button type="button" class="opt-chip" data-car-min="120">2 ore</button>
+                  <button type="button" class="opt-chip" data-car-min="180">3 ore</button>
+                </div>
+                <div class="inline-row">
+                  <span class="set-note">Oppure fino alle</span>
+                  <input type="time" class="set-input" id="carUntil" value="${defaultTime}">
+                  <button type="button" class="set-btn" data-car="until">Imposta</button>
+                </div>
+              </div>
+              ${car.expiry ? '<div class="set-actions"><button type="button" class="set-btn" data-car="clear-timer"><i data-lucide="bell-off"></i> Togli promemoria</button></div>' : ''}
+            </div>
+            <p class="set-hint">${carNotifyWarning ? '<b>' + escapeHtml(carNotifyWarning) + '</b> ' : ''}Ti avviso 10 minuti prima e alla scadenza.${IS_NATIVE_APP ? '' : ' Sul sito l\'avviso arriva solo con la pagina aperta; con l\'app Android anche a telefono bloccato.'}</p>
+          </div>
+          <div class="set-group">
+            <div class="set-card">
+              <div class="set-actions">
+                <button type="button" class="set-btn danger" data-car="remove"><i data-lucide="log-out"></i> Ho lasciato il parcheggio</button>
+              </div>
+            </div>
+          </div>`;
+      }
+      lucide.createIcons({ root: body });
+
+      body.querySelectorAll('[data-car]').forEach(btn => {
+        btn.onclick = () => {
+          const action = btn.dataset.car;
+          if (action === 'gps') saveCarFromGps();
+          else if (action === 'center') { const c = map.getCenter(); saveCarAt(c.lat, c.lng, 'map'); }
+          else if (action === 'show') { closeSheet(); map.setView([car.lat, car.lon], Math.max(map.getZoom(), 17)); }
+          else if (action === 'clear-timer') setCarExpiry(null);
+          else if (action === 'until') {
+            const v = document.getElementById('carUntil').value;
+            if (!/^\d{2}:\d{2}$/.test(v)) return;
+            const [h, m] = v.split(':').map(Number);
+            const d = new Date(); d.setHours(h, m, 0, 0);
+            if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1); // orario già passato: domani
+            setCarExpiry(d.getTime());
+          } else if (action === 'remove') {
+            car = null;
+            carNotifyWarning = '';
+            saveCar();
+            scheduleCarNotifications();
+            renderCarOnMap();
+            updateCarChip();
+            closeSheet();
+          }
+        };
+      });
+      body.querySelectorAll('[data-car-min]').forEach(btn => {
+        btn.onclick = () => setCarExpiry(Date.now() + parseInt(btn.dataset.carMin, 10) * 60000);
+      });
+    }
+
+    function openCarSheet() {
+      renderCarSheet();
+      openSheet(carSheetEl);
+    }
+    document.getElementById('carBtn').onclick = openCarSheet;
+    document.getElementById('carChip').onclick = openCarSheet;
+
+    // Aggiornamenti periodici: tempo residuo e distanza (la posizione cambia)
+    setInterval(() => {
+      updateCarChip();
+      if (car) renderCarOnMap();
+      if (car && !carSheetEl.hidden && !carSheetEl.contains(document.activeElement)) renderCarSheet();
+    }, 30000);
+
+    renderCarOnMap();
+    updateCarChip();
+    if (car && car.expiry && !IS_NATIVE_APP) scheduleCarNotifications(); // sul sito i timer non sopravvivono alla ricarica
+
+    /* ===== Pressione prolungata sulla mappa ===== */
+    map.on('contextmenu', (e) => {
+      const { lat, lng } = e.latlng;
+      const html = `<div class="ctx-menu">
+        <div class="ctx-title">${lat.toFixed(5)}, ${lng.toFixed(5)}</div>
+        <button type="button" class="set-btn" data-ctx="car"><i data-lucide="car"></i> Ho parcheggiato qui</button>
+        <button type="button" class="set-btn" data-ctx="report"><i data-lucide="map-pin-plus"></i> Segnala un parcheggio mancante</button>
+        <a class="set-btn" href="${buildNavUrl(lat, lng, 'driving')}" target="_blank" rel="noopener"><i data-lucide="navigation"></i> Naviga fin qui</a>
+      </div>`;
+      const popup = L.popup({ className: 'ctx-popup', autoPanPadding: [20, 80] }).setLatLng(e.latlng).setContent(html).openOn(map);
+      const root = popup.getElement();
+      lucide.createIcons({ root });
+      root.querySelector('[data-ctx="car"]').onclick = () => { map.closePopup(); saveCarAt(lat, lng, 'map'); openCarSheet(); };
+      root.querySelector('[data-ctx="report"]').onclick = () => { map.closePopup(); openReport({ lat, lon: lng, type: 'missing' }); };
+    });
+
+    /* ===== Impostazioni aggiuntive: tema e app di navigazione ===== */
+    function refreshExtraSettingsUI() {
+      document.querySelectorAll('#themeControl button').forEach(b => b.classList.toggle('active', b.dataset.themeOpt === settings.theme));
+      document.querySelectorAll('#navAppControl button').forEach(b => b.classList.toggle('active', b.dataset.nav === settings.navApp));
+    }
+    document.querySelectorAll('#themeControl button').forEach(b => {
+      b.onclick = () => { settings.theme = b.dataset.themeOpt; saveSettings(); applyTheme(); refreshExtraSettingsUI(); };
+    });
+    document.querySelectorAll('#navAppControl button').forEach(b => {
+      b.onclick = () => { settings.navApp = b.dataset.nav; saveSettings(); refreshExtraSettingsUI(); };
+    });
+
+    /* ===== Funzionamento offline del sito ===== */
+    // Il service worker conserva l'app e le tessere di mappa già viste: senza
+    // rete il sito si apre lo stesso e mostra i parcheggi salvati. Nell'app
+    // Android non serve: pagina e librerie sono già dentro l'APK.
+    if ('serviceWorker' in navigator && !IS_NATIVE_APP &&
+        (location.protocol === 'https:' || location.hostname === 'localhost')) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => console.warn('Service worker non registrato:', err.message));
+      });
+    }
+    window.addEventListener('offline', () => { setStatus('Sei offline: mostro i dati salvati'); setTimeout(() => setStatus(''), 3000); });
+    window.addEventListener('online', () => { setStatus('Di nuovo online'); setTimeout(() => setStatus(''), 1500); loadVisibleTiles(); });
 
     updateFullscreenIcon();
   </script>
