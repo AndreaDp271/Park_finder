@@ -1,0 +1,94 @@
+# Pubblica ParkMap su GitHub Pages insieme ai dati statici dei parcheggi.
+#
+# - Ogni notte (e con "Run workflow") rigenera i dati dall'estratto OSM
+#   dell'Italia di Geofabrik.
+# - A ogni push su main ripubblica il sito riusando gli ultimi dati generati
+#   (dalla cache), senza riscaricare l'estratto da 2 GB.
+#
+# Richiede: Settings → Pages → Build and deployment → Source: "GitHub Actions".
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '30 3 * * *'   # Geofabrik pubblica l'estratto del giorno nella notte
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ripristina gli ultimi dati generati
+        id: data-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: data
+          key: parking-data-${{ github.run_id }}
+          restore-keys: parking-data-
+
+      - name: Decide se rigenerare i dati
+        id: plan
+        run: |
+          if [ "${{ github.event_name }}" != "push" ] || [ ! -f data/index.json ]; then
+            echo "rebuild=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Installa gli strumenti OSM
+        if: steps.plan.outputs.rebuild == 'true'
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q osmium-tool
+          pip install -q osmium shapely
+
+      - name: Genera i dati dall'estratto Geofabrik
+        if: steps.plan.outputs.rebuild == 'true'
+        run: |
+          mkdir -p work
+          curl -sSfL -o work/italy.osm.pbf https://download.geofabrik.de/europe/italy-latest.osm.pbf
+          curl -sSfL -o work/italy.poly https://download.geofabrik.de/europe/italy.poly
+          # Prefiltro veloce in C++: resta un file piccolo con i soli oggetti utili
+          # (più i nodi delle way, necessari per la geometria)
+          osmium tags-filter work/italy.osm.pbf \
+            nw/amenity=parking nw/amenity=parking_space nw/amenity=vending_machine \
+            -o work/parking.osm.pbf --overwrite
+          rm -rf data
+          python scripts/build_tiles.py work/parking.osm.pbf work/italy.poly data
+
+      - name: Salva i dati generati
+        if: steps.plan.outputs.rebuild == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: data
+          key: parking-data-${{ github.run_id }}
+
+      - name: Prepara il sito
+        run: |
+          mkdir -p _site
+          cp index.html manifest.json icon-192.png icon-512.png _site/
+          cp -r data _site/data
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

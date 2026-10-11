@@ -1296,13 +1296,16 @@
     // Ogni tessera scaricata resta in memoria e in localStorage: spostando la
     // mappa si scaricano solo le tessere nuove, quelle già viste compaiono
     // all'istante (anche dopo aver chiuso l'app), e quelle salvate ma vecchie
-    // vengono mostrate subito e aggiornate in background. Le tessere mancanti
-    // si scaricano a blocchi 3x3, partendo da quello al centro della vista.
+    // vengono mostrate subito e aggiornate in background.
+    // Fonte dei dati: in Italia i file statici precalcolati ogni notte e
+    // pubblicati con il sito (vedi scripts/build_tiles.py), serviti da CDN in
+    // pochi millisecondi; fuori dall'area coperta (o se i file non ci sono, es.
+    // in locale) Overpass, a blocchi 3x3 partendo da quello al centro.
     const TILE_DEG = 0.01;
     const TILE_FRESH_MS = 6 * 60 * 60 * 1000;   // entro 6 ore una tessera non si riscarica
     const TILE_PERSIST_PREFIX = 'parkTile_v1:';
     const TILE_INDEX_KEY = 'parkTileIndex_v1';
-    const TILE_PERSIST_MAX = 120;
+    const TILE_PERSIST_MAX = 400;
     const MAX_TILES_SPAN = 7;                   // al massimo 7x7 tessere attorno al centro
     const BLOCK_SIZE = 3;
     const MAX_PARALLEL_BLOCKS = 2;
@@ -1319,6 +1322,87 @@
     let loadGeneration = 0;           // incrementato da "Aggiorna": scarta le risposte vecchie
     const MAX_AUTO_RETRIES = 3;
     let consecutiveFailures = 0, retryTimer = null;
+
+    // ─── Dati statici precalcolati ───
+    // index.json elenca le celle (5x5 tessere, ~5 x 4 km) coperte dall'estratto
+    // OSM e quelle che hanno dati: una cella coperta senza file è vuota, senza
+    // bisogno di chiederla. Formato delle celle: vedi scripts/build_tiles.py.
+    const STATIC_BASE = 'data/';
+    const TILES_PER_CELL = 5;
+    let staticIndex = null;           // { covered: Set, data: Set, osmTimestamp }
+    let staticIndexSettled = false;
+    let staticFetchCache = 'default'; // 'no-cache' dopo "Aggiorna": riconvalida col server
+    let activeStaticCells = 0;
+
+    function cellKeyOfTile(i, j) {
+      return Math.floor(i / TILES_PER_CELL) + '_' + Math.floor(j / TILES_PER_CELL);
+    }
+
+    function expandRuns(runs) {
+      const set = new Set();
+      runs.forEach(([i, j0, j1]) => { for (let j = j0; j <= j1; j++) set.add(i + '_' + j); });
+      return set;
+    }
+
+    const staticIndexReady = fetch(STATIC_BASE + 'index.json', { cache: 'no-cache' })
+      .then(res => res.ok ? res.json() : null)
+      .then(idx => {
+        if (!idx || idx.v !== 1 || idx.tilesPerCell !== TILES_PER_CELL) return;
+        staticIndex = {
+          covered: expandRuns(idx.covered),
+          data: expandRuns(idx.data),
+          osmTimestamp: idx.osmTimestamp || idx.generated
+        };
+      })
+      .catch(() => { /* niente dati statici: si usa solo Overpass */ })
+      .finally(() => {
+        staticIndexSettled = true;
+        if (initialLoadDone) loadVisibleTiles();
+      });
+
+    // [tipo, id, tag, lat, lon] per i nodi, [tipo, id, tag, [lat, lon, lat, lon...]]
+    // per le way: stesso formato degli elementi Overpass usato dal render.
+    function expandStaticElements(records) {
+      return records.map(r => {
+        if (r[0] === 'n') return { type: 'node', id: r[1], tags: r[2], lat: r[3], lon: r[4] };
+        const flat = r[3], geometry = [];
+        for (let k = 0; k < flat.length; k += 2) geometry.push({ lat: flat[k], lon: flat[k + 1] });
+        return { type: 'way', id: r[1], tags: r[2], geometry };
+      });
+    }
+
+    async function fetchStaticCell(cellKey) {
+      const gen = loadGeneration;
+      const [ci, cj] = cellKey.split('_').map(Number);
+      const rect = {
+        i0: ci * TILES_PER_CELL, i1: ci * TILES_PER_CELL + TILES_PER_CELL - 1,
+        j0: cj * TILES_PER_CELL, j1: cj * TILES_PER_CELL + TILES_PER_CELL - 1
+      };
+      const rectKeys = [];
+      for (let i = rect.i0; i <= rect.i1; i++) for (let j = rect.j0; j <= rect.j1; j++) rectKeys.push(tileKey(i, j));
+      rectKeys.forEach(k => inflightTiles.add(k));
+      activeStaticCells++;
+      updateLoadingUi();
+
+      try {
+        let elements = [];
+        if (staticIndex.data.has(cellKey)) {
+          const res = await fetch(STATIC_BASE + 'cells/' + cellKey + '.json', { cache: staticFetchCache });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          elements = expandStaticElements((await res.json()).e);
+        }
+        if (gen === loadGeneration) applyBlockData({ elements }, rect, true);
+      } catch (err) {
+        if (gen === loadGeneration) {
+          console.warn('Errore cella statica:', cellKey, err);
+          reportLoadError();
+        }
+      } finally {
+        rectKeys.forEach(k => inflightTiles.delete(k));
+        activeStaticCells--;
+        updateLoadingUi();
+      }
+    }
 
     function tileKey(i, j) { return i + ',' + j; }
     function latToTile(lat) { return Math.floor(lat / TILE_DEG); }
@@ -1427,8 +1511,24 @@
 
     function loadVisibleTiles() {
       if (map.getZoom() < MIN_DATA_ZOOM) { blockQueue = []; updateLoadingUi(); return; }
+      // Prima di scegliere la fonte serve sapere quali zone hanno i dati
+      // statici (richiamata da sola appena l'indice è arrivato)
+      if (!staticIndexSettled) return;
 
-      const missing = tilesForView().filter(t => !inflightTiles.has(t.key) && !isTileFresh(getTile(t.key)));
+      let missing = tilesForView().filter(t => !inflightTiles.has(t.key) && !isTileFresh(getTile(t.key)));
+
+      // Tessere coperte dai dati statici: una richiesta per cella, tutte in
+      // parallelo (file statici da CDN, nessun limite come per Overpass)
+      if (staticIndex) {
+        const cells = new Set();
+        missing = missing.filter(t => {
+          const ck = cellKeyOfTile(t.i, t.j);
+          if (!staticIndex.covered.has(ck)) return true;
+          cells.add(ck);
+          return false;
+        });
+        cells.forEach(fetchStaticCell);
+      }
 
       // Se manca la tessera al centro (zona mai vista) la si chiede da sola e
       // per prima: query molto più leggera, quindi primi dati prima possibile.
@@ -1582,7 +1682,7 @@
     // l'icona del pulsante "Aggiorna").
     let loadingStatusShown = false;
     function updateLoadingUi() {
-      const loading = activeBlocks > 0;
+      const loading = activeBlocks + activeStaticCells > 0;
       document.getElementById('refreshBtn').classList.toggle('loading', loading);
       if (loading && (loadingStatusShown || !getTile(centerTileKey()))) {
         if (!loadingStatusShown) { setStatus('Caricamento parcheggi...'); loadingStatusShown = true; }
@@ -2107,6 +2207,7 @@
       // restano sulla mappa finché quelli nuovi non li sostituiscono, così se
       // i mirror non rispondono non si resta con una mappa vuota.
       tileStore.forEach(t => { t.ts = 0; });
+      staticFetchCache = 'no-cache'; // scavalca la cache HTTP: prende l'ultima generazione notturna
 
       setStatus('Aggiornamento dati...');
       loadingStatusShown = true; // il messaggio sparisce quando arrivano i dati
@@ -2152,6 +2253,14 @@
       const hasSessionCache = isTileFresh(centerTile);
       const hasPersistentCache = !!centerTile;
 
+      const c = map.getCenter();
+      const staticCoversCenter = !!staticIndex && staticIndex.covered.has(cellKeyOfTile(latToTile(c.lat), lonToTile(c.lng)));
+      const staticDate = staticIndex && staticIndex.osmTimestamp
+        ? new Date(staticIndex.osmTimestamp).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })
+        : '';
+      const staticLabel = !staticIndex ? 'non disponibili'
+        : (staticCoversCenter ? `OSM del ${staticDate}` : 'fuori area (Overpass)');
+
       const panel = document.createElement('div');
       panel.id = 'diagPanel';
       panel.innerHTML = `
@@ -2177,6 +2286,10 @@
         <div class="diag-cache-row">
           <span>Cache per questa zona</span>
           <strong style="color:${hasSessionCache || hasPersistentCache ? '#16a34a' : '#94a3b8'}">${hasSessionCache ? 'attiva' : (hasPersistentCache ? 'disponibile' : 'assente')}</strong>
+        </div>
+        <div class="diag-cache-row">
+          <span>Dati precalcolati</span>
+          <strong style="color:${staticCoversCenter ? '#16a34a' : '#94a3b8'}">${staticLabel}</strong>
         </div>
         <button type="button" class="diag-run-btn">Aggiorna ora</button>
       `;
