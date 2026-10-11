@@ -227,30 +227,6 @@
     .fab-btn:hover{ transform:scale(1.06); color:var(--primary); }
     .fab-btn:active{ transform:scale(0.94); }
 
-    /* Allinea lo zoom di Leaflet allo stile dei pulsanti flottanti */
-    .leaflet-bottom.leaflet-left{ margin:0 0 var(--fab-bottom) var(--fab-left); }
-    .leaflet-bottom .leaflet-control{ margin:0 0 var(--btn-gap) 0 !important; }
-    .leaflet-control-zoom{ border:none !important; background:transparent !important; box-shadow:none !important; border-radius:0 !important; display:flex; flex-direction:column; gap:var(--btn-gap); }
-    .leaflet-control-zoom a{
-      width:var(--btn-size) !important; height:var(--btn-size) !important; line-height:var(--btn-size) !important;
-      border-radius:50% !important;
-      background:var(--glass) !important;
-      backdrop-filter:blur(10px);
-      -webkit-backdrop-filter:blur(10px);
-      box-shadow:var(--btn-shadow);
-      border:var(--btn-border) !important;
-      color:var(--text-main) !important;
-      font-size:19px;
-      transition:transform .2s cubic-bezier(0.34,1.56,0.64,1), color .15s ease;
-    }
-    .leaflet-control-zoom a:hover{ background-color:var(--glass) !important; transform:scale(1.06); }
-    /* Stesse icone Lucide (plus/minus) dei pulsanti flottanti al posto dei caratteri +/− */
-    .leaflet-control-zoom a span{ display:none; }
-    .leaflet-control-zoom a{ background-repeat:no-repeat !important; background-position:center !important; background-size:20px 20px !important; }
-    .leaflet-control-zoom a.leaflet-control-zoom-in{ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231e293b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='M12 5v14'/%3E%3C/svg%3E") !important; }
-    .leaflet-control-zoom a.leaflet-control-zoom-out{ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231e293b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3C/svg%3E") !important; }
-    .leaflet-control-zoom a.leaflet-disabled{ opacity:.45; }
-    .leaflet-control-zoom a:active{ transform:scale(0.94); }
 
     /* Sposta la scritta Leaflet/OpenStreetMap in basso al centro, così non finisce sotto i pulsanti */
     .leaflet-control-attribution{
@@ -634,13 +610,14 @@
     .chip.car.expired{ background:var(--danger); }
     .chip[hidden]{ display:none; }
 
-    /* ─── Pulsanti a sinistra (auto, elenco), sopra lo zoom ─── */
+    /* ─── Pulsanti a sinistra: auto, elenco, zoom (stessa colonna, stesse misure) ─── */
     #fabStackLeft{
       position:fixed; z-index:1001;
       left:var(--fab-left);
-      bottom:calc(var(--fab-bottom) + (var(--btn-size) + var(--btn-gap)) * 2);
+      bottom:var(--fab-bottom);
       display:flex; flex-direction:column; gap:var(--btn-gap);
     }
+    .fab-btn:disabled{ opacity:.45; cursor:default; transform:none; }
     .fab-btn.filled{ background:var(--primary-dark); color:#fff; border-color:transparent; }
     .fab-btn.filled:hover{ color:#fff; }
 
@@ -749,8 +726,6 @@
     html[data-theme="dark"] .badge-note.time{ background:#2e1f4d; color:#c4b5fd; border-color:#4c1d95; }
     html[data-theme="dark"] .popup-links button.fav.on{ background:#3a2a0a; border-color:#92400e; color:#fbbf24; }
     html[data-theme="dark"] input.switch::after{ background:#f8fafc; }
-    html[data-theme="dark"] .leaflet-control-zoom a.leaflet-control-zoom-in{ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e2e8f0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='M12 5v14'/%3E%3C/svg%3E") !important; }
-    html[data-theme="dark"] .leaflet-control-zoom a.leaflet-control-zoom-out{ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e2e8f0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3C/svg%3E") !important; }
   </style>
 </head>
 
@@ -788,6 +763,8 @@
   <div id="fabStackLeft">
     <button id="carBtn" class="fab-btn" title="La mia auto" aria-label="La mia auto"><i data-lucide="car"></i></button>
     <button id="listBtn" class="fab-btn" title="Parcheggi vicini e preferiti" aria-label="Parcheggi vicini e preferiti"><i data-lucide="list"></i></button>
+    <button id="zoomInBtn" class="fab-btn" title="Avvicina" aria-label="Avvicina"><i data-lucide="plus"></i></button>
+    <button id="zoomOutBtn" class="fab-btn" title="Allontana" aria-label="Allontana"><i data-lucide="minus"></i></button>
   </div>
 
   <div id="fabStack">
@@ -1237,7 +1214,16 @@
     // I popup si aprono sotto la barra di ricerca e i filtri, non dietro
     L.Popup.mergeOptions({ autoPanPaddingTopLeft: L.point(12, 130), autoPanPaddingBottomRight: L.point(70, 24) });
     var map = L.map('map', { zoomControl: false }).setView(initialView[0], initialView[1]);
-    L.control.zoom({ position: 'bottomleft' }).addTo(map);
+    // Zoom con pulsanti propri nella colonna di sinistra (stesse misure di auto ed elenco)
+    const zoomInBtnEl = document.getElementById('zoomInBtn');
+    const zoomOutBtnEl = document.getElementById('zoomOutBtn');
+    zoomInBtnEl.onclick = () => map.zoomIn();
+    zoomOutBtnEl.onclick = () => map.zoomOut();
+    function updateZoomButtons() {
+      zoomInBtnEl.disabled = map.getZoom() >= map.getMaxZoom();
+      zoomOutBtnEl.disabled = map.getZoom() <= map.getMinZoom();
+    }
+    map.on('zoomend', updateZoomButtons);
 
     const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>';
     // Solo fonti utilizzabili senza chiave API (CARTO ora la richiede: le sue
@@ -1272,6 +1258,7 @@
       }).addTo(map);
     }
     applyMapStyle(settings.mapStyle);
+    updateZoomButtons();
 
     // Le icone dei popup sono create dinamicamente: vanno renderizzate ogni volta che si aprono
     map.on('popupopen', (e) => lucide.createIcons({ root: e.popup._contentNode }));
