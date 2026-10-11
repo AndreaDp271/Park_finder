@@ -1,0 +1,95 @@
+# Costruisce l'APK Android di ParkMap (Capacitor) e lo pubblica nelle Releases
+# del repository, da dove si scarica e installa direttamente dal telefono.
+#
+# Firma: con i secret ANDROID_KEYSTORE_BASE64 e ANDROID_KEYSTORE_PASSWORD
+# l'APK è firmato sempre con la stessa chiave e ogni versione si installa
+# sopra la precedente. Senza secret si usa una chiave temporanea: l'APK
+# funziona, ma per aggiornarlo bisogna disinstallare la versione precedente.
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - index.html
+      - manifest.json
+      - icon-192.png
+      - icon-512.png
+      - app/**
+      - .github/workflows/android.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Prepara i file dell'app
+        run: bash app/prepare-www.sh
+
+      - name: Genera il progetto Android
+        working-directory: app
+        run: |
+          npm install --no-audit --no-fund
+          npx cap add android
+          npx cap sync android
+          bash customize-android.sh "${{ github.run_number }}"
+
+      - name: Compila
+        working-directory: app/android
+        run: ./gradlew --no-daemon assembleRelease
+
+      - name: Firma l'APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > release.p12
+            echo "SIGNING=stabile" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Secret di firma assenti: APK firmato con una chiave temporanea"
+            KEYSTORE_PASSWORD=$(openssl rand -hex 16)
+            keytool -genkeypair -keystore release.p12 -storetype PKCS12 -alias parkmap \
+              -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=ParkMap" \
+              -storepass "$KEYSTORE_PASSWORD" -keypass "$KEYSTORE_PASSWORD"
+            echo "SIGNING=temporanea" >> "$GITHUB_ENV"
+          fi
+          "$BT/zipalign" -p -f 4 app/android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          KS_PASS="$KEYSTORE_PASSWORD" "$BT/apksigner" sign --ks release.p12 --ks-pass env:KS_PASS \
+            --out "ParkMap-1.0.${{ github.run_number }}.apk" aligned.apk
+          "$BT/apksigner" verify "ParkMap-1.0.${{ github.run_number }}.apk"
+          rm -f release.p12
+
+      - name: Pubblica nelle Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-v1.0.${{ github.run_number }}
+          name: ParkMap Android 1.0.${{ github.run_number }}
+          make_latest: true
+          files: ParkMap-1.0.${{ github.run_number }}.apk
+          body: |
+            APK di ParkMap costruito dal commit ${{ github.sha }}.
+
+            Installazione: scarica il file .apk dal telefono e aprilo (Android chiede di
+            consentire l'installazione da questa fonte la prima volta).
+
+            Firma: ${{ env.SIGNING }}${{ env.SIGNING == 'temporanea' && ' — per installare questa versione sopra una precedente bisogna prima disinstallarla.' || '' }}

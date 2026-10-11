@@ -1,0 +1,13 @@
+{
+  "name": "parkmap-android",
+  "private": true,
+  "description": "App Android di ParkMap (Capacitor): impacchetta index.html del sito in un APK",
+  "scripts": {
+    "prepare-www": "bash prepare-www.sh"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/cli": "8.5.3",
+    "@capacitor/core": "8.5.3"
+  }
+}

@@ -54,6 +54,14 @@
       --btn-gap:10px;
       --btn-shadow:0 2px 10px rgb(15 23 42 / 0.10),0 1px 2px rgb(15 23 42 / 0.08);
       --btn-border:1px solid rgba(15,23,42,0.06);
+      /* Aree occupate da notch, barra di stato e barra di navigazione (app Android
+         edge-to-edge, iPhone): con viewport-fit=cover i controlli vanno spostati qui */
+      --safe-top:env(safe-area-inset-top, 0px);
+      --safe-bottom:env(safe-area-inset-bottom, 0px);
+      --safe-left:env(safe-area-inset-left, 0px);
+      --safe-right:env(safe-area-inset-right, 0px);
+      --fab-bottom:calc(16px + var(--safe-bottom));
+      --fab-right:calc(16px + var(--safe-right));
     }
 
     html,body{
@@ -74,7 +82,7 @@
 
     #topbar{
       position:fixed;
-      top:12px;
+      top:calc(12px + var(--safe-top));
       left:50%;
       transform:translateX(-50%);
       width:calc(100% - 24px);
@@ -201,7 +209,7 @@
     .fab-btn:active{ transform:scale(0.94); }
 
     /* Allinea i controlli nativi di Leaflet (zoom, layer) allo stile dei pulsanti flottanti */
-    .leaflet-bottom.leaflet-left{ margin:0 0 16px 16px; }
+    .leaflet-bottom.leaflet-left{ margin:0 0 var(--fab-bottom) calc(16px + var(--safe-left)); }
     .leaflet-bottom .leaflet-control{ margin:0 0 var(--btn-gap) 0 !important; }
     .leaflet-control-zoom{ border:none !important; background:transparent !important; box-shadow:none !important; border-radius:0 !important; display:flex; flex-direction:column; gap:var(--btn-gap); }
     .leaflet-control-zoom a{
@@ -242,7 +250,7 @@
       position:fixed !important;
       left:50% !important;
       right:auto !important;
-      bottom:4px !important;
+      bottom:calc(4px + var(--safe-bottom)) !important;
       transform:translateX(-50%);
       background:rgba(255,255,255,0.75) !important;
       border-radius:8px;
@@ -309,7 +317,7 @@
 
     #status{
       position:fixed;
-      bottom:30px;
+      bottom:calc(30px + var(--safe-bottom));
       left:50%;
       transform:translateX(-50%) translateY(20px);
       background:rgba(15,23,42,.9);
@@ -332,16 +340,16 @@
     #status:not(:empty){ opacity:1; transform:translateX(-50%) translateY(0); }
 
     /* Pulsanti flottanti impilati sul lato destro (a sinistra restano zoom/layer di Leaflet) */
-    #toggleLegend{ bottom:16px; right:16px; }
-    #fullscreenBtn{ bottom:calc(16px + (var(--btn-size) + var(--btn-gap)) * 1); right:16px; }
-    #refreshBtn{ bottom:calc(16px + (var(--btn-size) + var(--btn-gap)) * 2); right:16px; }
-    #gpsBtn{ bottom:calc(16px + (var(--btn-size) + var(--btn-gap)) * 3); right:16px; }
-    #shareBtn{ bottom:calc(16px + (var(--btn-size) + var(--btn-gap)) * 4); right:16px; }
+    #toggleLegend{ bottom:var(--fab-bottom); right:var(--fab-right); }
+    #fullscreenBtn{ bottom:calc(var(--fab-bottom) + (var(--btn-size) + var(--btn-gap)) * 1); right:var(--fab-right); }
+    #refreshBtn{ bottom:calc(var(--fab-bottom) + (var(--btn-size) + var(--btn-gap)) * 2); right:var(--fab-right); }
+    #gpsBtn{ bottom:calc(var(--fab-bottom) + (var(--btn-size) + var(--btn-gap)) * 3); right:var(--fab-right); }
+    #shareBtn{ bottom:calc(var(--fab-bottom) + (var(--btn-size) + var(--btn-gap)) * 4); right:var(--fab-right); }
 
     #legendPanel{
       position:fixed;
-      bottom:calc(16px + (var(--btn-size) + var(--btn-gap)) * 1);
-      right:16px;
+      bottom:calc(var(--fab-bottom) + (var(--btn-size) + var(--btn-gap)) * 1);
+      right:var(--fab-right);
       width:280px;
       max-width:calc(100% - 40px);
       max-height:60vh;
@@ -528,15 +536,15 @@
 
     @media (max-width:600px){
       :root{ --btn-size:42px; --btn-gap:8px; }
-      #topbar{ top:10px; width:calc(100% - 20px); gap:8px; }
+      #topbar{ top:calc(10px + var(--safe-top)); width:calc(100% - 20px); gap:8px; }
       #titleBadge span{ display:none; }
       #titleBadge{ padding:0; width:46px; justify-content:center; }
       #searchBtn span.text{ display:none; }
       #searchBtn{ padding:0; width:36px; height:36px; justify-content:center; margin-left:4px; }
       #searchBox{ padding-left:12px; padding-right:6px; }
       #legendPanel{ left:16px; right:16px; width:auto; }
-      #toggleLegend, #fullscreenBtn, #refreshBtn, #gpsBtn, #shareBtn{ right:12px; }
-      .leaflet-bottom.leaflet-left{ margin:0 0 12px 12px; }
+      #toggleLegend, #fullscreenBtn, #refreshBtn, #gpsBtn, #shareBtn{ right:calc(12px + var(--safe-right)); }
+      .leaflet-bottom.leaflet-left{ margin:0 0 calc(12px + var(--safe-bottom)) calc(12px + var(--safe-left)); }
     }
   </style>
 </head>
@@ -616,6 +624,11 @@
 
   <script>
     lucide.createIcons();
+
+    // App Android costruita con Capacitor (vedi app/): il bridge nativo
+    // inietta window.Capacitor. Sul sito questa costante è sempre false.
+    const IS_NATIVE_APP = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    const PUBLIC_SITE_URL = 'https://andreadp271.github.io/Park_finder/';
 
     function toggleLegend() {
       const lp = document.getElementById('legendPanel');
@@ -1332,7 +1345,9 @@
     // index.json elenca le celle (5x5 tessere, ~5 x 4 km) coperte dall'estratto
     // OSM e quelle che hanno dati: una cella coperta senza file è vuota, senza
     // bisogno di chiederla. Formato delle celle: vedi scripts/build_tiles.py.
-    const STATIC_BASE = 'data/';
+    // Nell'app Android (Capacitor) la pagina è servita dall'APK stesso: i dati
+    // vanno presi dal sito pubblico, che li rigenera ogni notte.
+    const STATIC_BASE = IS_NATIVE_APP ? PUBLIC_SITE_URL + 'data/' : 'data/';
     const TILES_PER_CELL = 5;
     let staticIndex = null;           // { covered: Set, data: Set, osmTimestamp }
     let staticIndexSettled = false;
@@ -2249,7 +2264,8 @@
     /* ===== Condividi posizione ===== */
     function buildShareUrl() {
       const c = map.getCenter();
-      const url = new URL(window.location.href);
+      // Dall'app il link deve aprire il sito pubblico, non l'indirizzo interno dell'APK
+      const url = new URL(IS_NATIVE_APP ? PUBLIC_SITE_URL : window.location.href);
       url.hash = '';
       url.searchParams.set('lat', c.lat.toFixed(6));
       url.searchParams.set('lon', c.lng.toFixed(6));
@@ -2462,7 +2478,7 @@
     // Idem se l'app è già installata come PWA a schermo intero (manifest display:fullscreen):
     // il pulsante sarebbe ridondante e su alcuni browser innescherebbe comunque il banner nativo.
     var runningFullscreenPwa = window.matchMedia('(display-mode: fullscreen)').matches || navigator.standalone;
-    if (!document.documentElement.requestFullscreen || runningFullscreenPwa) {
+    if (!document.documentElement.requestFullscreen || runningFullscreenPwa || IS_NATIVE_APP) {
       document.getElementById('fullscreenBtn').style.display = 'none';
     }
 

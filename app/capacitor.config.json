@@ -1,0 +1,17 @@
+{
+  "appId": "io.github.andreadp271.parkmap",
+  "appName": "ParkMap",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "appendUserAgent": "ParkMap-Android (+https://github.com/AndreaDp271/Park_finder)"
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}
