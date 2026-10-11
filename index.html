@@ -646,9 +646,13 @@
       ? [[sharedLat, sharedLon], Number.isFinite(sharedZoom) ? sharedZoom : 17]
       : (readLastView() || [[45.4642, 9.19], 15]);
 
-    // preferCanvas: centinaia di poligoni/cerchi disegnati su canvas invece che
-    // come singoli nodi SVG, molto più veloce da renderizzare e da spostare.
-    var map = L.map('map', { zoomControl: false, preferCanvas: true }).setView(initialView[0], initialView[1]);
+    // I vettori sono disegnati in SVG con un margine di mezzo schermo per lato
+    // (default Leaflet: 10%): trascinando la mappa le zone vicine sono già
+    // disegnate, invece di restare vuote finché non si rilascia il dito.
+    // (Il canvas qui sarebbe peggio: a parità di margine occupa molta memoria
+    // sui telefoni ad alta densità, mentre gli elementi visibili sono pochi.)
+    L.SVG.mergeOptions({ padding: 0.5 });
+    var map = L.map('map', { zoomControl: false }).setView(initialView[0], initialView[1]);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -1346,7 +1350,17 @@
       });
     }
 
+    // JSON.stringify + localStorage sono sincroni: si scrive quando il browser
+    // è libero, per non bloccare la mappa mentre la si sta trascinando.
+    const whenIdle = window.requestIdleCallback
+      ? (fn) => requestIdleCallback(fn, { timeout: 2000 })
+      : (fn) => setTimeout(fn, 300);
+
     function persistTiles(entries) {
+      whenIdle(() => writeTiles(entries));
+    }
+
+    function writeTiles(entries) {
       try {
         const index = readTileIndex();
         entries.forEach(([key, t]) => {
@@ -1365,9 +1379,10 @@
       } catch (err) { /* storage non disponibile, non bloccante */ }
     }
 
-    // Tessere che coprono la vista attuale (con margine), ordinate dal centro verso l'esterno
+    // Tessere che coprono la vista attuale con un margine ampio (prefetch: le
+    // zone attorno sono già pronte quando si scorre), ordinate dal centro
     function tilesForView() {
-      const b = map.getBounds().pad(0.25);
+      const b = map.getBounds().pad(0.75);
       const c = map.getCenter();
       const ci = latToTile(c.lat), cj = lonToTile(c.lng);
       const half = Math.floor(MAX_TILES_SPAN / 2);
@@ -1710,7 +1725,19 @@
       saveLastView();
       showCachedForView(); // istantaneo, dalla cache
       if (fetchTimeout) clearTimeout(fetchTimeout);
-      fetchTimeout = setTimeout(loadVisibleTiles, 200);
+      fetchTimeout = setTimeout(loadVisibleTiles, 100);
+    });
+
+    // Anche DURANTE il trascinamento (al massimo ogni 300 ms): si disegna ciò
+    // che è in cache per la zona che sta entrando e si avviano i download,
+    // senza aspettare che l'utente rilasci il dito.
+    var lastMoveLoad = 0;
+    map.on('move', () => {
+      const now = Date.now();
+      if (now - lastMoveLoad < 300) return;
+      lastMoveLoad = now;
+      showCachedForView();
+      if (initialLoadDone) loadVisibleTiles();
     });
 
     showCachedForView();
