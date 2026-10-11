@@ -17,6 +17,15 @@
   <link rel="icon" type="image/svg+xml" sizes="any"
     href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20viewBox%3D%270%200%2024%2024%27%3E%3Crect%20width%3D%2724%27%20height%3D%2724%27%20fill%3D%27%23ffffff%27/%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%233b82f6%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Crect%20x%3D%273%27%20y%3D%273%27%20width%3D%2718%27%20height%3D%2718%27%20rx%3D%272%27/%3E%3Cpath%20d%3D%27M9%2017V7h4a3%203%200%200%201%200%206H9%27/%3E%3C/g%3E%3C/svg%3E" />
 
+  <!-- Apre subito le connessioni verso tile e mirror Overpass, prima che il JS le richieda -->
+  <link rel="preconnect" href="https://unpkg.com" crossorigin />
+  <link rel="preconnect" href="https://a.tile.openstreetmap.org" />
+  <link rel="preconnect" href="https://b.tile.openstreetmap.org" />
+  <link rel="preconnect" href="https://c.tile.openstreetmap.org" />
+  <link rel="preconnect" href="https://maps.mail.ru" crossorigin />
+  <link rel="preconnect" href="https://overpass.kumi.systems" crossorigin />
+  <link rel="preconnect" href="https://overpass-api.de" crossorigin />
+
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
@@ -24,8 +33,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
     :root{
@@ -482,6 +489,43 @@
     }
     .popup-links a:hover{ background:var(--primary); color:#fff; border-color:var(--primary); transform:translateY(-1px); }
 
+    /* ─── Pallino pulsante della posizione utente ─── */
+    .user-loc-icon{ background:none; border:none; }
+    .user-loc{
+      position:relative;
+      width:18px; height:18px;
+    }
+    .user-loc-dot{
+      position:absolute; inset:0;
+      background:#2563eb;
+      border:3px solid #fff;
+      border-radius:50%;
+      box-sizing:border-box;
+      box-shadow:0 1px 6px rgb(15 23 42 / 0.35);
+      z-index:2;
+    }
+    .user-loc-pulse{
+      position:absolute;
+      left:50%; top:50%;
+      width:18px; height:18px;
+      margin:-9px 0 0 -9px;
+      border-radius:50%;
+      background:rgba(37,99,235,0.45);
+      animation:userLocPulse 2s ease-out infinite;
+      z-index:1;
+    }
+    @keyframes userLocPulse{
+      0%  { transform:scale(1);   opacity:0.9; }
+      70% { transform:scale(3.4); opacity:0; }
+      100%{ transform:scale(3.4); opacity:0; }
+    }
+    @media (prefers-reduced-motion: reduce){
+      .user-loc-pulse{ animation:none; transform:scale(2); opacity:0.35; }
+    }
+    #gpsBtn.active{ color:var(--primary); }
+    /* Download in background: gira l'icona di "Aggiorna" invece di mostrare messaggi */
+    #refreshBtn.loading svg{ animation:diagSpin 1s linear infinite; }
+
     @media (max-width:600px){
       :root{ --btn-size:42px; --btn-gap:8px; }
       #topbar{ top:10px; width:calc(100% - 20px); gap:8px; }
@@ -567,6 +611,8 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
           crossorigin=""></script>
+  <!-- Lucide Icons: versione fissata (niente redirect di @latest) e caricata a fine body, non blocca il primo render -->
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 
   <script>
     lucide.createIcons();
@@ -586,11 +632,23 @@
     const sharedLon = parseFloat(sharedViewParams.get('lon'));
     const sharedZoom = parseInt(sharedViewParams.get('z'), 10);
     const hasSharedView = Number.isFinite(sharedLat) && Number.isFinite(sharedLon);
+    // Senza link condiviso si riparte dall'ultima vista usata (così i dati in
+    // cache della zona compaiono subito), e solo al primo avvio da Milano.
+    const LAST_VIEW_KEY = 'parkLastView_v1';
+    function readLastView() {
+      try {
+        const v = JSON.parse(localStorage.getItem(LAST_VIEW_KEY));
+        if (v && Number.isFinite(v.lat) && Number.isFinite(v.lon) && Number.isFinite(v.z)) return [[v.lat, v.lon], v.z];
+      } catch (err) { /* storage non disponibile */ }
+      return null;
+    }
     const initialView = hasSharedView
       ? [[sharedLat, sharedLon], Number.isFinite(sharedZoom) ? sharedZoom : 17]
-      : [[45.4642, 9.19], 15];
+      : (readLastView() || [[45.4642, 9.19], 15]);
 
-    var map = L.map('map', { zoomControl: false }).setView(initialView[0], initialView[1]);
+    // preferCanvas: centinaia di poligoni/cerchi disegnati su canvas invece che
+    // come singoli nodi SVG, molto più veloce da renderizzare e da spostare.
+    var map = L.map('map', { zoomControl: false, preferCanvas: true }).setView(initialView[0], initialView[1]);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -610,6 +668,10 @@
     /* ✅ Parcometri */
     map.createPane('parkometersPane');
     map.getPane('parkometersPane').style.zIndex = 430;
+
+    // Posizione utente sopra a tutti i dati (ma sotto ai popup, pane 700)
+    map.createPane('userLocationPane');
+    map.getPane('userLocationPane').style.zIndex = 650;
 
     var parkingAreasLayer = L.layerGroup().addTo(map);
     var parkingSpacesLayer = L.layerGroup().addTo(map);
@@ -1119,15 +1181,13 @@
       `;
     }
 
-    const overpassCache = new Map();
-
-    // Mirror Overpass pubblici interrogati IN PARALLELO: si aspettano tutte le
-    // risposte (ognuna con il proprio timeout) e si tiene quella con più
-    // elementi, non semplicemente la prima che arriva — un mirror può
-    // rispondere in fretta ma con dati incompleti (replica indietro, query
-    // tagliata per carico interno...). onUpdate permette comunque di mostrare
-    // subito il primo risultato utile sulla mappa e sostituirlo in silenzio
-    // se un mirror più lento risponde con più elementi.
+    // Mirror Overpass pubblici interrogati IN PARALLELO. Appena il primo
+    // risponde i dati vanno subito sulla mappa; dopo una breve finestra
+    // (OVERPASS_GRACE_MS) il caricamento si considera concluso, senza
+    // aspettare il mirror più lento fino al timeout. Gli altri mirror però
+    // continuano in background: uno può rispondere in fretta ma con dati
+    // incompleti (replica indietro, query tagliata per carico...), quindi se
+    // ne arriva uno con più elementi onUpdate viene richiamato comunque.
     const OVERPASS_MIRRORS = [
       'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
       'https://overpass.kumi.systems/api/interpreter',
@@ -1143,8 +1203,8 @@
       // preflight OPTIONS) non porta l'header CORS in un browser, quindi la
       // fetch fallisce sempre con "blocked by CORS policy" — verificato.
     ];
-    const OVERPASS_TIMEOUT_MS = 25000;
-    let activeOverpassAbort = null;
+    const OVERPASS_TIMEOUT_MS = 20000;
+    const OVERPASS_GRACE_MS = 1200;
 
     // Stato dell'ultimo tentativo per provider, usato dal pannello diagnostico
     // aperto con la pressione prolungata sul pulsante "Aggiorna".
@@ -1155,41 +1215,10 @@
       try { return new URL(url).hostname.replace(/^overpass\./, ''); } catch { return url; }
     }
 
-    function getCacheKey(center, zoom) {
-      const precision = zoom >= 16 ? 4 : 3;
-      return `${center.lat.toFixed(precision)},${center.lng.toFixed(precision)},z${Math.round(zoom)}`;
-    }
-
-    // Cache persistente (sopravvive alla ricarica della pagina): usata solo
-    // come ultima spiaggia quando TUTTI i mirror falliscono e non c'è nulla
-    // in cache di sessione, per mostrare comunque un dato (anche vecchio)
-    // invece di una mappa vuota.
-    const OVERPASS_PERSIST_KEY = 'parkOverpassCache_v1';
-    const OVERPASS_PERSIST_MAX_ENTRIES = 20;
-
-    function readPersistentCache(key) {
-      try {
-        const all = JSON.parse(localStorage.getItem(OVERPASS_PERSIST_KEY)) || {};
-        return all[key] || null;
-      } catch (err) { return null; }
-    }
-    function writePersistentCache(key, data) {
-      try {
-        const all = JSON.parse(localStorage.getItem(OVERPASS_PERSIST_KEY)) || {};
-        all[key] = { data, ts: Date.now() };
-        const keys = Object.keys(all);
-        if (keys.length > OVERPASS_PERSIST_MAX_ENTRIES) {
-          keys.sort((a, b) => all[a].ts - all[b].ts);
-          delete all[keys[0]];
-        }
-        localStorage.setItem(OVERPASS_PERSIST_KEY, JSON.stringify(all));
-      } catch (err) { /* quota piena o storage non disponibile, non bloccante */ }
-    }
-
-    // Combina un AbortSignal "esterno" (pan della mappa) con uno "interno"
-    // (timeout del singolo mirror): basta che uno dei due scatti per abortire
-    // la fetch. AbortSignal.any non è ancora universale sui browser mobili
-    // più vecchi, quindi qui si combina manualmente.
+    // Combina un AbortSignal "esterno" con uno "interno" (timeout del singolo
+    // mirror): basta che uno dei due scatti per abortire la fetch.
+    // AbortSignal.any non è ancora universale sui browser mobili più vecchi,
+    // quindi qui si combina manualmente.
     function combineSignals(a, b) {
       if (!a) return b;
       if (!b) return a;
@@ -1200,148 +1229,365 @@
       return controller.signal;
     }
 
-    // Interroga tutti i mirror in parallelo. Ogni fetch ha il proprio timeout
-    // (OVERPASS_TIMEOUT_MS) ed è comunque cancellabile dal segnale esterno
-    // (es. l'utente sposta la mappa mentre la richiesta è in corso). Si
-    // aspettano TUTTI i mirror e si tiene quello con più elementi; onUpdate
-    // (facoltativo) viene richiamato non appena c'è un dato migliore di
-    // quello mostrato finora, senza aspettare gli altri.
+    // onUpdate (facoltativo) viene richiamato ogni volta che c'è un dato
+    // migliore di quello mostrato finora, anche dopo che la promessa si è
+    // risolta (con il migliore ottenuto entro la finestra di grazia).
     function fetchOverpassRace(query, externalSignal, onUpdate) {
-      let best = null;
+      return new Promise((resolve, reject) => {
+        let best = null, pending = OVERPASS_MIRRORS.length, graceTimer = null, done = false;
 
-      const requests = OVERPASS_MIRRORS.map(url => {
-        const label = shortOverpassLabel(url);
-        overpassDiagState[label] = 'loading';
-        updateDiagCell(label);
-        let gotResponse = false;
-        const signal = combineSignals(externalSignal, AbortSignal.timeout(OVERPASS_TIMEOUT_MS));
+        const finish = () => {
+          if (done) return;
+          done = true;
+          clearTimeout(graceTimer);
+          if (externalSignal && externalSignal.aborted) {
+            const e = new Error('Aborted'); e.name = 'AbortError'; reject(e); return;
+          }
+          if (best) resolve(best);
+          else reject(new Error('Tutti i mirror Overpass hanno fallito o sono scaduti'));
+        };
 
-        return fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: 'data=' + encodeURIComponent(query),
-          signal
-        })
-          .then(res => {
-            gotResponse = true;
-            overpassDiagReachable[label] = true;
-            updateDiagReach(label);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return res.json();
+        OVERPASS_MIRRORS.forEach(url => {
+          const label = shortOverpassLabel(url);
+          overpassDiagState[label] = 'loading';
+          updateDiagCell(label);
+          let gotResponse = false;
+          const signal = combineSignals(externalSignal, AbortSignal.timeout(OVERPASS_TIMEOUT_MS));
+
+          fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'data=' + encodeURIComponent(query),
+            signal
           })
-          .then(data => {
-            overpassDiagState[label] = 'success';
-            updateDiagCell(label);
-            if (!best || (data.elements?.length || 0) > (best.elements?.length || 0)) {
-              best = data;
-              if (onUpdate) onUpdate(data);
-            }
-            return data;
-          })
-          .catch(error => {
-            overpassDiagState[label] = 'failed';
-            updateDiagCell(label);
-            if (!gotResponse) { overpassDiagReachable[label] = false; updateDiagReach(label); }
-            throw error;
-          });
-      });
-
-      return Promise.allSettled(requests).then(settled => {
-        const anyAborted = externalSignal && externalSignal.aborted;
-        if (anyAborted) { const e = new Error('Aborted'); e.name = 'AbortError'; throw e; }
-        if (!best) throw new Error('Tutti i mirror Overpass hanno fallito o sono scaduti');
-        return best;
+            .then(res => {
+              gotResponse = true;
+              overpassDiagReachable[label] = true;
+              updateDiagReach(label);
+              if (!res.ok) throw new Error(`HTTP ${res.status}`);
+              return res.json();
+            })
+            .then(data => {
+              overpassDiagState[label] = 'success';
+              updateDiagCell(label);
+              if (externalSignal && externalSignal.aborted) return;
+              if (!best || (data.elements?.length || 0) > (best.elements?.length || 0)) {
+                best = data;
+                if (onUpdate) onUpdate(data);
+              }
+              if (!graceTimer && !done) graceTimer = setTimeout(finish, OVERPASS_GRACE_MS);
+            })
+            .catch(() => {
+              overpassDiagState[label] = 'failed';
+              updateDiagCell(label);
+              if (!gotResponse) { overpassDiagReachable[label] = false; updateDiagReach(label); }
+            })
+            .finally(() => { if (--pending === 0) finish(); });
+        });
       });
     }
 
-    async function fetchParking(forceRefresh = false) {
-      if (activeOverpassAbort) {
-        activeOverpassAbort.abort();
+    // ─── Caricamento dati a tessere ───
+    // L'area è divisa in una griglia fissa di tessere da 0.01° (~1.1 x 0.8 km).
+    // Ogni tessera scaricata resta in memoria e in localStorage: spostando la
+    // mappa si scaricano solo le tessere nuove, quelle già viste compaiono
+    // all'istante (anche dopo aver chiuso l'app), e quelle salvate ma vecchie
+    // vengono mostrate subito e aggiornate in background. Le tessere mancanti
+    // si scaricano a blocchi 3x3, partendo da quello al centro della vista.
+    const TILE_DEG = 0.01;
+    const TILE_FRESH_MS = 6 * 60 * 60 * 1000;   // entro 6 ore una tessera non si riscarica
+    const TILE_PERSIST_PREFIX = 'parkTile_v1:';
+    const TILE_INDEX_KEY = 'parkTileIndex_v1';
+    const TILE_PERSIST_MAX = 120;
+    const MAX_TILES_SPAN = 7;                   // al massimo 7x7 tessere attorno al centro
+    const BLOCK_SIZE = 3;
+    const MAX_PARALLEL_BLOCKS = 2;
+    const MIN_DATA_ZOOM = 12;
+
+    // Vecchia cache a chiavi "centro+zoom", sostituita dalle tessere: libera spazio
+    try { localStorage.removeItem('parkOverpassCache_v1'); } catch (err) {}
+
+    const tileStore = new Map();      // key -> { ts, elements }
+    const inflightTiles = new Set();
+    const inflightControllers = new Set();
+    let blockQueue = [];
+    let activeBlocks = 0;
+    let loadGeneration = 0;           // incrementato da "Aggiorna": scarta le risposte vecchie
+    const MAX_AUTO_RETRIES = 3;
+    let consecutiveFailures = 0, retryTimer = null;
+
+    function tileKey(i, j) { return i + ',' + j; }
+    function latToTile(lat) { return Math.floor(lat / TILE_DEG); }
+    function lonToTile(lon) { return Math.floor(lon / TILE_DEG); }
+    function isTileFresh(t) { return !!t && (Date.now() - t.ts) < TILE_FRESH_MS; }
+
+    function readTileIndex() {
+      try { return JSON.parse(localStorage.getItem(TILE_INDEX_KEY)) || {}; } catch (err) { return {}; }
+    }
+
+    function getTile(key) {
+      if (tileStore.has(key)) return tileStore.get(key);
+      try {
+        const raw = localStorage.getItem(TILE_PERSIST_PREFIX + key);
+        if (raw) {
+          const t = JSON.parse(raw);
+          tileStore.set(key, t);
+          return t;
+        }
+      } catch (err) { /* storage non disponibile o dato corrotto */ }
+      return null;
+    }
+
+    function evictPersistedTiles(index, keep) {
+      const keys = Object.keys(index).sort((a, b) => index[a] - index[b]);
+      keys.slice(0, Math.max(0, keys.length - keep)).forEach(k => {
+        localStorage.removeItem(TILE_PERSIST_PREFIX + k);
+        delete index[k];
+      });
+    }
+
+    function persistTiles(entries) {
+      try {
+        const index = readTileIndex();
+        entries.forEach(([key, t]) => {
+          const payload = JSON.stringify(t);
+          try {
+            localStorage.setItem(TILE_PERSIST_PREFIX + key, payload);
+          } catch (err) {
+            // Quota piena: libera metà delle tessere più vecchie e riprova una volta
+            evictPersistedTiles(index, Math.floor(Object.keys(index).length / 2));
+            localStorage.setItem(TILE_PERSIST_PREFIX + key, payload);
+          }
+          index[key] = t.ts;
+        });
+        evictPersistedTiles(index, TILE_PERSIST_MAX);
+        localStorage.setItem(TILE_INDEX_KEY, JSON.stringify(index));
+      } catch (err) { /* storage non disponibile, non bloccante */ }
+    }
+
+    // Tessere che coprono la vista attuale (con margine), ordinate dal centro verso l'esterno
+    function tilesForView() {
+      const b = map.getBounds().pad(0.25);
+      const c = map.getCenter();
+      const ci = latToTile(c.lat), cj = lonToTile(c.lng);
+      const half = Math.floor(MAX_TILES_SPAN / 2);
+      const i0 = Math.max(latToTile(b.getSouth()), ci - half), i1 = Math.min(latToTile(b.getNorth()), ci + half);
+      const j0 = Math.max(lonToTile(b.getWest()), cj - half), j1 = Math.min(lonToTile(b.getEast()), cj + half);
+      const out = [];
+      for (let i = i0; i <= i1; i++) {
+        for (let j = j0; j <= j1; j++) {
+          out.push({ i, j, key: tileKey(i, j), dist: Math.abs(i - ci) + Math.abs(j - cj) });
+        }
+      }
+      return out.sort((a, b) => a.dist - b.dist);
+    }
+
+    function centerTileKey() {
+      const c = map.getCenter();
+      return tileKey(latToTile(c.lat), lonToTile(c.lng));
+    }
+
+    // Rimuove dalla mappa ciò che appartiene a tessere non più visibili, per
+    // evitare che la mappa accumuli all'infinito elementi durante il pan.
+    function pruneOutsideTiles(keepKeys) {
+      idToLayer.forEach((entry, uniqueId) => {
+        if (!keepKeys.has(entry.tile)) {
+          entry.group.removeLayer(entry.layer);
+          idToLayer.delete(uniqueId);
+          loadedIds.delete(uniqueId);
+        }
+      });
+    }
+
+    // Disegna subito, senza rete, tutto ciò che è già in cache per la vista
+    function showCachedForView() {
+      if (map.getZoom() < MIN_DATA_ZOOM) return;
+      const tiles = tilesForView();
+      pruneOutsideTiles(new Set(tiles.map(t => t.key)));
+      tiles.forEach(t => {
+        const data = getTile(t.key);
+        if (data) renderParking(data.elements, t.key);
+      });
+    }
+
+    function loadVisibleTiles() {
+      if (map.getZoom() < MIN_DATA_ZOOM) { blockQueue = []; updateLoadingUi(); return; }
+
+      const missing = tilesForView().filter(t => !inflightTiles.has(t.key) && !isTileFresh(getTile(t.key)));
+
+      // Se manca la tessera al centro (zona mai vista) la si chiede da sola e
+      // per prima: query molto più leggera, quindi primi dati prima possibile.
+      const firstBlocks = [];
+      if (missing.length > 1 && missing[0].dist === 0 && !getTile(missing[0].key)) {
+        firstBlocks.push({ tiles: [missing.shift()], dist: -1 });
       }
 
-      const center = map.getCenter();
-      const zoom = map.getZoom() || 15;
-      const radius = zoom >= 17 ? 700 : (zoom >= 15 ? 1000 : 1400);
-      const cacheKey = getCacheKey(center, zoom);
+      // Raggruppa le tessere mancanti in blocchi BLOCK_SIZE x BLOCK_SIZE allineati alla griglia
+      const blocks = new Map();
+      missing.forEach(t => {
+        const bk = Math.floor(t.i / BLOCK_SIZE) + ':' + Math.floor(t.j / BLOCK_SIZE);
+        if (!blocks.has(bk)) blocks.set(bk, { tiles: [], dist: t.dist });
+        const block = blocks.get(bk);
+        block.tiles.push(t);
+        block.dist = Math.min(block.dist, t.dist);
+      });
 
-      if (forceRefresh) {
-        overpassCache.clear();
+      // La coda viene ricostruita a ogni spostamento: i blocchi usciti dalla vista si scartano
+      blockQueue = firstBlocks.concat([...blocks.values()].sort((a, b) => a.dist - b.dist));
+      pumpBlockQueue();
+      updateLoadingUi();
+    }
+
+    function pumpBlockQueue() {
+      while (activeBlocks < MAX_PARALLEL_BLOCKS && blockQueue.length) {
+        fetchBlock(blockQueue.shift());
       }
+    }
 
-      if (!forceRefresh && overpassCache.has(cacheKey)) {
-        renderParking(overpassCache.get(cacheKey));
-        pruneFarElements(center, radius * 3);
-        setStatus('Dati da cache');
-        setTimeout(() => setStatus(''), 900);
-        return;
-      }
+    function buildParkingQuery(s, w, n, e) {
+      return `[out:json][timeout:25][bbox:${s},${w},${n},${e}];(
+        way["amenity"="parking"];
+        relation["amenity"="parking"];
+        node["amenity"="parking"];
 
-      setStatus('Aggiornamento dati...');
+        node["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"];
+        way["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"];
 
-      const query = `[out:json][timeout:25];(
-        way["amenity"="parking"](around:${radius},${center.lat},${center.lng});
-        relation["amenity"="parking"](around:${radius},${center.lat},${center.lng});
-        node["amenity"="parking"](around:${radius},${center.lat},${center.lng});
-
-        node["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](around:${radius},${center.lat},${center.lng});
-        way["amenity"="parking_space"]["parking_space"]["parking_space"!="normal"](around:${radius},${center.lat},${center.lng});
-
-        /* ✅ PARCOMETRI */
-        node["amenity"="vending_machine"]["vending"="parking_tickets"](around:${radius},${center.lat},${center.lng});
-        way["amenity"="vending_machine"]["vending"="parking_tickets"](around:${radius},${center.lat},${center.lng});
-        relation["amenity"="vending_machine"]["vending"="parking_tickets"](around:${radius},${center.lat},${center.lng});
+        node["amenity"="vending_machine"]["vending"="parking_tickets"];
+        way["amenity"="vending_machine"]["vending"="parking_tickets"];
+        relation["amenity"="vending_machine"]["vending"="parking_tickets"];
       );out body geom qt;`;
+    }
 
+    async function fetchBlock(block) {
+      const gen = loadGeneration;
+      const rect = {
+        i0: Math.min(...block.tiles.map(t => t.i)), i1: Math.max(...block.tiles.map(t => t.i)),
+        j0: Math.min(...block.tiles.map(t => t.j)), j1: Math.max(...block.tiles.map(t => t.j))
+      };
+      const rectKeys = [];
+      for (let i = rect.i0; i <= rect.i1; i++) for (let j = rect.j0; j <= rect.j1; j++) rectKeys.push(tileKey(i, j));
+
+      rectKeys.forEach(k => inflightTiles.add(k));
+      activeBlocks++;
+      updateLoadingUi();
+
+      const query = buildParkingQuery(
+        (rect.i0 * TILE_DEG).toFixed(4), (rect.j0 * TILE_DEG).toFixed(4),
+        ((rect.i1 + 1) * TILE_DEG).toFixed(4), ((rect.j1 + 1) * TILE_DEG).toFixed(4)
+      );
       const controller = new AbortController();
-      activeOverpassAbort = controller;
+      inflightControllers.add(controller);
 
       try {
+        let lastRendered = null, settled = false;
         const data = await fetchOverpassRace(query, controller.signal, (partial) => {
-          // Mostra subito il primo dato utile, anche prima che tutti i
-          // mirror abbiano risposto: renderParking è additivo (salta gli ID
-          // già disegnati), quindi un secondo render con più elementi
-          // aggiunge solo la differenza, senza duplicati.
-          renderParking(partial);
-          pruneFarElements(center, radius * 3);
+          // Mostra subito il primo dato utile; renderParking è additivo, quindi
+          // un risultato migliore (anche arrivato in ritardo da un mirror
+          // lento) aggiunge solo la differenza e, a caricamento concluso,
+          // sostituisce anche la copia salvata.
+          if (gen !== loadGeneration) return;
+          applyBlockData(partial, rect, settled);
+          lastRendered = partial;
         });
-
-        if (overpassCache.size >= 30) {
-          overpassCache.delete(overpassCache.keys().next().value); // scarta la voce più vecchia
+        settled = true;
+        if (gen === loadGeneration) {
+          if (data !== lastRendered) applyBlockData(data, rect, false);
+          persistTiles(rectKeys.map(k => [k, tileStore.get(k)]));
+          consecutiveFailures = 0;
         }
-        overpassCache.set(cacheKey, data);
-        writePersistentCache(cacheKey, data);
-        renderParking(data);
-        pruneFarElements(center, radius * 3);
-        setStatus('Dati caricati');
-        setTimeout(() => setStatus(''), 1500);
       } catch (err) {
-        if (err.name === 'AbortError') return;
-        console.warn('Errore fetch:', err);
-
-        const stale = readPersistentCache(cacheKey);
-        if (stale) {
-          renderParking(stale.data);
-          pruneFarElements(center, radius * 3);
-          setStatus('Dati non aggiornati (offline)');
-          setTimeout(() => setStatus(''), 2200);
-        } else {
-          setStatus('Errore connessione. Riprova più tardi.');
+        if (err.name !== 'AbortError' && gen === loadGeneration) {
+          console.warn('Errore fetch:', err);
+          // I mirror pubblici sono spesso sovraccarichi per brevi periodi:
+          // si riprova da soli qualche volta, con attesa crescente.
+          if (consecutiveFailures < MAX_AUTO_RETRIES) {
+            consecutiveFailures++;
+            clearTimeout(retryTimer);
+            retryTimer = setTimeout(loadVisibleTiles, 2000 * consecutiveFailures);
+          } else {
+            reportLoadError();
+          }
         }
       } finally {
-        if (activeOverpassAbort === controller) activeOverpassAbort = null;
+        inflightControllers.delete(controller);
+        rectKeys.forEach(k => inflightTiles.delete(k));
+        activeBlocks--;
+        pumpBlockQueue();
+        updateLoadingUi();
       }
     }
 
+    function elementPosition(el) {
+      if (el.lat != null) return { lat: el.lat, lon: el.lon };
+      if (el.bounds) return { lat: (el.bounds.minlat + el.bounds.maxlat) / 2, lon: (el.bounds.minlon + el.bounds.maxlon) / 2 };
+      if (el.geometry && el.geometry.length && el.geometry[0].lat != null) return el.geometry[0];
+      return null;
+    }
 
+    // Distribuisce gli elementi di una risposta nelle tessere del rettangolo
+    // richiesto (anche le tessere vuote vengono salvate: "qui non c'è nulla"
+    // è un dato utile quanto gli altri) e disegna quelle visibili.
+    function applyBlockData(data, rect, persist) {
+      const buckets = new Map();
+      for (let i = rect.i0; i <= rect.i1; i++) for (let j = rect.j0; j <= rect.j1; j++) buckets.set(tileKey(i, j), []);
 
+      (data.elements || []).forEach(el => {
+        const pos = elementPosition(el);
+        // Gli elementi a cavallo del bordo finiscono nella tessera più vicina del rettangolo
+        const i = Math.min(rect.i1, Math.max(rect.i0, pos ? latToTile(pos.lat) : rect.i0));
+        const j = Math.min(rect.j1, Math.max(rect.j0, pos ? lonToTile(pos.lon) : rect.j0));
+        // Solo i campi usati dal render: niente liste di nodi/membri, la cache resta leggera
+        buckets.get(tileKey(i, j)).push({ type: el.type, id: el.id, tags: el.tags, lat: el.lat, lon: el.lon, geometry: el.geometry });
+      });
 
-        function renderParking(data) {
-      // NOTA: Ho rimosso i clearLayers() da qui. 
-      // I dati vecchi rimangono sulla mappa.
-      
-      if (!data || !data.elements) return;
+      const ts = Date.now();
+      buckets.forEach((elements, key) => tileStore.set(key, { ts, elements }));
+      if (persist) persistTiles([...buckets.keys()].map(k => [k, tileStore.get(k)]));
 
-      data.elements.forEach(el => {
+      // Toglie dalla mappa gli elementi di queste tessere che nei dati nuovi
+      // non ci sono più (es. rimossi su OSM); quelli ancora presenti restano
+      // dove sono, senza sfarfallio né chiudere un popup aperto.
+      const freshIds = new Set();
+      buckets.forEach(elements => elements.forEach(el => freshIds.add(el.type + ':' + el.id)));
+      idToLayer.forEach((entry, uniqueId) => {
+        if (buckets.has(entry.tile) && !freshIds.has(uniqueId)) {
+          entry.group.removeLayer(entry.layer);
+          idToLayer.delete(uniqueId);
+          loadedIds.delete(uniqueId);
+        }
+      });
+
+      const visible = new Set(tilesForView().map(t => t.key));
+      buckets.forEach((elements, key) => { if (visible.has(key)) renderParking(elements, key); });
+    }
+
+    // Messaggio "Caricamento..." solo se la zona al centro è ancora vuota: se
+    // ci sono dati in cache l'aggiornamento avviene in silenzio (gira solo
+    // l'icona del pulsante "Aggiorna").
+    let loadingStatusShown = false;
+    function updateLoadingUi() {
+      const loading = activeBlocks > 0;
+      document.getElementById('refreshBtn').classList.toggle('loading', loading);
+      if (loading && (loadingStatusShown || !getTile(centerTileKey()))) {
+        if (!loadingStatusShown) { setStatus('Caricamento parcheggi...'); loadingStatusShown = true; }
+      } else if (loadingStatusShown) {
+        setStatus('');
+        loadingStatusShown = false;
+      }
+    }
+
+    function reportLoadError() {
+      if (getTile(centerTileKey())) return; // si continua a mostrare la cache, anche se vecchia
+      loadingStatusShown = false;
+      setStatus('Errore connessione. Riprova più tardi.');
+      setTimeout(() => setStatus(''), 3000);
+    }
+
+    function renderParking(elements, tile) {
+      if (!elements || !elements.length) return;
+
+      elements.forEach(el => {
         // Creiamo un ID univoco per OSM (tipo + id)
         var uniqueId = el.type + ':' + el.id;
 
@@ -1353,6 +1599,10 @@
 
         var tags = el.tags || {};
         var osmMeta = { type: el.type, id: el.id };
+
+        // I popup sono costruiti solo quando vengono aperti (bindPopup con
+        // funzione), non per ogni elemento al caricamento: con centinaia di
+        // elementi il render iniziale è molto più rapido.
 
         /* ===== Aree di sosta ===== */
         if (tags.amenity === 'parking') {
@@ -1380,17 +1630,17 @@
           }
 
           if (el.geometry) {
-            var pts = el.geometry.map(g => [g.lat, g.lon]);
-            var layer = (pts[0][0] === pts[pts.length-1][0] && pts.length > 2) ?
+            let pts = el.geometry.map(g => [g.lat, g.lon]);
+            let layer = (pts[0][0] === pts[pts.length-1][0] && pts.length > 2) ?
               L.polygon(pts, { color, weight: 2, fillColor, fillOpacity: 0.4, pane: 'parkingAreasPane' }) :
               L.polyline(pts, { color, weight: 3, pane: 'parkingAreasPane' });
 
-            layer.bindPopup(buildPopupContent(tags, pts[0][0], pts[0][1], osmMeta)).addTo(parkingAreasLayer);
-            idToLayer.set(uniqueId, { layer, group: parkingAreasLayer, lat: pts[0][0], lon: pts[0][1] });
+            layer.bindPopup(() => buildPopupContent(tags, pts[0][0], pts[0][1], osmMeta)).addTo(parkingAreasLayer);
+            idToLayer.set(uniqueId, { layer, group: parkingAreasLayer, tile });
           } else if (el.lat) {
-            var layer = L.circleMarker([el.lat, el.lon], { radius: 7, color, fillColor, fillOpacity: 0.7, pane: 'parkingAreasPane' })
-              .bindPopup(buildPopupContent(tags, el.lat, el.lon, osmMeta)).addTo(parkingAreasLayer);
-            idToLayer.set(uniqueId, { layer, group: parkingAreasLayer, lat: el.lat, lon: el.lon });
+            let layer = L.circleMarker([el.lat, el.lon], { radius: 7, color, fillColor, fillOpacity: 0.7, pane: 'parkingAreasPane' })
+              .bindPopup(() => buildPopupContent(tags, el.lat, el.lon, osmMeta)).addTo(parkingAreasLayer);
+            idToLayer.set(uniqueId, { layer, group: parkingAreasLayer, tile });
           }
         }
 
@@ -1407,14 +1657,14 @@
           else { cPs = '#374151'; fPs = '#6b7280'; }
 
           if (el.geometry) {
-            var pts2 = el.geometry.map(g => [g.lat, g.lon]);
-            var layer2 = L.polygon(pts2, { color: cPs, weight: 2, fillColor: fPs, fillOpacity: 0.8, pane: 'parkingSpacesPane' })
-              .bindPopup(buildPopupContent(tags, pts2[0][0], pts2[0][1], osmMeta)).addTo(parkingSpacesLayer);
-            idToLayer.set(uniqueId, { layer: layer2, group: parkingSpacesLayer, lat: pts2[0][0], lon: pts2[0][1] });
+            let pts2 = el.geometry.map(g => [g.lat, g.lon]);
+            let layer2 = L.polygon(pts2, { color: cPs, weight: 2, fillColor: fPs, fillOpacity: 0.8, pane: 'parkingSpacesPane' })
+              .bindPopup(() => buildPopupContent(tags, pts2[0][0], pts2[0][1], osmMeta)).addTo(parkingSpacesLayer);
+            idToLayer.set(uniqueId, { layer: layer2, group: parkingSpacesLayer, tile });
           } else if (el.lat) {
-            var layer2 = L.circleMarker([el.lat, el.lon], { radius: 8, color: cPs, fillColor: fPs, fillOpacity: 0.9, pane: 'parkingSpacesPane' })
-              .bindPopup(buildPopupContent(tags, el.lat, el.lon, osmMeta)).addTo(parkingSpacesLayer);
-            idToLayer.set(uniqueId, { layer: layer2, group: parkingSpacesLayer, lat: el.lat, lon: el.lon });
+            let layer2 = L.circleMarker([el.lat, el.lon], { radius: 8, color: cPs, fillColor: fPs, fillOpacity: 0.9, pane: 'parkingSpacesPane' })
+              .bindPopup(() => buildPopupContent(tags, el.lat, el.lon, osmMeta)).addTo(parkingSpacesLayer);
+            idToLayer.set(uniqueId, { layer: layer2, group: parkingSpacesLayer, tile });
           }
         }
 
@@ -1430,40 +1680,52 @@
           if (lat != null && lon != null) {
             var meterLayer = L.circleMarker([lat, lon], {
               radius: 5,
-              color: getComputedStyle(document.documentElement).getPropertyValue('--meter-stroke').trim() || '#111827',
+              color: METER_STROKE,
               weight: 2,
-              fillColor: getComputedStyle(document.documentElement).getPropertyValue('--meter-fill').trim() || '#f97316',
+              fillColor: METER_FILL,
               fillOpacity: 0.95,
               pane: 'parkometersPane'
-            }).bindPopup(buildParkingMeterPopup(tags, lat, lon, osmMeta))
+            }).bindPopup(() => buildParkingMeterPopup(tags, lat, lon, osmMeta))
               .addTo(parkometersLayer);
-            idToLayer.set(uniqueId, { layer: meterLayer, group: parkometersLayer, lat, lon });
+            idToLayer.set(uniqueId, { layer: meterLayer, group: parkometersLayer, tile });
           }
         }
       });
     }
 
+    // Letti una volta sola: getComputedStyle per ogni parcometro rallentava il render
+    const rootStyle = getComputedStyle(document.documentElement);
+    const METER_STROKE = rootStyle.getPropertyValue('--meter-stroke').trim() || '#111827';
+    const METER_FILL = rootStyle.getPropertyValue('--meter-fill').trim() || '#f97316';
 
-    // Rimuove i marker/poligoni troppo lontani dal centro corrente, per evitare
-    // che la mappa accumuli all'infinito elementi mai ripuliti durante il pan.
-    function pruneFarElements(center, maxDistanceMeters) {
-      idToLayer.forEach((entry, uniqueId) => {
-        var d = map.distance(center, L.latLng(entry.lat, entry.lon));
-        if (d > maxDistanceMeters) {
-          entry.group.removeLayer(entry.layer);
-          idToLayer.delete(uniqueId);
-          loadedIds.delete(uniqueId);
-        }
-      });
+    function saveLastView() {
+      try {
+        const c = map.getCenter();
+        localStorage.setItem(LAST_VIEW_KEY, JSON.stringify({ lat: +c.lat.toFixed(5), lon: +c.lng.toFixed(5), z: map.getZoom() }));
+      } catch (err) {}
     }
 
     var fetchTimeout = null;
     map.on('moveend', () => {
+      saveLastView();
+      showCachedForView(); // istantaneo, dalla cache
       if (fetchTimeout) clearTimeout(fetchTimeout);
-      fetchTimeout = setTimeout(() => fetchParking(false), 350);
+      fetchTimeout = setTimeout(loadVisibleTiles, 200);
     });
 
-    fetchParking(false);
+    showCachedForView();
+
+    // Al primo avvio con GPS si aspetta (poco) la posizione prima di scaricare,
+    // per non sprecare una richiesta sulla vista iniziale che verrebbe subito
+    // abbandonata. Il primo fix GPS (o il suo errore) anticipa il caricamento.
+    let initialLoadDone = false;
+    function triggerInitialLoad() {
+      if (initialLoadDone) return;
+      initialLoadDone = true;
+      clearTimeout(initialLoadTimer);
+      loadVisibleTiles();
+    }
+    const initialLoadTimer = setTimeout(triggerInitialLoad, hasSharedView ? 0 : 1500);
 
     function showSearchResults(items) {
       const box = document.getElementById('searchResults');
@@ -1496,28 +1758,41 @@
     // amministrativo (lento e spesso in timeout sui mirror pubblici gratuiti).
     const ITALY_BBOX = '35.2,6.6,47.3,18.6';
 
-    // fetchOverpassWithFallback si ferma alla prima risposta HTTP 200, anche se ha 0 risultati:
-    // per le ricerche puntuali (CAP/città) alcuni mirror hanno dati incompleti e rispondono vuoti
-    // pur avendo l'endpoint online, quindi qui proviamo tutti i mirror finché uno non trova qualcosa.
-    async function fetchOverpassPreferNonEmpty(query) {
-      let firstOk = null;
-      for (const endpoint of OVERPASS_MIRRORS) {
-        try {
-          const response = await fetch(endpoint, {
+    // Per le ricerche puntuali (CAP/città) alcuni mirror hanno dati incompleti e rispondono vuoti
+    // pur avendo l'endpoint online: si interrogano tutti i mirror in parallelo e vince il primo
+    // che trova qualcosa (gli altri vengono annullati). Se nessuno trova nulla, risultato vuoto.
+    function fetchOverpassPreferNonEmpty(query) {
+      return new Promise(resolve => {
+        let pending = OVERPASS_MIRRORS.length, firstOk = null, done = false;
+        const controller = new AbortController();
+
+        OVERPASS_MIRRORS.forEach(endpoint => {
+          fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'data=' + encodeURIComponent(query)
-          });
-          if (!response.ok) continue;
-
-          const data = await response.json();
-          if (data && data.elements && data.elements.length) return data;
-          if (!firstOk) firstOk = data;
-        } catch (err) {
-          console.warn('Overpass mirror fallito:', endpoint, err.message);
-        }
-      }
-      return firstOk || { elements: [] };
+            body: 'data=' + encodeURIComponent(query),
+            signal: combineSignals(controller.signal, AbortSignal.timeout(OVERPASS_TIMEOUT_MS))
+          })
+            .then(response => {
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+              return response.json();
+            })
+            .then(data => {
+              if (done) return;
+              if (data && data.elements && data.elements.length) {
+                done = true;
+                controller.abort();
+                resolve(data);
+              } else if (!firstOk) {
+                firstOk = data;
+              }
+            })
+            .catch(err => { if (!done) console.warn('Overpass mirror fallito:', endpoint, err.message); })
+            .finally(() => {
+              if (--pending === 0 && !done) { done = true; resolve(firstOk || { elements: [] }); }
+            });
+        });
+      });
     }
 
     async function geocodeCapFromOsm(cap) {
@@ -1656,31 +1931,96 @@
       if (box.style.display === 'block' && !sb.contains(e.target)) showSearchResults([]);
     });
 
-    // --- Nuova funzione per localizzare l'utente ---
+    /* ===== Posizione utente: pallino blu pulsante + cerchio di precisione ===== */
+    const gpsBtnEl = document.getElementById('gpsBtn');
+    const userLocIcon = L.divIcon({
+      className: 'user-loc-icon',
+      html: '<div class="user-loc"><div class="user-loc-pulse"></div><div class="user-loc-dot"></div></div>',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    });
+    let userMarker = null, userAccuracyCircle = null, lastFix = null;
+    let geoWatchId = null, centerOnNextFix = false;
+
+    function onUserPosition(p) {
+      const ll = [p.coords.latitude, p.coords.longitude];
+      const acc = p.coords.accuracy || 0;
+      // Un fix approssimativo arrivato dopo uno più preciso non deve peggiorare il pallino
+      if (lastFix && acc > lastFix.acc * 2 && Date.now() - lastFix.ts < 15000) return;
+      lastFix = { ll, acc, ts: Date.now() };
+
+      if (!userMarker) {
+        userAccuracyCircle = L.circle(ll, {
+          radius: acc, pane: 'userLocationPane', interactive: false,
+          color: '#2563eb', weight: 1, opacity: 0.35, fillColor: '#3b82f6', fillOpacity: 0.12
+        }).addTo(map);
+        userMarker = L.marker(ll, { icon: userLocIcon, pane: 'userLocationPane', interactive: false, keyboard: false }).addTo(map);
+      } else {
+        userMarker.setLatLng(ll);
+        userAccuracyCircle.setLatLng(ll).setRadius(acc);
+      }
+      gpsBtnEl.classList.add('active');
+
+      if (centerOnNextFix) {
+        centerOnNextFix = false;
+        map.setView(ll, Math.max(map.getZoom(), 17));
+        setStatus('Posizione trovata');
+        setTimeout(() => setStatus(''), 1200);
+      }
+      triggerInitialLoad();
+    }
+
+    function onUserPositionError(err) {
+      if (centerOnNextFix) {
+        centerOnNextFix = false;
+        setStatus(err && err.code === 1 ? 'Permesso posizione negato' : 'Posizione non disponibile');
+        setTimeout(() => setStatus(''), 2500);
+      }
+      if (err && err.code === 1) {
+        // Permesso negato: il watch non riceverà più nulla, lo si riavvia al prossimo click
+        if (geoWatchId != null) navigator.geolocation.clearWatch(geoWatchId);
+        geoWatchId = null;
+        gpsBtnEl.classList.remove('active');
+      }
+      triggerInitialLoad();
+    }
+
+    function startWatchingPosition() {
+      if (geoWatchId != null) return;
+      // Fix rapido (anche approssimativo o di qualche minuto fa) per centrare
+      // subito la mappa; il watch ad alta precisione poi lo affina e tiene il
+      // pallino aggiornato mentre ci si sposta.
+      navigator.geolocation.getCurrentPosition(onUserPosition, () => {},
+        { enableHighAccuracy: false, maximumAge: 5 * 60 * 1000, timeout: 4000 });
+      geoWatchId = navigator.geolocation.watchPosition(onUserPosition, onUserPositionError,
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
+    }
+
     function locateUser() {
       if (!navigator.geolocation) {
         setStatus('GPS non disponibile');
+        triggerInitialLoad();
         return;
       }
-      setStatus('Cerco la tua posizione...');
-      
-      navigator.geolocation.getCurrentPosition(
-        (p) => {
-          map.setView([p.coords.latitude, p.coords.longitude], 17);
-          setStatus('Posizione trovata');
-        }, 
-        () => setStatus('Errore o permesso negato'), 
-        { enableHighAccuracy: true }
-      );
+      // Posizione già nota e recente: si centra all'istante, senza attese
+      if (lastFix && Date.now() - lastFix.ts < 30000) {
+        map.setView(lastFix.ll, Math.max(map.getZoom(), 17));
+      } else {
+        centerOnNextFix = true;
+        setStatus('Cerco la tua posizione...');
+      }
+      startWatchingPosition();
     }
 
     // 1. Collega la funzione al click del pulsante (così puoi usarlo sempre)
-    document.getElementById('gpsBtn').onclick = locateUser;
+    gpsBtnEl.onclick = locateUser;
 
     // 2. Chiama la funzione SUBITO all'avvio (appena apri il sito), a meno che
     // l'app non sia stata aperta da un link condiviso: in quel caso l'utente
     // vuole vedere PROPRIO quella posizione, non la propria (la sovrascriverebbe).
+    // Il pallino compare comunque, ma la mappa resta sulla posizione condivisa.
     if (!hasSharedView) locateUser();
+    else if (navigator.geolocation) startWatchingPosition();
 
     /* ===== Condividi posizione ===== */
     function buildShareUrl() {
@@ -1728,16 +2068,22 @@
     document.getElementById('shareBtn').onclick = shareCurrentView;
 
 
-        function refreshAllData() {
-      // Svuota tutto (cache e mappa)
-      loadedIds.clear();
-      idToLayer.clear();
-      parkingAreasLayer.clearLayers();
-      parkingSpacesLayer.clearLayers();
-      parkometersLayer.clearLayers();
+    function refreshAllData() {
+      // Annulla i download in corso e scarta le loro risposte
+      loadGeneration++;
+      inflightControllers.forEach(c => c.abort());
+      inflightTiles.clear();
+      blockQueue = [];
+      consecutiveFailures = 0;
 
-      setStatus('Reset dati e aggiornamento...');
-      fetchParking(true);
+      // Le tessere vengono solo segnate come "vecchie", non cancellate: i dati
+      // restano sulla mappa finché quelli nuovi non li sostituiscono, così se
+      // i mirror non rispondono non si resta con una mappa vuota.
+      tileStore.forEach(t => { t.ts = 0; });
+
+      setStatus('Aggiornamento dati...');
+      loadingStatusShown = true; // il messaggio sparisce quando arrivano i dati
+      loadVisibleTiles();
     }
 
     /* ===== Pannello diagnostico provider (pressione prolungata su "Aggiorna") ===== */
@@ -1775,9 +2121,9 @@
       diagBackdropEl.onclick = closeDiagPanel;
       document.body.appendChild(diagBackdropEl);
 
-      const cacheKey = getCacheKey(map.getCenter(), map.getZoom() || 15);
-      const hasSessionCache = overpassCache.has(cacheKey);
-      const hasPersistentCache = !!readPersistentCache(cacheKey);
+      const centerTile = getTile(centerTileKey());
+      const hasSessionCache = isTileFresh(centerTile);
+      const hasPersistentCache = !!centerTile;
 
       const panel = document.createElement('div');
       panel.id = 'diagPanel';
