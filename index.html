@@ -512,7 +512,7 @@
       color:#fff;
       line-height:1.3;
     }
-    .leaflet-popup-content > div:not(.popup-header-container):not(.popup-links){ padding:0 20px; }
+    .leaflet-popup-content > div:not(.popup-header-container):not(.popup-links):not(.ctx-menu){ padding:0 20px; }
     .leaflet-popup-content > .popup-header-container + *{ margin-top:18px; }
     .popup-section{ margin-bottom:14px; padding-bottom:14px; display:flex; flex-direction:column; border-bottom:1px solid var(--border-soft); }
     .popup-section:last-of-type{ margin-bottom:4px; padding-bottom:0; border-bottom:none; }
@@ -708,9 +708,9 @@
     /* ─── Menu della pressione prolungata sulla mappa ─── */
     .ctx-popup .leaflet-popup-content{ min-width:230px !important; }
     .ctx-popup a.leaflet-popup-close-button{ color:var(--text-light) !important; background:transparent !important; top:8px !important; right:8px !important; }
-    .ctx-menu{ padding:14px; display:flex; flex-direction:column; gap:8px; }
-    .ctx-title{ font-weight:700; font-size:13px; color:var(--text-light); margin:0 2px 2px; }
-    .ctx-menu .set-btn{ justify-content:flex-start; width:100%; box-sizing:border-box; }
+    .leaflet-popup-content > div.ctx-menu{ padding:16px 14px 14px; display:flex; flex-direction:column; gap:8px; }
+    .ctx-title{ font-weight:700; font-size:13px; color:var(--text-light); margin:0 30px 4px 2px; }
+    .ctx-menu .set-btn{ justify-content:flex-start; width:100%; box-sizing:border-box; height:auto; min-height:42px; padding:9px 12px; text-align:left; line-height:1.3; }
     .leaflet-container .ctx-menu a.set-btn{ color:var(--text-main); }
 
     /* In orizzontale con poco spazio la colonna di destra va su due colonne */
@@ -3838,7 +3838,7 @@
       const html = `<div class="ctx-menu">
         <div class="ctx-title">${lat.toFixed(5)}, ${lng.toFixed(5)}</div>
         <button type="button" class="set-btn" data-ctx="car"><i data-lucide="car"></i> Ho parcheggiato qui</button>
-        <button type="button" class="set-btn" data-ctx="report"><i data-lucide="map-pin-plus"></i> Segnala un parcheggio mancante</button>
+        <button type="button" class="set-btn" data-ctx="report"><i data-lucide="map-pin-plus"></i> Segnala parcheggio mancante</button>
         <a class="set-btn" href="${buildNavUrl(lat, lng, 'driving')}" target="_blank" rel="noopener"><i data-lucide="navigation"></i> Naviga fin qui</a>
       </div>`;
       const popup = L.popup({ className: 'ctx-popup', autoPanPadding: [20, 80] }).setLatLng(e.latlng).setContent(html).openOn(map);
