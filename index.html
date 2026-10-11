@@ -190,8 +190,7 @@
     .search-result-item + .search-result-item{ border-top:1px solid #f1f5f9; }
 
     .fab-btn{
-      position:fixed;
-      z-index:1001;
+      position:relative;
       background:var(--glass);
       backdrop-filter:blur(10px);
       -webkit-backdrop-filter:blur(10px);
@@ -318,12 +317,13 @@
     }
     #status:not(:empty){ opacity:1; transform:translateX(-50%) translateY(0); }
 
-    /* Pulsanti flottanti impilati sul lato destro (a sinistra resta lo zoom di Leaflet) */
-    #settingsBtn{ bottom:var(--fab-bottom); right:var(--fab-right); }
-    #fullscreenBtn{ bottom:calc(var(--fab-bottom) + (var(--btn-size) + var(--btn-gap)) * 1); right:var(--fab-right); }
-    #refreshBtn{ bottom:calc(var(--fab-bottom) + (var(--btn-size) + var(--btn-gap)) * 2); right:var(--fab-right); }
-    #gpsBtn{ bottom:calc(var(--fab-bottom) + (var(--btn-size) + var(--btn-gap)) * 3); right:var(--fab-right); }
-    #shareBtn{ bottom:calc(var(--fab-bottom) + (var(--btn-size) + var(--btn-gap)) * 4); right:var(--fab-right); }
+    /* Pulsanti flottanti impilati sul lato destro (a sinistra resta lo zoom di Leaflet).
+       Colonna flex: un pulsante nascosto (es. schermo intero nell'app) non lascia buchi. */
+    #fabStack{
+      position:fixed; z-index:1001; right:var(--fab-right); bottom:var(--fab-bottom);
+      display:flex; flex-direction:column; gap:var(--btn-gap);
+    }
+    #fabStack .fab-btn{ position:relative; }
 
     @keyframes slideUp{
       from{ opacity:0; transform:translateY(20px) scale(0.95); }
@@ -353,15 +353,14 @@
       flex-shrink:0;
     }
 
-    /* ─── Impostazioni (foglio dal basso su telefono, finestra al centro su desktop) ─── */
-    #settingsBtn{ overflow:visible; }
+    /* ─── Impostazioni e Legenda (foglio dal basso su telefono, finestra al centro su desktop) ─── */
     .fab-badge{
       position:absolute; top:6px; right:6px; width:10px; height:10px; border-radius:50%;
       background:var(--danger); box-shadow:0 0 0 2px #fff;
     }
     .fab-badge[hidden]{ display:none; }
-    #settingsBackdrop{ position:fixed; inset:0; z-index:2500; background:rgba(15,23,42,0.4); animation:fadeIn .2s ease; }
-    #settingsSheet{
+    .sheet-backdrop{ position:fixed; inset:0; z-index:2500; background:rgba(15,23,42,0.4); animation:fadeIn .2s ease; }
+    .sheet{
       position:fixed; z-index:2600; left:50%; bottom:0; transform:translateX(-50%);
       width:min(100%, 480px); max-height:88vh; max-height:88dvh;
       display:flex; flex-direction:column;
@@ -370,7 +369,7 @@
       animation:sheetUp .28s cubic-bezier(0.16,1,0.3,1);
       font-family:'Inter',system-ui,sans-serif; color:var(--text-main);
     }
-    #settingsBackdrop[hidden], #settingsSheet[hidden]{ display:none; }
+    .sheet-backdrop[hidden], .sheet[hidden]{ display:none; }
     @keyframes sheetUp{ from{ transform:translate(-50%, 40px); opacity:0; } to{ transform:translate(-50%, 0); opacity:1; } }
     @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
     .sheet-header{
@@ -445,7 +444,7 @@
     .legend-card{ padding:14px 16px 6px; }
     .legend-grid{ display:grid; grid-template-columns:1fr 1fr; column-gap:12px; margin-bottom:8px; }
     @media (min-width:700px){
-      #settingsSheet{ top:50%; bottom:auto; transform:translate(-50%,-50%); border-radius:24px; max-height:min(84vh, 760px); animation:fadeIn .2s ease; }
+      .sheet{ top:50%; bottom:auto; transform:translate(-50%,-50%); border-radius:24px; max-height:min(84vh, 760px); animation:fadeIn .2s ease; }
       .sheet-header::before{ display:none; }
     }
 
@@ -588,7 +587,7 @@
       #searchBtn span.text{ display:none; }
       #searchBtn{ padding:0; width:36px; height:36px; justify-content:center; margin-left:4px; }
       #searchBox{ padding-left:12px; padding-right:6px; }
-      #settingsBtn, #fullscreenBtn, #refreshBtn, #gpsBtn, #shareBtn{ right:calc(12px + var(--safe-right)); }
+      #fabStack{ right:calc(12px + var(--safe-right)); }
       .leaflet-bottom.leaflet-left{ margin:0 0 calc(12px + var(--safe-bottom)) calc(12px + var(--safe-left)); }
     }
   </style>
@@ -611,32 +610,38 @@
   <div id="map"></div>
   <div id="status"></div>
 
-  <button id="gpsBtn" class="fab-btn" title="La mia posizione">
-    <i data-lucide="locate-fixed"></i>
-  </button>
 
-  <button id="shareBtn" class="fab-btn" title="Condividi questa posizione">
-    <i data-lucide="share-2"></i>
-  </button>
 
-  <button id="refreshBtn" class="fab-btn" title="Aggiorna dati (tieni premuto per lo stato dei provider)">
-    <i data-lucide="refresh-cw"></i>
-  </button>
 
-  <button id="fullscreenBtn" class="fab-btn" title="Schermo intero">
-    <i data-lucide="maximize-2"></i>
-  </button>
 
-  <button id="settingsBtn" class="fab-btn" title="Impostazioni" aria-label="Impostazioni">
-    <i data-lucide="settings"></i>
-    <span class="fab-badge" id="settingsBadge" hidden></span>
-  </button>
 
-  <div id="settingsBackdrop" hidden></div>
-  <section id="settingsSheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
+  <div id="fabStack">
+    <button id="shareBtn" class="fab-btn" title="Condividi questa posizione">
+      <i data-lucide="share-2"></i>
+    </button>
+    <button id="gpsBtn" class="fab-btn" title="La mia posizione">
+      <i data-lucide="locate-fixed"></i>
+    </button>
+    <button id="refreshBtn" class="fab-btn" title="Aggiorna dati (tieni premuto per lo stato dei provider)">
+      <i data-lucide="refresh-cw"></i>
+    </button>
+    <button id="fullscreenBtn" class="fab-btn" title="Schermo intero">
+      <i data-lucide="maximize-2"></i>
+    </button>
+    <button id="legendBtn" class="fab-btn" title="Legenda" aria-label="Legenda">
+      <i data-lucide="info"></i>
+    </button>
+    <button id="settingsBtn" class="fab-btn" title="Impostazioni" aria-label="Impostazioni">
+      <i data-lucide="settings"></i>
+      <span class="fab-badge" id="settingsBadge" hidden></span>
+    </button>
+  </div>
+
+  <div id="sheetBackdrop" class="sheet-backdrop" hidden></div>
+  <section id="settingsSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
     <header class="sheet-header">
       <h2 id="settingsTitle">Impostazioni</h2>
-      <button type="button" class="sheet-close" id="settingsClose" aria-label="Chiudi"><i data-lucide="x"></i></button>
+      <button type="button" class="sheet-close" aria-label="Chiudi"><i data-lucide="x"></i></button>
     </header>
     <div class="sheet-body">
       <div class="set-group">
@@ -646,8 +651,8 @@
             <span class="set-label"><i data-lucide="palette"></i> Stile della mappa</span>
             <div class="segmented" id="mapStyleControl">
               <button type="button" data-style="osm">Standard</button>
-              <button type="button" data-style="voyager">Essenziale</button>
               <button type="button" data-style="light">Chiaro</button>
+              <button type="button" data-style="satellite">Satellite</button>
             </div>
           </div>
         </div>
@@ -698,7 +703,23 @@
       </div>
 
       <div class="set-group">
-        <div class="set-title">Legenda</div>
+        <div class="set-title">Informazioni</div>
+        <div class="set-card">
+          <a class="set-row link" href="https://github.com/AndreaDp271/Park_finder" target="_blank" rel="noopener"><span class="set-label"><i data-lucide="github"></i> Codice sorgente</span><i data-lucide="chevron-right" class="chev"></i></a>
+          <a class="set-row link" href="https://github.com/AndreaDp271/Park_finder/issues/new" target="_blank" rel="noopener"><span class="set-label"><i data-lucide="message-circle"></i> Segnala un problema</span><i data-lucide="chevron-right" class="chev"></i></a>
+          <a class="set-row link" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener"><span class="set-label"><i data-lucide="map"></i> Dati © OpenStreetMap contributors</span><i data-lucide="chevron-right" class="chev"></i></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="legendSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="legendTitle" hidden>
+    <header class="sheet-header">
+      <h2 id="legendTitle">Legenda</h2>
+      <button type="button" class="sheet-close" aria-label="Chiudi"><i data-lucide="x"></i></button>
+    </header>
+    <div class="sheet-body">
+      <div class="set-group">
         <div class="set-card legend-card">
           <div class="legend-section-title">Aree di sosta</div>
           <div class="legend-grid">
@@ -722,14 +743,6 @@
         </div>
       </div>
 
-      <div class="set-group">
-        <div class="set-title">Informazioni</div>
-        <div class="set-card">
-          <a class="set-row link" href="https://github.com/AndreaDp271/Park_finder" target="_blank" rel="noopener"><span class="set-label"><i data-lucide="github"></i> Codice sorgente</span><i data-lucide="chevron-right" class="chev"></i></a>
-          <a class="set-row link" href="https://github.com/AndreaDp271/Park_finder/issues/new" target="_blank" rel="noopener"><span class="set-label"><i data-lucide="message-circle"></i> Segnala un problema</span><i data-lucide="chevron-right" class="chev"></i></a>
-          <a class="set-row link" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener"><span class="set-label"><i data-lucide="map"></i> Dati © OpenStreetMap contributors</span><i data-lucide="chevron-right" class="chev"></i></a>
-        </div>
-      </div>
     </div>
   </section>
 
@@ -809,15 +822,28 @@
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
     const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>';
-    const CARTO_ATTRIBUTION = OSM_ATTRIBUTION + ' &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>';
+    // Solo fonti utilizzabili senza chiave API (CARTO ora la richiede: le sue
+    // tessere mostrano "API KEY REQUIRED").
     const MAP_STYLES = {
       osm: { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', maxNativeZoom: 19, attribution: OSM_ATTRIBUTION },
-      voyager: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', subdomains: 'abcd', maxNativeZoom: 20, attribution: CARTO_ATTRIBUTION },
-      light: { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', subdomains: 'abcd', maxNativeZoom: 20, attribution: CARTO_ATTRIBUTION }
+      light: {
+        url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', maxNativeZoom: 19,
+        attribution: OSM_ATTRIBUTION + ', stile <a href="https://www.hotosm.org/" target="_blank">Humanitarian OSM Team</a>'
+      },
+      satellite: {
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', maxNativeZoom: 19,
+        attribution: 'Immagini &copy; Esri, Maxar, Earthstar Geographics | ' + OSM_ATTRIBUTION
+      }
     };
     let baseLayer = null;
     function applyMapStyle(name) {
-      const style = MAP_STYLES[name] || MAP_STYLES.osm;
+      if (!MAP_STYLES[name]) {
+        // Stile salvato da una versione precedente e non più disponibile
+        name = 'osm';
+        settings.mapStyle = name;
+        saveSettings();
+      }
+      const style = MAP_STYLES[name];
       if (baseLayer) map.removeLayer(baseLayer);
       baseLayer = L.tileLayer(style.url, {
         maxZoom: 20,
@@ -2661,7 +2687,9 @@
 
     /* ===== Pagina Impostazioni ===== */
     const settingsSheetEl = document.getElementById('settingsSheet');
-    const settingsBackdropEl = document.getElementById('settingsBackdrop');
+    const legendSheetEl = document.getElementById('legendSheet');
+    const sheetBackdropEl = document.getElementById('sheetBackdrop');
+    let openSheetEl = null;
 
     function formatBytes(n) {
       if (n < 1024) return n + ' B';
@@ -2699,30 +2727,40 @@
       renderUpdateInfo();
     }
 
+    // Fogli dal basso (Impostazioni, Legenda): uno solo aperto alla volta
+    function openSheet(sheet) {
+      if (openSheetEl === sheet) return;
+      if (openSheetEl) closeSheet(true);
+      openSheetEl = sheet;
+      sheetBackdropEl.hidden = false;
+      sheet.hidden = false;
+      sheet.querySelector('.sheet-body').scrollTop = 0;
+      // Il tasto "indietro" di Android (e del browser) chiude il foglio invece di uscire
+      history.pushState({ sheet: sheet.id }, '');
+    }
+
+    function closeSheet(fromHistory) {
+      if (!openSheetEl) return;
+      openSheetEl.hidden = true;
+      sheetBackdropEl.hidden = true;
+      openSheetEl = null;
+      if (!fromHistory && history.state && history.state.sheet) history.back();
+    }
+
     function openSettings() {
       refreshSettingsUI();
-      settingsBackdropEl.hidden = false;
-      settingsSheetEl.hidden = false;
-      settingsSheetEl.querySelector('.sheet-body').scrollTop = 0;
-      // Il tasto "indietro" di Android (e del browser) chiude il foglio invece di uscire
-      history.pushState({ settings: true }, '');
+      openSheet(settingsSheetEl);
     }
 
-    function closeSettings(fromHistory) {
-      if (settingsSheetEl.hidden) return;
-      settingsSheetEl.hidden = true;
-      settingsBackdropEl.hidden = true;
-      if (!fromHistory && history.state && history.state.settings) history.back();
-    }
-
-    window.addEventListener('popstate', () => closeSettings(true));
+    window.addEventListener('popstate', () => closeSheet(true));
     document.getElementById('settingsBtn').onclick = openSettings;
+    document.getElementById('legendBtn').onclick = () => openSheet(legendSheetEl);
     const titleBadgeEl = document.getElementById('titleBadge');
     titleBadgeEl.onclick = openSettings;
     titleBadgeEl.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSettings(); } };
-    document.getElementById('settingsClose').onclick = () => closeSettings();
-    settingsBackdropEl.onclick = () => closeSettings();
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !diagPanelEl) closeSettings(); });
+    document.querySelectorAll('.sheet .sheet-close').forEach(b => { b.onclick = () => closeSheet(); });
+    sheetBackdropEl.onclick = () => closeSheet();
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !diagPanelEl) closeSheet(); });
 
     document.querySelectorAll('#mapStyleControl button').forEach(btn => {
       btn.onclick = () => {
@@ -2743,7 +2781,7 @@
     document.getElementById('setShowAccuracy').onchange = (e) => { settings.showAccuracy = e.target.checked; saveSettings(); applyAccuracyVisibility(); };
     document.getElementById('setAutoUpdate').onchange = (e) => { settings.autoUpdateCheck = e.target.checked; saveSettings(); };
 
-    document.getElementById('setRefreshData').onclick = () => { closeSettings(); refreshAllData(); };
+    document.getElementById('setRefreshData').onclick = () => { closeSheet(); refreshAllData(); };
     document.getElementById('setClearCache').onclick = () => {
       clearPersistedTiles();
       tileStore.clear();
