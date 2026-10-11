@@ -649,8 +649,12 @@
     // I vettori sono disegnati in SVG con un margine di mezzo schermo per lato
     // (default Leaflet: 10%): trascinando la mappa le zone vicine sono già
     // disegnate, invece di restare vuote finché non si rilascia il dito.
-    // (Il canvas qui sarebbe peggio: a parità di margine occupa molta memoria
-    // sui telefoni ad alta densità, mentre gli elementi visibili sono pochi.)
+    // NON usare preferCanvas/L.canvas: ogni pane personalizzato avrebbe il suo
+    // <canvas>, che intercetta i click su tutta la mappa, e quello del pane
+    // più alto (posizione utente) impedisce di aprire i popup degli elementi
+    // sottostanti. L'SVG di Leaflet invece lascia passare i click (solo i
+    // singoli path interattivi li ricevono). In più il canvas, a parità di
+    // margine, occupa molta memoria sui telefoni ad alta densità.
     L.SVG.mergeOptions({ padding: 0.5 });
     var map = L.map('map', { zoomControl: false }).setView(initialView[0], initialView[1]);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
