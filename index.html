@@ -1303,8 +1303,9 @@
     // vengono mostrate subito e aggiornate in background.
     // Fonte dei dati: in Italia i file statici precalcolati ogni notte e
     // pubblicati con il sito (vedi scripts/build_tiles.py), serviti da CDN in
-    // pochi millisecondi; fuori dall'area coperta (o se i file non ci sono, es.
-    // in locale) Overpass, a blocchi 3x3 partendo da quello al centro.
+    // pochi millisecondi; nel resto del mondo (o se i file non ci sono, es. in
+    // locale) Postpass, con Overpass come riserva, a blocchi 3x3 partendo da
+    // quello al centro.
     const TILE_DEG = 0.01;
     const TILE_FRESH_MS = 6 * 60 * 60 * 1000;   // entro 6 ore una tessera non si riscarica
     const TILE_PERSIST_PREFIX = 'parkTile_v1:';
@@ -1578,6 +1579,72 @@
       );out body geom qt;`;
     }
 
+    // ─── Postpass (Geofabrik/FOSSGIS): fonte principale fuori dai dati statici ───
+    // Database PostGIS di tutto il mondo aggiornato al minuto, interrogabile in
+    // SQL dal browser: risponde in 0.2-0.8 s anche dove i mirror Overpass sono
+    // fermi. Overpass resta come riserva se Postpass non risponde.
+    const POSTPASS_URL = 'https://postpass.geofabrik.de/api/interpreter';
+    const POSTPASS_LABEL = 'postpass.geofabrik.de';
+    const POSTPASS_TIMEOUT_MS = 12000;
+    const OSM_TYPE_NAMES = { N: 'node', W: 'way', R: 'relation' };
+
+    function postpassParkingSql(s, w, n, e) {
+      // "<> 'normal'" esclude anche gli stalli senza parking_space (NULL)
+      return `SELECT osm_type, osm_id, tags, geom FROM postpass_pointlinepolygon WHERE (` +
+        `tags->>'amenity' = 'parking' OR ` +
+        `(tags->>'amenity' = 'parking_space' AND tags->>'parking_space' <> 'normal') OR ` +
+        `(tags->>'amenity' = 'vending_machine' AND tags->>'vending' = 'parking_tickets')` +
+        `) AND geom && ST_MakeEnvelope(${w},${s},${e},${n},4326)`;
+    }
+
+    async function fetchPostpass(sql, externalSignal) {
+      overpassDiagState[POSTPASS_LABEL] = 'loading';
+      updateDiagCell(POSTPASS_LABEL);
+      try {
+        const res = await fetch(POSTPASS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'data=' + encodeURIComponent(sql),
+          signal: combineSignals(externalSignal, AbortSignal.timeout(POSTPASS_TIMEOUT_MS))
+        });
+        overpassDiagReachable[POSTPASS_LABEL] = true;
+        updateDiagReach(POSTPASS_LABEL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        overpassDiagState[POSTPASS_LABEL] = 'success';
+        updateDiagCell(POSTPASS_LABEL);
+        return data;
+      } catch (err) {
+        overpassDiagState[POSTPASS_LABEL] = 'failed';
+        updateDiagCell(POSTPASS_LABEL);
+        throw err;
+      }
+    }
+
+    // GeoJSON di Postpass -> stesso formato degli elementi Overpass usato dal render.
+    // Dei multipoligoni (relazioni) si disegna l'anello esterno più grande.
+    function postpassToElements(fc) {
+      return (fc.features || []).map(f => {
+        const p = f.properties || {}, g = f.geometry;
+        if (!g || p.osm_id == null) return null;
+        const el = { type: OSM_TYPE_NAMES[p.osm_type] || 'way', id: p.osm_id, tags: p.tags || {} };
+        if (g.type === 'Point') {
+          el.lat = g.coordinates[1];
+          el.lon = g.coordinates[0];
+          return el;
+        }
+        let ring = null;
+        if (g.type === 'LineString') ring = g.coordinates;
+        else if (g.type === 'Polygon') ring = g.coordinates[0];
+        else if (g.type === 'MultiPolygon') {
+          g.coordinates.forEach(poly => { if (!ring || poly[0].length > ring.length) ring = poly[0]; });
+        }
+        if (!ring || ring.length < 2) return null;
+        el.geometry = ring.map(c => ({ lat: c[1], lon: c[0] }));
+        return el;
+      }).filter(Boolean);
+    }
+
     async function fetchBlock(block) {
       const gen = loadGeneration;
       const rect = {
@@ -1591,14 +1658,30 @@
       activeBlocks++;
       updateLoadingUi();
 
-      const query = buildParkingQuery(
+      const bbox = [
         (rect.i0 * TILE_DEG).toFixed(4), (rect.j0 * TILE_DEG).toFixed(4),
         ((rect.i1 + 1) * TILE_DEG).toFixed(4), ((rect.j1 + 1) * TILE_DEG).toFixed(4)
-      );
+      ];
       const controller = new AbortController();
       inflightControllers.add(controller);
 
       try {
+        let fromPostpass = null;
+        try {
+          fromPostpass = postpassToElements(await fetchPostpass(postpassParkingSql(...bbox), controller.signal));
+        } catch (err) {
+          if (controller.signal.aborted) throw err; // "Aggiorna": risposta da scartare
+          console.warn('Postpass non disponibile, uso Overpass:', err.message);
+        }
+        if (fromPostpass) {
+          if (gen === loadGeneration) {
+            applyBlockData({ elements: fromPostpass }, rect, true);
+            consecutiveFailures = 0;
+          }
+          return;
+        }
+
+        const query = buildParkingQuery(...bbox);
         let lastRendered = null, settled = false;
         const data = await fetchOverpassRace(query, controller.signal, (partial) => {
           // Mostra subito il primo dato utile; renderParking è additivo, quindi
@@ -1882,71 +1965,92 @@
       });
     }
 
-    // Un CAP italiano (5 cifre) viene cercato tra i nodi OSM reali (postal_code/addr:postcode),
-    // non tramite Nominatim: quello restituirebbe il centroide calcolato sull'area del CAP,
-    // non un punto effettivamente presente sulla mappa.
-    // Bounding box dell'Italia: evita di far calcolare a Overpass l'area del confine
-    // amministrativo (lento e spesso in timeout sui mirror pubblici gratuiti).
-    const ITALY_BBOX = '35.2,6.6,47.3,18.6';
+    // ─── Ricerca località (tutto il mondo) ───
+    // Prima si cercano i nodi OSM reali vicini alla zona visualizzata (Postpass,
+    // 0.2 s), poi Nominatim su tutto il mondo. I risultati vicini vengono prima:
+    // "Valencia" cercata dall'Italia porta comunque in Spagna, ma tra due
+    // omonimi vince quello più vicino.
 
-    // Per le ricerche puntuali (CAP/città) alcuni mirror hanno dati incompleti e rispondono vuoti
-    // pur avendo l'endpoint online: si interrogano tutti i mirror in parallelo e vince il primo
-    // che trova qualcosa (gli altri vengono annullati). Se nessuno trova nulla, risultato vuoto.
-    function fetchOverpassPreferNonEmpty(query) {
-      return new Promise(resolve => {
-        let pending = OVERPASS_MIRRORS.length, firstOk = null, done = false;
-        const controller = new AbortController();
-
-        OVERPASS_MIRRORS.forEach(endpoint => {
-          fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'data=' + encodeURIComponent(query),
-            signal: combineSignals(controller.signal, AbortSignal.timeout(OVERPASS_TIMEOUT_MS))
-          })
-            .then(response => {
-              if (!response.ok) throw new Error(`HTTP ${response.status}`);
-              return response.json();
-            })
-            .then(data => {
-              if (done) return;
-              if (data && data.elements && data.elements.length) {
-                done = true;
-                controller.abort();
-                resolve(data);
-              } else if (!firstOk) {
-                firstOk = data;
-              }
-            })
-            .catch(err => { if (!done) console.warn('Overpass mirror fallito:', endpoint, err.message); })
-            .finally(() => {
-              if (--pending === 0 && !done) { done = true; resolve(firstOk || { elements: [] }); }
-            });
-        });
-      });
+    // Riquadro di ±deg gradi attorno al centro della mappa, per le ricerche "vicine"
+    function boxAroundView(deg) {
+      const c = map.getCenter();
+      return {
+        s: Math.max(-90, c.lat - deg), n: Math.min(90, c.lat + deg),
+        w: Math.max(-180, c.lng - deg), e: Math.min(180, c.lng + deg)
+      };
     }
 
-    async function geocodeCapFromOsm(cap) {
-      const query = `[out:json][timeout:25];
-        (
-          node["postal_code"="${cap}"](${ITALY_BBOX});
-          node["addr:postcode"="${cap}"](${ITALY_BBOX});
-        );
-        out body 5;`;
+    function sqlString(s) { return "'" + String(s).replace(/'/g, "''") + "'"; }
 
-      try {
-        const data = await fetchOverpassPreferNonEmpty(query);
-        const el = data && data.elements && data.elements[0];
-        if (!el || el.lat == null) return false;
+    function distanceFromView(lat, lon) { return map.distance(map.getCenter(), L.latLng(lat, lon)); }
 
-        map.setView([el.lat, el.lon], 15);
+    // Nodi OSM (tabella punti di Postpass) che soddisfano `where` dentro il riquadro
+    async function postpassPoints(where, box, limit, timeoutMs) {
+      const sql = `SELECT osm_type, osm_id, tags, geom FROM postpass_point WHERE ${where} ` +
+        `AND geom && ST_MakeEnvelope(${box.w},${box.s},${box.e},${box.n},4326) LIMIT ${limit}`;
+      const res = await fetch(POSTPASS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'data=' + encodeURIComponent(sql),
+        signal: AbortSignal.timeout(timeoutMs)
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const fc = await res.json();
+      return (fc.features || [])
+        .filter(f => f.geometry && f.geometry.type === 'Point')
+        .map(f => ({ lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0], tags: f.properties.tags || {} }));
+    }
+
+    async function nominatimSearch(params) {
+      const url = 'https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&' + params;
+      const res = await fetch(url, { headers: { 'Accept-Language': navigator.language || 'it' } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    // Codice postale: il nodo OSM reale più vicino (postal_code / addr:postcode),
+    // non il centroide calcolato da Nominatim sull'area del CAP; se nei dintorni
+    // non c'è, Nominatim in tutto il mondo (es. un CAP francese cercato dall'Italia).
+    async function geocodePostcode(code) {
+      const worldwide = nominatimSearch('postalcode=' + encodeURIComponent(code) + '&limit=10').catch(() => []);
+      const nearby = postpassPoints(
+        `(tags->>'postal_code' = ${sqlString(code)} OR tags->>'addr:postcode' = ${sqlString(code)})`,
+        boxAroundView(3), 5, 5000
+      ).catch(err => { console.warn('Ricerca CAP vicina non riuscita:', err.message); return []; });
+
+      // Il nodo reale vicino ha la precedenza, ma se nei dintorni il CAP non
+      // esiste (es. un CAP francese cercato dall'Italia) non lo si aspetta fino
+      // al timeout: al massimo 1.5 s in più rispetto alla risposta di Nominatim.
+      await worldwide;
+      const near = await Promise.race([nearby, new Promise(r => setTimeout(() => r([]), 1500))]);
+
+      if (near.length) {
+        near.sort((a, b) => distanceFromView(a.lat, a.lon) - distanceFromView(b.lat, b.lon));
+        map.setView([near[0].lat, near[0].lon], 15);
         setStatus('CAP trovato');
         setTimeout(() => setStatus(''), 1200);
         return true;
-      } catch (err) {
-        console.warn('Errore ricerca CAP:', err);
-        return false;
       }
+
+      const results = (await worldwide).map(r => {
+        const a = r.address || {};
+        return {
+          lat: +r.lat, lon: +r.lon,
+          name: code,
+          display_name: [code, a.city || a.town || a.village || a.county, a.country].filter(Boolean).join(', ')
+        };
+      }).sort((a, b) => distanceFromView(a.lat, a.lon) - distanceFromView(b.lat, b.lon));
+
+      if (!results.length) return false;
+      if (results.length === 1) {
+        map.setView([results[0].lat, results[0].lon], 15);
+        setStatus('CAP trovato');
+        setTimeout(() => setStatus(''), 1200);
+      } else {
+        showSearchResults(results.slice(0, 6));
+        setStatus('Seleziona un risultato');
+      }
+      return true;
     }
 
     const placeTypeLabels = {
@@ -1963,23 +2067,19 @@
       }).join(' ');
     }
 
-    // Cerca il nodo OSM reale place=* con corrispondenza esatta sul nome (es. https://www.openstreetmap.org/node/64778671).
-    // Il confronto "=" usa l'indice dei valori di Overpass ed è quasi istantaneo; una ricerca con
-    // regex "~" su tutta Italia, invece, deve scansionare ogni nodo con tag place e va in timeout
-    // sui mirror pubblici (verificato: 26s di timeout anche per una singola città).
+    // Nodo OSM reale place=* con il nome esatto, entro ~600 km dalla zona visualizzata
+    // (es. https://www.openstreetmap.org/node/64778671): risponde in ~0.2 s.
     async function geocodeExactPlaceNode(q) {
-      const name = toItalianTitleCase(q).replace(/"/g, '\\"');
-      const query = `[out:json][timeout:15];(node["place"]["name"="${name}"](${ITALY_BBOX}););out body 5;`;
-
+      const names = [...new Set([q.trim(), toItalianTitleCase(q)])].map(sqlString).join(',');
       try {
-        const data = await fetchOverpassPreferNonEmpty(query);
-        return (data.elements || [])
-          .filter(el => el.lat != null && el.tags)
-          .map(el => ({
-            lat: el.lat,
-            lon: el.lon,
-            name: el.tags.name,
-            display_name: el.tags.name + (placeTypeLabels[el.tags.place] ? ` (${placeTypeLabels[el.tags.place]})` : '')
+        const points = await postpassPoints(`tags ? 'place' AND tags->>'name' IN (${names})`, boxAroundView(6), 10, 5000);
+        return points
+          .sort((a, b) => distanceFromView(a.lat, a.lon) - distanceFromView(b.lat, b.lon))
+          .map(p => ({
+            lat: p.lat,
+            lon: p.lon,
+            name: p.tags.name,
+            display_name: p.tags.name + (placeTypeLabels[p.tags.place] ? ` (${placeTypeLabels[p.tags.place]})` : '')
           }));
       } catch (err) {
         console.warn('Errore ricerca nodo esatto:', err);
@@ -1987,25 +2087,12 @@
       }
     }
 
-    // Fallback via Nominatim: per alcune città importanti (es. capoluoghi di provincia) il nodo
-    // place=* viene "assorbito" da Nominatim nel confine amministrativo e non compare nei risultati,
-    // quindi qui accettiamo anche relation/way di tipo boundary come ultima spiaggia.
-    async function geocodePlaceFromOsm(q) {
-      const exact = await geocodeExactPlaceNode(q);
-      if (exact.length) return exact.slice(0, 6);
-
-      const url =
-        'https://nominatim.openstreetmap.org/search?format=json' +
-        '&addressdetails=1' +
-        '&countrycodes=it' +
-        '&q=' + encodeURIComponent(q) +
-        '&limit=25';
-
+    // Nominatim su tutto il mondo. Per alcune città importanti il nodo place=* viene
+    // "assorbito" nel confine amministrativo, quindi si accettano anche i boundary.
+    async function geocodePlaceWorldwide(q) {
       try {
-        const res = await fetch(url, { headers: { 'Accept-Language': 'it' } });
-        const results = await res.json();
+        const results = await nominatimSearch('q=' + encodeURIComponent(q) + '&limit=25');
         if (!results || !results.length) return [];
-
         const qLower = q.trim().toLowerCase();
 
         return results
@@ -2014,15 +2101,18 @@
           .map(r => {
             const name = (r.display_name.split(',')[0] || '').trim();
             const label = placeTypeLabels[r.type] || (r.addresstype ? placeTypeLabels[r.addresstype] : null);
+            const country = r.address && r.address.country;
             return {
-              lat: r.lat,
-              lon: r.lon,
+              lat: +r.lat,
+              lon: +r.lon,
               name,
-              display_name: label ? `${name} (${label})` : name
+              display_name: (label ? `${name} (${label})` : name) + (country ? `, ${country}` : '')
             };
           })
-          // Il nome identico alla ricerca (es. "Treviso") prima delle frazioni/quartieri omonimi
-          .sort((a, b) => (a.name.toLowerCase() === qLower ? -1 : 0) - (b.name.toLowerCase() === qLower ? -1 : 0))
+          // Il nome identico alla ricerca prima delle frazioni omonime, poi i più vicini
+          .sort((a, b) =>
+            ((a.name.toLowerCase() === qLower ? 0 : 1) - (b.name.toLowerCase() === qLower ? 0 : 1)) ||
+            (distanceFromView(a.lat, a.lon) - distanceFromView(b.lat, b.lon)))
           .slice(0, 6);
       } catch (err) {
         console.warn('Errore ricerca città:', err);
@@ -2036,18 +2126,21 @@
       showSearchResults([]);
       setStatus('Cerco località...');
 
-      const isCap = /^\d{5}$/.test(q);
-      if (isCap) {
-        const found = await geocodeCapFromOsm(q);
-        if (found) return;
+      // Codici postali numerici (IT, FR, DE, ES, US: 5 cifre; CH, AT, BE...: 4; ecc.)
+      if (/^\d{4,6}$/.test(q)) {
+        if (await geocodePostcode(q)) return;
         setStatus('CAP non trovato su OSM');
         return;
       }
 
-      const placeResults = await geocodePlaceFromOsm(q);
+      // Vicino (Postpass) e mondo (Nominatim) in parallelo: si mostra il vicino
+      // se c'è, altrimenti il risultato mondiale, senza attendere due volte.
+      const worldwide = geocodePlaceWorldwide(q);
+      let placeResults = await geocodeExactPlaceNode(q);
+      if (!placeResults.length) placeResults = await worldwide;
       if (!placeResults.length) { setStatus('Nessun risultato'); return; }
 
-      showSearchResults(placeResults);
+      showSearchResults(placeResults.slice(0, 6));
       setStatus('Seleziona un risultato');
     }
 
@@ -2276,8 +2369,8 @@
           <table class="diag-table">
             <thead><tr><th>Provider</th><th>Rete</th><th>Query</th></tr></thead>
             <tbody>
-              ${OVERPASS_MIRRORS.map(url => {
-                const label = shortOverpassLabel(url);
+              ${[POSTPASS_URL, ...OVERPASS_MIRRORS].map(url => {
+                const label = url === POSTPASS_URL ? POSTPASS_LABEL : shortOverpassLabel(url);
                 return `<tr>
                   <td class="diag-provider">${escapeHtml(label)}</td>
                   <td class="diag-icon-cell diag-reach-cell" data-label="${escapeHtml(label)}">${diagIconHtml(overpassDiagReachable[label] === true ? 'success' : (overpassDiagReachable[label] === false ? 'failed' : ''))}</td>
