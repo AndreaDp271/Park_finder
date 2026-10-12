@@ -61,7 +61,7 @@ jobs:
           # Prefiltro veloce in C++: resta un file piccolo con i soli oggetti utili
           # (più i nodi delle way, necessari per la geometria)
           osmium tags-filter work/italy.osm.pbf \
-            nw/amenity=parking nw/amenity=parking_space nw/amenity=vending_machine \
+            nw/amenity=parking nw/amenity=parking_space nw/amenity=vending_machine             nw/amenity=charging_station nw/amenity=motorcycle_parking nw/amenity=bicycle_parking \
             -o work/parking.osm.pbf --overwrite
           rm -rf data
           python scripts/build_tiles.py work/parking.osm.pbf work/italy.poly data

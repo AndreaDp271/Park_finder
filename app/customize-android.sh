@@ -13,13 +13,23 @@ sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#&\n    
 grep -q ACCESS_FINE_LOCATION "$MANIFEST" || { echo "permessi non inseriti nel manifest" >&2; exit 1; }
 
 # Codice nativo di ParkMap (app/native): MainActivity con il plugin locale,
-# widget "La mia auto". Sovrascrive la MainActivity generata.
+# widget "La mia auto", salvataggio dell'auto alla disconnessione dal
+# Bluetooth e scorciatoie dell'icona. Sovrascrive la MainActivity generata.
 cp -r ../native/java/. app/src/main/java/
 cp -r ../native/res/. app/src/main/res/
 python3 - "$MANIFEST" <<'PY'
 import sys
 path = sys.argv[1]
 s = open(path, encoding='utf-8').read()
+perms = '''    <!-- Salvataggio automatico dell'auto via Bluetooth: dispositivi associati
+         (Android 12+), eventi di disconnessione (fino ad Android 11) e posizione
+         letta con l'app in background -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+
+'''
 block = '''
         <!-- Widget "La mia auto" -->
         <receiver
@@ -33,12 +43,28 @@ block = '''
                 android:name="android.appwidget.provider"
                 android:resource="@xml/parkmap_widget_info" />
         </receiver>
+
+        <!-- Disconnessione dal Bluetooth dell'auto: la invia lo stack Bluetooth,
+             che ha un proprio utente di sistema, quindi exported="true" -->
+        <receiver
+            android:name=".BluetoothCarReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.bluetooth.device.action.ACL_DISCONNECTED" />
+            </intent-filter>
+        </receiver>
 '''
-assert s.count('</application>') == 1
+assert s.count('</application>') == 1 and s.count('<application') == 1
 s = s.replace('</application>', block + '    </application>')
+s = s.replace('<application', perms + '    <application', 1)
+# Scorciatoie dell'icona sull'attività principale (quella con MAIN/LAUNCHER)
+b = s.index('</activity>', s.index('android.intent.category.LAUNCHER'))
+s = s[:b] + '    <meta-data android:name="android.app.shortcuts" android:resource="@xml/parkmap_shortcuts" />\n        ' + s[b:]
 open(path, 'w', encoding='utf-8').write(s)
 PY
-grep -q "ParkMapWidget" "$MANIFEST" || { echo "manifest: widget non inserito" >&2; exit 1; }
+for what in ParkMapWidget BluetoothCarReceiver android.app.shortcuts BLUETOOTH_CONNECT; do
+  grep -q "$what" "$MANIFEST" || { echo "manifest: $what non inserito" >&2; exit 1; }
+done
 
 # Versione: cresce a ogni build, così Android accetta l'aggiornamento sopra la precedente
 sed -i -E "s/versionCode [0-9]+/versionCode ${BUILD}/; s/versionName \"[^\"]*\"/versionName \"1.0.${BUILD}\"/" app/build.gradle

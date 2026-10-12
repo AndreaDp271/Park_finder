@@ -5,11 +5,13 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.location.Location;
 import org.json.JSONObject;
 
 /**
- * Stato condiviso tra la pagina web (tramite ParkMapNativePlugin) e il widget:
- * la posizione dell'auto e l'azione chiesta dal widget.
+ * Stato condiviso tra la pagina web (tramite ParkMapNativePlugin), il widget
+ * e il salvataggio automatico via Bluetooth: la posizione dell'auto, l'azione
+ * chiesta da widget/scorciatoie e l'auto scelta per il Bluetooth.
  * L'auto è un JSON {lat, lon, ts, expiry} come in localStorage ("parkCar_v1").
  */
 public final class ParkMapState {
@@ -20,6 +22,10 @@ public final class ParkMapState {
     private static final String PREFS = "parkmap";
     private static final String KEY_CAR = "car";
     private static final String KEY_PENDING = "pending_action";
+    // Auto salvata dal lato nativo (Bluetooth) che la pagina non ha ancora letto
+    private static final String KEY_PENDING_CAR = "pending_car";
+    private static final String KEY_BT_ADDRESS = "bt_address";
+    private static final String KEY_BT_NAME = "bt_name";
 
     private ParkMapState() {}
 
@@ -51,12 +57,52 @@ public final class ParkMapState {
         scheduleWidgetRefreshAtExpiry(ctx);
     }
 
+    /** Auto salvata alla disconnessione dal Bluetooth: la pagina la adotta con takePendingCar. */
+    public static void saveCarFromBluetooth(Context ctx, Location loc, String deviceName) {
+        try {
+            JSONObject car = new JSONObject();
+            car.put("lat", Math.round(loc.getLatitude() * 1e6) / 1e6);
+            car.put("lon", Math.round(loc.getLongitude() * 1e6) / 1e6);
+            car.put("ts", System.currentTimeMillis());
+            car.put("expiry", JSONObject.NULL);
+            car.put("source", "bluetooth");
+            if (loc.hasAccuracy()) car.put("acc", Math.round(loc.getAccuracy()));
+            if (deviceName != null) car.put("device", deviceName);
+            String json = car.toString();
+            prefs(ctx).edit().putString(KEY_PENDING_CAR, json).apply();
+            setCarJson(ctx, json);
+        } catch (Exception ignored) {
+        }
+    }
+
+    public static String takePendingCar(Context ctx) {
+        SharedPreferences p = prefs(ctx);
+        String json = p.getString(KEY_PENDING_CAR, null);
+        if (json != null) p.edit().remove(KEY_PENDING_CAR).apply();
+        return json;
+    }
+
+    public static String getBluetoothAddress(Context ctx) {
+        return prefs(ctx).getString(KEY_BT_ADDRESS, null);
+    }
+
+    public static String getBluetoothName(Context ctx) {
+        return prefs(ctx).getString(KEY_BT_NAME, null);
+    }
+
+    public static void setBluetoothCar(Context ctx, String address, String name) {
+        SharedPreferences.Editor ed = prefs(ctx).edit();
+        if (address == null) ed.remove(KEY_BT_ADDRESS).remove(KEY_BT_NAME);
+        else ed.putString(KEY_BT_ADDRESS, address).putString(KEY_BT_NAME, name);
+        ed.apply();
+    }
+
     public static long getExpiry(JSONObject car) {
         if (car == null || car.isNull("expiry")) return 0;
         return car.optLong("expiry", 0);
     }
 
-    /** Il widget apre l'app con un'azione: la pagina la legge con takePendingAction. */
+    /** Widget e scorciatoie aprono l'app con un'azione: la pagina la legge con takePendingAction. */
     public static void storePendingAction(Context ctx, Intent intent) {
         if (intent == null) return;
         String action = intent.getStringExtra(EXTRA_ACTION);

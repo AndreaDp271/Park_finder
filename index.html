@@ -397,7 +397,7 @@
     .set-row.link{ cursor:pointer; }
     .set-row.link:active{ background:var(--surface-2); }
     label.set-row{ cursor:pointer; }
-    .set-row[hidden], .set-actions [hidden]{ display:none !important; }
+    .set-row[hidden], .set-actions[hidden], .set-actions [hidden]{ display:none !important; }
     .set-label{ display:flex; align-items:center; gap:12px; min-width:0; }
     .set-label > i, .set-label > svg{ width:20px; height:20px; color:var(--primary-dark); flex-shrink:0; }
     .set-value{ color:var(--text-light); font-size:13.5px; text-align:right; }
@@ -689,6 +689,8 @@
     .ctx-title{ font-weight:700; font-size:13px; color:var(--text-light); margin:0 30px 4px 2px; }
     .ctx-menu .set-btn{ justify-content:flex-start; width:100%; box-sizing:border-box; height:auto; min-height:42px; padding:9px 12px; text-align:left; line-height:1.3; }
     .leaflet-container .ctx-menu a.set-btn{ color:var(--text-main); }
+    .ctx-note{ font-size:13px; line-height:1.4; color:var(--text-main); margin:-2px 2px 4px; }
+    .list-dist small{ font-weight:500; font-size:11.5px; }
 
     /* In orizzontale con poco spazio la colonna di destra va su due colonne */
     @media (max-height:520px){
@@ -726,6 +728,42 @@
     html[data-theme="dark"] .badge-note.time{ background:#2e1f4d; color:#c4b5fd; border-color:#4c1d95; }
     html[data-theme="dark"] .popup-links button.fav.on{ background:#3a2a0a; border-color:#92400e; color:#fbbf24; }
     html[data-theme="dark"] input.switch::after{ background:#f8fafc; }
+
+    /* ─── Colonnine, destinazione, auto condivisa ─── */
+    .ev-marker-icon, .dest-marker-icon{ background:none; border:none; }
+    .ev-marker{
+      width:22px; height:22px; border-radius:50%; box-sizing:border-box;
+      background:#059669; border:2px solid #fff; color:#fff;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow:0 1px 4px rgb(15 23 42 / 0.4);
+    }
+    .ev-marker svg{ width:12px; height:12px; fill:#fff; stroke:none; }
+    .dest-marker{ width:34px; height:42px; filter:drop-shadow(0 3px 4px rgb(15 23 42 / 0.35)); }
+    .dest-marker svg{ width:34px; height:42px; display:block; }
+    .car-marker.shared{ background:#7c3aed; }
+    .chip.dest{ background:#be123c; color:#fff; border-color:transparent; }
+    .chip .chip-x{ margin-left:2px; margin-right:-4px; width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.22); font-size:11px; }
+    .list-badge{ font-size:11px; font-weight:700; color:var(--primary-dark); background:var(--primary-light); border-radius:8px; padding:2px 7px; margin-left:6px; }
+
+    /* ─── Costo stimato nel popup ─── */
+    .cost-chips{ display:flex; flex-wrap:wrap; gap:6px; margin:2px 0 8px; }
+    .cost-chip{
+      height:30px; padding:0 11px; border-radius:15px; cursor:pointer;
+      border:1px solid var(--border); background:var(--surface-2); color:var(--text-main);
+      font:600 12px 'Inter',system-ui,sans-serif;
+    }
+    .cost-chip.active{ background:var(--primary-dark); border-color:var(--primary-dark); color:#fff; }
+    .cost-result{ font-size:13.5px; }
+    .cost-result small{ display:block; color:var(--text-light); font-weight:500; font-size:12px; margin-top:2px; }
+
+    /* ─── Foto dell'auto ─── */
+    .car-photo{ display:block; width:100%; max-height:220px; object-fit:cover; border-radius:12px; cursor:zoom-in; background:var(--surface-3); }
+    #photoViewer{ position:fixed; inset:0; z-index:3500; background:rgba(2,6,23,0.92); display:flex; align-items:center; justify-content:center; cursor:zoom-out; padding:calc(16px + var(--safe-top)) 16px calc(16px + var(--safe-bottom)); box-sizing:border-box; }
+    #photoViewer[hidden]{ display:none; }
+    #photoViewer img{ max-width:100%; max-height:100%; border-radius:10px; }
+    .bt-device{ display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:none; border:none; padding:12px 16px; font:500 14.5px 'Inter',system-ui,sans-serif; color:var(--text-main); cursor:pointer; border-top:1px solid var(--border-soft); }
+    .bt-device svg{ width:18px; height:18px; color:var(--primary-dark); flex-shrink:0; }
+    .bt-device:active{ background:var(--surface-2); }
   </style>
 </head>
 
@@ -753,11 +791,14 @@
 
   <div id="chipBar" role="toolbar" aria-label="Filtri">
     <button type="button" class="chip car" id="carChip" hidden><i data-lucide="car"></i><span id="carChipText">Auto</span></button>
+    <button type="button" class="chip dest" id="destChip" hidden><i data-lucide="flag"></i><span id="destChipText"></span><span class="chip-x" id="destChipClose" role="button" aria-label="Chiudi">✕</span></button>
     <button type="button" class="chip" data-filter="freeNow" aria-pressed="false"><i data-lucide="clock"></i> Gratis adesso</button>
     <button type="button" class="chip" data-filter="free" aria-pressed="false"><i data-lucide="circle-check"></i> Gratuiti</button>
     <button type="button" class="chip" data-filter="disc" aria-pressed="false"><i data-lucide="timer"></i> Disco orario</button>
     <button type="button" class="chip" data-filter="disabled" aria-pressed="false"><i data-lucide="accessibility"></i> Disabili</button>
     <button type="button" class="chip" data-filter="ev" aria-pressed="false"><i data-lucide="zap"></i> Ricarica EV</button>
+    <button type="button" class="chip" data-filter="moto" aria-pressed="false"><i data-lucide="bike"></i> Moto</button>
+    <button type="button" class="chip" data-filter="bike" aria-pressed="false"><i data-lucide="bike"></i> Bici</button>
   </div>
 
   <div id="fabStackLeft">
@@ -815,6 +856,14 @@
               <button type="button" data-theme-opt="dark">Scuro</button>
             </div>
           </div>
+          <div class="set-row column">
+            <span class="set-label"><i data-lucide="languages"></i> Lingua</span>
+            <div class="segmented" id="langControl">
+              <button type="button" data-lang="auto">Automatica</button>
+              <button type="button" data-lang="it">Italiano</button>
+              <button type="button" data-lang="en">English</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -838,6 +887,9 @@
           <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#60a5fa; border-color:#1d4ed8"></span> Aree di sosta</span><input type="checkbox" class="switch" data-layer="areas"></label>
           <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#fde047; border-color:#eab308"></span> Stalli speciali</span><input type="checkbox" class="switch" data-layer="spaces"></label>
           <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:var(--meter-fill); border-color:var(--meter-stroke); border-radius:50%"></span> Parcometri</span><input type="checkbox" class="switch" data-layer="meters"></label>
+          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#059669; border-color:#fff; border-radius:50%; box-shadow:0 0 0 1px #059669"></span> Colonnine di ricarica</span><input type="checkbox" class="switch" data-layer="charging"></label>
+          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#fca5a5; border-color:#b91c1c; border-radius:50%"></span> Parcheggi moto</span><input type="checkbox" class="switch" data-layer="moto"></label>
+          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#bef264; border-color:#4d7c0f; border-radius:50%"></span> Parcheggi bici</span><input type="checkbox" class="switch" data-layer="bikes"></label>
         </div>
       </div>
 
@@ -847,6 +899,21 @@
           <label class="set-row"><span class="set-label"><i data-lucide="locate-fixed"></i> Centra sulla mia posizione all'avvio</span><input type="checkbox" class="switch" id="setLocateOnStart"></label>
           <label class="set-row"><span class="set-label"><i data-lucide="circle-dashed"></i> Mostra la precisione del GPS</span><input type="checkbox" class="switch" id="setShowAccuracy"></label>
         </div>
+      </div>
+
+      <div class="set-group" id="btGroup" hidden>
+        <div class="set-title">Auto via Bluetooth</div>
+        <div class="set-card">
+          <label class="set-row"><span class="set-label"><i data-lucide="bluetooth"></i> Salva l'auto quando mi scollego</span><input type="checkbox" class="switch" id="setBtAuto"></label>
+          <div class="set-row link" id="btDeviceRow" hidden><span class="set-label"><i data-lucide="car"></i> <span id="btDeviceName">—</span></span><span class="set-value">Cambia</span></div>
+          <div id="btPicker" hidden></div>
+          <div class="set-row" id="btNoteRow" hidden><span class="set-note" id="btNote"></span></div>
+          <div class="set-actions" id="btActions" hidden>
+            <button type="button" class="set-btn primary" id="btGrant"><i data-lucide="map-pin"></i> Concedi la posizione</button>
+            <button type="button" class="set-btn" id="btOpenSettings"><i data-lucide="settings"></i> Impostazioni di Android</button>
+          </div>
+        </div>
+        <p class="set-hint">Quando il telefono si scollega dal Bluetooth dell'auto, ParkMap salva da solo dove l'hai lasciata e ti avvisa con una notifica.</p>
       </div>
 
       <div class="set-group">
@@ -914,6 +981,12 @@
           <div class="legend-grid">
             <div class="legend-item"><div class="legend-color" style="background:var(--meter-fill); border:1px solid var(--meter-stroke);"></div>Parcometro (ticket)</div>
           </div>
+          <div class="legend-section-title">Altri servizi</div>
+          <div class="legend-grid">
+            <div class="legend-item"><div class="legend-color" style="background:#059669; border:1px solid #047857; border-radius:50%;"></div>Colonnina di ricarica</div>
+            <div class="legend-item"><div class="legend-color" style="background:#fca5a5; border:1px solid #b91c1c; border-radius:50%;"></div>Parcheggio moto</div>
+            <div class="legend-item"><div class="legend-color" style="background:#bef264; border:1px solid #4d7c0f; border-radius:50%;"></div>Parcheggio bici</div>
+          </div>
         </div>
       </div>
 
@@ -926,7 +999,9 @@
       <button type="button" class="sheet-close" aria-label="Chiudi"><i data-lucide="x"></i></button>
     </header>
     <div class="sheet-body" id="carBody"></div>
+    <input type="file" id="carPhotoInput" accept="image/*" capture="environment" hidden>
   </section>
+  <div id="photoViewer" hidden role="dialog" aria-label="Foto dell'auto"><img alt=""></div>
 
   <section id="listSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="listTitle" hidden>
     <header class="sheet-header">
@@ -981,6 +1056,351 @@
   <!-- Lucide Icons: versione fissata (niente redirect di @latest) e caricata a fine body, non blocca il primo render -->
   <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 
+  <!-- Testi in inglese (i18n-en): chiave = testo italiano usato nel codice, vedi t() -->
+  <script>
+    window.PARKMAP_EN = {
+    "(segnalato con l'app ParkMap)": "(reported with the ParkMap app)",
+    "(solo)": "(only)",
+    "1 anno": "1 year",
+    "1 giorno": "1 day",
+    "1 mese": "1 month",
+    "1 minuto": "1 minute",
+    "1 ora": "1 hour",
+    "1 presa": "1 socket",
+    "1 settimana": "1 week",
+    "2 ore": "2 hours",
+    "3 ore": "3 hours",
+    "A pagamento": "Paid",
+    "A pagamento adesso": "Paid now",
+    "A pagamento nei giorni/orari: {c}": "Paid on: {c}",
+    "A pagamento, ma la tariffa non è indicata su OpenStreetMap.": "Paid, but the rate is not listed on OpenStreetMap.",
+    "A {d} da te · circa {n} min a piedi": "{d} from you · about {n} min walk",
+    "Accesso": "Access",
+    "Accesso limitato": "Restricted access",
+    "Aggiorna dati": "Refresh data",
+    "Aggiorna dati (tieni premuto per lo stato dei provider)": "Refresh data (long-press for provider status)",
+    "Aggiorna ora": "Refresh now",
+    "Aggiornamenti": "Updates",
+    "Aggiornamento dati...": "Updating data...",
+    "Allontana": "Zoom out",
+    "Altri servizi": "Other services",
+    "Altro": "Other",
+    "Ancoraggi": "Anchors",
+    "Aperto": "Open",
+    "App per \"Vai a\"": "App for \"Go\"",
+    "Archetti": "Stands",
+    "Area di sosta": "Parking area",
+    "Aree di sosta": "Parking areas",
+    "Armadietti": "Lockers",
+    "Attivo: quando ti scolleghi da {name} salvo da solo dove hai lasciato l'auto.": "On: when you disconnect from {name} I'll save where you left the car.",
+    "Auto": "Car",
+    "Auto a {d}": "Car {d} away",
+    "Auto condivisa": "Shared car",
+    "Auto via Bluetooth": "Car via Bluetooth",
+    "Automatica": "Automatic",
+    "Automatico": "Automatic",
+    "Autorizzato": "Permissive",
+    "Avvicina": "Zoom in",
+    "Bancomat / carte di debito": "Debit cards",
+    "Banconote": "Notes",
+    "Bici": "Bikes",
+    "Bluetooth non disponibile su questo telefono.": "Bluetooth is not available on this phone.",
+    "Bus": "Bus",
+    "CAP non trovato su OSM": "Postcode not found on OSM",
+    "CAP trovato": "Postcode found",
+    "CEE blu": "CEE blue",
+    "CEE rossa 16A": "CEE red 16A",
+    "CEE rossa 32A": "CEE red 32A",
+    "Cache per questa zona": "Cache for this area",
+    "Cache svuotata": "Cache cleared",
+    "Cambia": "Change",
+    "Cambia foto": "Change photo",
+    "Cancella storico": "Clear history",
+    "Caricamento parcheggi...": "Loading parking...",
+    "Carico/Scarico": "Loading",
+    "Carte": "Cards",
+    "Carte di credito": "Credit cards",
+    "Centra sulla mia posizione all'avvio": "Centre on my location at startup",
+    "Cerca": "Search",
+    "Cerca località": "Search place or address",
+    "Cerca località...": "Search place or address...",
+    "Cerco la tua posizione...": "Finding your location...",
+    "Cerco località...": "Searching...",
+    "Chiaro": "Light",
+    "Chiudi": "Close",
+    "Circa {cost} fino alle {time}": "About {cost} until {time}",
+    "Città": "City",
+    "Codice sorgente": "Source code",
+    "Colonnina di ricarica": "Charging station",
+    "Colonnine di ricarica": "Charging stations",
+    "Comune": "Town",
+    "Concedi la posizione": "Allow location",
+    "Condividi": "Share",
+    "Condividi questa posizione": "Share this location",
+    "Condizionato:": "Conditional:",
+    "Contanti": "Cash",
+    "Controlla aggiornamenti all'avvio": "Check for updates at startup",
+    "Controlla su GitHub": "Check on GitHub",
+    "Controllo in corso…": "Checking…",
+    "Coperto": "Covered",
+    "Copia il link:": "Copy the link:",
+    "Cosa non è corretto? Es. ora è a pagamento dal lunedì al sabato, 8–20.": "What is wrong? E.g. it is now paid Monday to Saturday, 8am–8pm.",
+    "Cosa vuoi segnalare?": "What do you want to report?",
+    "Costo": "Cost",
+    "Costo non indicato": "Cost not specified",
+    "Costo stimato": "Estimated cost",
+    "Dati": "Data",
+    "Dati precalcolati": "Precomputed data",
+    "Dati © OpenStreetMap contributors": "Data © OpenStreetMap contributors",
+    "Deposito coperto": "Shed",
+    "Descrivi la situazione.": "Describe the situation.",
+    "Di nuovo online": "Back online",
+    "Disabili": "Disabled",
+    "Disco orario": "Parking disc",
+    "Distanze a piedi da {name}": "Walking distance from {name}",
+    "Distanze dal centro della mappa": "Distance from the map centre",
+    "Distanze dalla tua posizione": "Distance from your location",
+    "Donne": "Women",
+    "Download avviato: al termine apri il file .apk e conferma l'aggiornamento.": "Download started: when it finishes, open the .apk file and confirm the update.",
+    "Edificio": "Building",
+    "Elemento:": "Feature:",
+    "Elimina foto": "Delete photo",
+    "Emergenza": "Emergency",
+    "Errore connessione. Riprova più tardi.": "Connection error. Try again later.",
+    "Es. il parcheggio è stato chiuso per lavori / trasformato in area pedonale.": "E.g. the car park was closed for works / turned into a pedestrian area.",
+    "Es. parcheggio gratuito con circa 20 posti, ingresso da via Roma.": "E.g. free parking with about 20 spaces, entrance from Main Street.",
+    "Es. piano -2, colonna B14": "E.g. level -2, pillar B14",
+    "Famiglie": "Families",
+    "Famiglie/Rosa": "Families/Women",
+    "Ferma-ruote": "Wheel benders",
+    "Ferma-ruote a terra": "Ground slots",
+    "Filtri": "Filters",
+    "Fonte in questa zona": "Source in this area",
+    "Foto dell'auto": "Car photo",
+    "Foto non salvata": "Photo not saved",
+    "Frazione": "Hamlet",
+    "GPS non disponibile": "GPS not available",
+    "GPS non disponibile: usa il centro della mappa": "GPS not available: use the map centre",
+    "Gestore": "Operator",
+    "Gratis": "Free",
+    "Gratis adesso": "Free now",
+    "Gratis fino alle {time}": "Free until {time}",
+    "Gratuita": "Free",
+    "Gratuiti": "Free",
+    "Gratuito": "Free",
+    "Gratuito nei giorni/orari: {c}": "Free on: {c}",
+    "Grazie! Segnalazione inviata": "Thanks! Report sent",
+    "Guarda questa posizione su ParkMap": "Check out this place on ParkMap",
+    "Hai già l'ultima versione.": "You have the latest version.",
+    "Ho lasciato il parcheggio": "I left the parking spot",
+    "Ho parcheggiato qui": "I parked here",
+    "I preferiti restano salvati su questo dispositivo.": "Favourites are saved on this device.",
+    "Il browser non consente le notifiche: vedrai l'avviso solo dentro la pagina.": "The browser does not allow notifications: you will only see the alert inside the page.",
+    "Il tempo del parcheggio è finito.": "Your parking time is over.",
+    "Il tuo parcheggio scade alle {time}: mancano 10 minuti.": "Your parking expires at {time}: 10 minutes left.",
+    "Immagini": "Imagery",
+    "Impossibile attivare schermo intero": "Could not enter full screen",
+    "Impossibile contattare GitHub. Riprova più tardi.": "Could not reach GitHub. Try again later.",
+    "Imposta": "Set",
+    "Impostazioni": "Settings",
+    "Impostazioni di Android": "Android settings",
+    "Informale": "Informal",
+    "Informazioni": "About",
+    "Informazioni sbagliate": "Wrong information",
+    "Invia segnalazione": "Send report",
+    "Invio in corso…": "Sending…",
+    "Invio non riuscito. Controlla la connessione e riprova.": "Sending failed. Check your connection and try again.",
+    "La mia auto": "My car",
+    "La mia auto è qui": "My car is here",
+    "La mia posizione": "My location",
+    "La segnalazione diventa una nota pubblica e anonima su OpenStreetMap: i volontari che curano la mappa la verificano e correggono i dati, per tutti.": "Your report becomes a public, anonymous note on OpenStreetMap: the volunteers who maintain the map check it and fix the data for everyone.",
+    "Le notifiche sono disattivate per ParkMap: abilitale nelle impostazioni di Android per ricevere il promemoria.": "Notifications are off for ParkMap: turn them on in Android settings to get the reminder.",
+    "Legenda": "Legend",
+    "Limitato/Privato": "Restricted/Private",
+    "Limitazioni": "Restrictions",
+    "Lingua": "Language",
+    "Link copiato negli appunti": "Link copied to clipboard",
+    "Livelli visibili": "Visible layers",
+    "Località": "Locality",
+    "Manca il permesso «Dispositivi nelle vicinanze»: senza, ParkMap non sa quando ti scolleghi.": "The \"Nearby devices\" permission is missing: without it ParkMap cannot tell when you disconnect.",
+    "Mappa": "Map",
+    "Metodi di pagamento": "Payment methods",
+    "Mezzi pesanti": "Trucks",
+    "Modifica": "Edit",
+    "Monete": "Coins",
+    "Mostra la precisione del GPS": "Show GPS accuracy",
+    "Mostra sulla mappa": "Show on map",
+    "Mostra tutte ({n})": "Show all ({n})",
+    "Moto": "Motorcycles",
+    "Naviga fin qui": "Navigate here",
+    "Navigazione": "Navigation",
+    "Nessun dispositivo associato: collega prima il telefono al Bluetooth dell'auto.": "No paired devices: first pair your phone with the car's Bluetooth.",
+    "Nessun parcheggio in questa zona con i filtri scelti.": "No parking in this area with the selected filters.",
+    "Nessun parcheggio in questa zona. Sposta la mappa o allarga la vista.": "No parking in this area. Move the map or zoom out.",
+    "Nessun preferito.<br>Apri un parcheggio sulla mappa e tocca <b>Salva<\/b> per ritrovarlo qui.": "No favourites yet.<br>Open a parking spot on the map and tap <b>Save<\/b> to find it here.",
+    "Nessun promemoria impostato.": "No reminder set.",
+    "Nessun risultato": "No results",
+    "No": "No",
+    "Non esiste più": "No longer exists",
+    "Non specificato": "Not specified",
+    "Note": "Notes",
+    "Note e foto": "Notes and photo",
+    "Novità": "What's new",
+    "Nuova versione {v} disponibile": "New version {v} available",
+    "Nuova versione {v}: apri le impostazioni": "New version {v}: open the settings",
+    "OSM del {date}": "OSM of {date}",
+    "Oppure attiva nelle Impostazioni il salvataggio automatico via Bluetooth.": "Or turn on automatic saving via Bluetooth in Settings.",
+    "Oppure fino alle": "Or until",
+    "Ora scegli «Consenti sempre» per la posizione di ParkMap.": "Now choose \"Allow all the time\" for ParkMap location.",
+    "Orari": "Opening hours",
+    "Paese": "Village",
+    "Pagamento": "Paid",
+    "Paletti": "Bollards",
+    "Parcheggi": "Parking",
+    "Parcheggi bici": "Bicycle parking",
+    "Parcheggi moto": "Motorcycle parking",
+    "Parcheggi vicini e preferiti": "Nearby parking and favourites",
+    "Parcheggi vicino a questo punto": "Parking near this point",
+    "Parcheggiata {when}": "Parked {when}",
+    "Parcheggio bici": "Bicycle parking",
+    "Parcheggio mancante": "Missing parking",
+    "Parcheggio moto": "Motorcycle parking",
+    "Parcometri": "Parking meters",
+    "Parcometro": "Parking meter",
+    "Parcometro (ticket)": "Parking meter (ticket)",
+    "Per salvare la posizione con l'app chiusa serve la posizione «Consenti sempre».": "To save the location while the app is closed, location must be set to \"Allow all the time\".",
+    "Permesso posizione negato": "Location permission denied",
+    "Polizia": "Police",
+    "Portami all'auto": "Take me to the car",
+    "Posizione": "Location",
+    "Posizione aggiornata": "Location updated",
+    "Posizione dell'auto salvata": "Car location saved",
+    "Posizione non disponibile": "Location not available",
+    "Posizione non disponibile: usa il centro della mappa": "Location not available: use the map centre",
+    "Posizione trovata": "Location found",
+    "Posti": "Spaces",
+    "Posti non indicati": "Spaces not specified",
+    "Postpass (in tempo reale)": "Postpass (live)",
+    "Potenza massima": "Max power",
+    "Precalcolati": "Precomputed",
+    "Predefinita": "Default",
+    "Preferiti": "Favourites",
+    "Prese": "Sockets",
+    "Prese e potenza non indicate su OpenStreetMap.": "Sockets and power not listed on OpenStreetMap.",
+    "Privato": "Private",
+    "Promemoria sosta": "Parking reminder",
+    "Provider dati OSM": "OSM data providers",
+    "Pubblico": "Public",
+    "Puoi anche tenere premuto un punto della mappa e scegliere \"Ho parcheggiato qui\".": "You can also long-press a point on the map and choose \"I parked here\".",
+    "Quando il telefono si scollega dal Bluetooth dell'auto, ParkMap salva da solo dove l'hai lasciata e ti avvisa con una notifica.": "When your phone disconnects from the car's Bluetooth, ParkMap saves where you left it and lets you know with a notification.",
+    "Quanto resti? Tocca una durata.": "How long are you staying? Tap a duration.",
+    "Quartiere": "Neighbourhood",
+    "Rastrelliera": "Rack",
+    "Rete": "Network",
+    "Ricarica EV": "EV charging",
+    "Ricarica rapida": "Fast charging",
+    "Rimuovi dai preferiti": "Remove from favourites",
+    "Riservato residenti": "Residents only",
+    "Salva": "Save",
+    "Salva come la mia auto": "Save as my car",
+    "Salva dove hai lasciato l'auto: la ritrovi sulla mappa, con la strada a piedi per tornarci e un promemoria per il ticket o il disco orario.": "Save where you left your car: find it on the map with walking directions back to it, and get a reminder for your ticket or parking disc.",
+    "Salva l'auto quando mi scollego": "Save the car when I disconnect",
+    "Salva la mia posizione": "Save my location",
+    "Salvata da sola scollegandoti da {name}": "Saved automatically when you disconnected from {name}",
+    "Salvati sul dispositivo": "Saved on device",
+    "Salvato": "Saved",
+    "Scade alle {time} · tra {d}": "Expires at {time} · in {d}",
+    "Scaduta alle {time} ({d} fa)": "Expired at {time} ({d} ago)",
+    "Scarica e installa": "Download and install",
+    "Scarica l'app Android": "Download the Android app",
+    "Scatta una foto": "Take a photo",
+    "Scegli il Bluetooth della tua auto:": "Choose your car's Bluetooth:",
+    "Schermo intero": "Full screen",
+    "Schermo intero non supportato": "Full screen not supported",
+    "Scrivi qualche dettaglio in più (almeno 10 caratteri): aiuta chi dovrà correggere la mappa.": "Add a few more details (at least 10 characters): it helps whoever fixes the map.",
+    "Scuro": "Dark",
+    "Segnala": "Report",
+    "Segnala parcheggio mancante": "Report missing parking",
+    "Segnala su OpenStreetMap": "Report on OpenStreetMap",
+    "Segnala un problema": "Report a problem",
+    "Sei offline: mostro i dati salvati": "You're offline: showing saved data",
+    "Seleziona un risultato": "Pick a result",
+    "Serve il permesso «Dispositivi nelle vicinanze» per vedere i dispositivi Bluetooth associati.": "The \"Nearby devices\" permission is needed to see your paired Bluetooth devices.",
+    "Solo clienti": "Customers only",
+    "Solo con permesso": "Permit only",
+    "Solo residenti": "Residents only",
+    "Sosta a ticket": "Pay and display",
+    "Sosta di {when}": "Parked {when}",
+    "Sosta in scadenza": "Parking about to expire",
+    "Sosta scaduta": "Parking expired",
+    "Sosta scaduta da {d}": "Parking expired {d} ago",
+    "Sosta: {d}": "Parking: {d}",
+    "Stalli speciali": "Special spaces",
+    "Stallo speciale": "Special space",
+    "Stato provider": "Provider status",
+    "Stile della mappa": "Map style",
+    "Stima dalle tariffe su OpenStreetMap: controlla sul posto.": "Estimated from OpenStreetMap rates: check on site.",
+    "Su Android puoi installare l'app: si apre subito e usa il GPS del telefono.": "On Android you can install the app: it opens instantly and uses the phone GPS.",
+    "Su due livelli": "Two-tier",
+    "Sul sito l'avviso arriva solo con la pagina aperta; con l'app Android anche a telefono bloccato.": "On the website the alert only works with the page open; with the Android app it also works with the phone locked.",
+    "Svuota cache": "Clear cache",
+    "Sì": "Yes",
+    "Tariffa": "Rate",
+    "Telefono": "Phone",
+    "Tema": "Theme",
+    "Tempo massimo (cond): ": "Max stay (cond): ",
+    "Tempo massimo: ": "Max stay: ",
+    "Tempo massimo: {v} nei giorni/orari: {c}": "Max stay: {v} on: {c}",
+    "Ti avviso 10 minuti prima e alla scadenza.": "I'll remind you 10 minutes before and when it expires.",
+    "Tipo": "Type",
+    "Togli promemoria": "Remove reminder",
+    "Type 2 (cavo)": "Type 2 (cable)",
+    "Ultime soste": "Recent parking",
+    "Usa il centro della mappa": "Use the map centre",
+    "Vai a": "Go",
+    "Validità: ": "Valid: ",
+    "Veicoli in ricarica insieme": "Vehicles charging at once",
+    "Versione installata": "Installed version",
+    "Versione web": "Web version",
+    "Vicini": "Nearby",
+    "Vicino a {name}": "Near {name}",
+    "Vietato": "Not allowed",
+    "assente": "none",
+    "attiva": "active",
+    "auto": "car",
+    "di cui {d} gratis": "including {d} free",
+    "disponibile": "available",
+    "durata {d}": "for {d}",
+    "filtri attivi": "filters on",
+    "fino a {kw}": "up to {kw}",
+    "fuori area (Postpass)": "outside the area (Postpass)",
+    "giorni": "days",
+    "giorno": "day",
+    "i 60 più vicini su {n}": "nearest 60 of {n}",
+    "nessuna zona": "no areas",
+    "non disponibili": "not available",
+    "nota": "note",
+    "oggi alle {time}": "today at {time}",
+    "punto scelto": "selected point",
+    "sempre aggiornata": "always up to date",
+    "senza limite": "no limit",
+    "stile": "style",
+    "sviluppo": "development",
+    "{date} alle {time}": "{date} at {time}",
+    "{label} nei giorni/orari: {c}": "{label} on: {c}",
+    "{n} anni": "{n} years",
+    "{n} giorni": "{n} days",
+    "{n} mesi": "{n} months",
+    "{n} min a piedi": "{n} min walk",
+    "{n} minuti": "{n} minutes",
+    "{n} ore": "{n} hours",
+    "{n} posti": "{n} spaces",
+    "{n} prese": "{n} sockets",
+    "{n} settimane": "{n} weeks",
+    "{n} zone": "{n} areas"
+    };
+  </script>
+
   <script>
     lucide.createIcons();
 
@@ -998,12 +1418,13 @@
     const SETTINGS_KEY = 'parkSettings_v1';
     const DEFAULT_SETTINGS = {
       mapStyle: 'osm',
-      layers: { areas: true, spaces: true, meters: true },
+      layers: { areas: true, spaces: true, meters: true, charging: true, moto: true, bikes: false },
       locateOnStart: true,
       showAccuracy: true,
       autoUpdateCheck: true,
       theme: 'auto',          // auto | light | dark
-      navApp: 'google'        // google | waze | system
+      navApp: 'google',       // google | waze | system
+      lang: 'auto'            // auto | it | en
     };
     const settings = (() => {
       try {
@@ -1016,6 +1437,41 @@
     function saveSettings() {
       try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (err) {}
     }
+
+    // ─── Lingua: italiano o inglese (in automatico quella del telefono) ───
+    // I testi nel codice sono in italiano: t() li traduce con il dizionario
+    // EN (in fondo alla pagina, i18n-en), translateDom fa lo stesso con
+    // l'HTML statico (testi, title, aria-label e placeholder).
+    const LANG = settings.lang === 'it' || settings.lang === 'en' ? settings.lang
+      : (/^it\b/i.test(navigator.language || '') ? 'it' : 'en');
+    const LOCALE = LANG === 'it' ? 'it-IT' : (/^en\b/i.test(navigator.language || '') ? navigator.language : 'en-GB');
+    document.documentElement.lang = LANG;
+    const EN = window.PARKMAP_EN || {};
+    function t(text, vars) {
+      let out = LANG === 'en' && EN[text] != null ? EN[text] : text;
+      if (vars) out = out.replace(/\{(\w+)\}/g, (m, k) => vars[k] != null ? vars[k] : m);
+      return out;
+    }
+    function translateDom(root) {
+      if (LANG !== 'en') return;
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode: n => n.parentNode && n.parentNode.nodeName === 'SCRIPT' ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
+      });
+      const nodes = [];
+      while (walker.nextNode()) nodes.push(walker.currentNode);
+      nodes.forEach(n => {
+        const key = n.nodeValue.trim();
+        if (key && EN[key] != null) n.nodeValue = n.nodeValue.replace(key, () => EN[key]);
+      });
+      root.querySelectorAll('[title],[aria-label],[placeholder]').forEach(el => {
+        ['title', 'aria-label', 'placeholder'].forEach(attr => {
+          const v = el.getAttribute(attr);
+          if (v && EN[v] != null) el.setAttribute(attr, EN[v]);
+        });
+      });
+    }
+    translateDom(document.body);
+    if (LANG === 'en') document.title = 'ParkMap - OSM Parking';
 
     // ─── Tema chiaro/scuro ───
     const darkSchemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -1118,17 +1574,34 @@
     function capacityFlag(value) {
       return value === 'yes' || (parseInt(value, 10) || 0) > 0;
     }
+    // Che cos'è un elemento OSM, per colori, filtri, popup ed elenco
+    function elementKind(tags) {
+      switch (tags.amenity) {
+        case 'parking': return 'parking';
+        case 'parking_space': return 'space';
+        case 'vending_machine': return 'meter';
+        case 'charging_station': return 'charging';
+        case 'motorcycle_parking': return 'moto';
+        case 'bicycle_parking': return 'bike';
+        default: return 'other';
+      }
+    }
     function elementMatchesFilter(tags, filter, now) {
-      if (tags.amenity === 'vending_machine') return false;
+      const kind = elementKind(tags);
+      if (kind === 'meter') return false;
+      const forCars = kind === 'parking' || kind === 'space';
       const restricted = isRestricted(tags);
       switch (filter) {
         case 'free':
-          return !restricted && ((tags.fee === 'no' && !tags['fee:conditional']) ||
+          return forCars && !restricted && ((tags.fee === 'no' && !tags['fee:conditional']) ||
             (!tags.fee && !tags['fee:conditional'] && hasDiscRule(tags)));
-        case 'freeNow': return !restricted && feeStateAt(tags, now) === 'free';
-        case 'disc': return !restricted && hasDiscRule(tags);
-        case 'disabled': return tags.parking_space === 'disabled' || capacityFlag(tags['capacity:disabled']);
-        case 'ev': return tags.parking_space === 'charging' || capacityFlag(tags['capacity:charging']);
+        case 'freeNow': return forCars && !restricted && feeStateAt(tags, now) === 'free';
+        case 'disc': return forCars && !restricted && hasDiscRule(tags);
+        case 'disabled': return forCars && (tags.parking_space === 'disabled' || capacityFlag(tags['capacity:disabled']));
+        case 'ev': return kind === 'charging' || (forCars && (tags.parking_space === 'charging' || capacityFlag(tags['capacity:charging'])));
+        case 'moto': return kind === 'moto' || (forCars && (tags.parking_space === 'motorcycle' ||
+          capacityFlag(tags['capacity:motorcycle']) || tags.motorcycle === 'designated'));
+        case 'bike': return kind === 'bike';
         default: return true;
       }
     }
@@ -1163,21 +1636,44 @@
     function isFavorite(key) { return favorites.some(f => f.id === key); }
 
     function elementTitle(tags) {
-      if (tags.amenity === 'vending_machine') return tags.name || tags.ref || 'Parcometro';
+      const kind = elementKind(tags);
+      if (kind === 'meter') return tags.name || tags.ref || t('Parcometro');
+      if (kind === 'charging') return tags.name || tags.operator || tags.network || tags.brand || t('Colonnina di ricarica');
+      if (kind === 'moto') return tags.name || t('Parcheggio moto');
+      if (kind === 'bike') return tags.name || t('Parcheggio bici');
       return tags.name || tags.ref ||
-        (tags.amenity === 'parking_space' ? (getSpecialStallName(tags.parking_space) || 'Stallo speciale') : 'Area di sosta');
+        (kind === 'space' ? (getSpecialStallName(tags.parking_space) || t('Stallo speciale')) : t('Area di sosta'));
     }
     // Riassunto di una riga: costo (anche "in questo momento"), disco, posti
     function elementSummary(tags) {
       const parts = [];
-      if (tags.amenity === 'parking_space') parts.push(getSpecialStallName(tags.parking_space) || 'Stallo speciale');
-      if (isRestricted(tags)) parts.push('Accesso limitato');
-      else if (tags['fee:conditional']) parts.push(feeStateAt(tags, new Date()) === 'free' ? 'Gratis adesso' : 'A pagamento adesso');
-      else if (tags.fee === 'no') parts.push('Gratuito');
-      else if (tags.fee === 'yes') parts.push('A pagamento');
-      if (hasDiscRule(tags)) parts.push('Disco orario');
-      if (tags.capacity) parts.push(tags.capacity + ' posti');
-      return parts.join(' · ') || 'Costo non indicato';
+      const kind = elementKind(tags);
+      if (kind === 'charging') {
+        const sockets = chargingSockets(tags);
+        const count = sockets.reduce((n, x) => n + (x.count || 1), 0);
+        if (count) parts.push(count === 1 ? t('1 presa') : t('{n} prese', { n: count }));
+        const kw = chargingMaxKw(tags);
+        if (kw) parts.push(t('fino a {kw}', { kw: formatKw(kw) }));
+        if (tags.fee === 'no') parts.push(t('Gratuita'));
+        else if (tags.fee === 'yes') parts.push(t('A pagamento'));
+        return parts.join(' · ') || t('Colonnina di ricarica');
+      }
+      if (kind === 'moto' || kind === 'bike') {
+        // Il tipo è già nel titolo, salvo che il parcheggio abbia un nome
+        if (tags.name) parts.push(kind === 'moto' ? t('Parcheggio moto') : t('Parcheggio bici'));
+        if (tags.capacity) parts.push(t('{n} posti', { n: tags.capacity }));
+        if (tags.covered === 'yes') parts.push(t('Coperto'));
+        if (tags.fee === 'yes') parts.push(t('A pagamento'));
+        return parts.join(' · ') || t('Posti non indicati');
+      }
+      if (kind === 'space') parts.push(getSpecialStallName(tags.parking_space) || t('Stallo speciale'));
+      if (isRestricted(tags)) parts.push(t('Accesso limitato'));
+      else if (tags['fee:conditional']) parts.push(feeStateAt(tags, new Date()) === 'free' ? t('Gratis adesso') : t('A pagamento adesso'));
+      else if (tags.fee === 'no') parts.push(t('Gratuito'));
+      else if (tags.fee === 'yes') parts.push(t('A pagamento'));
+      if (hasDiscRule(tags)) parts.push(t('Disco orario'));
+      if (tags.capacity) parts.push(t('{n} posti', { n: tags.capacity }));
+      return parts.join(' · ') || t('Costo non indicato');
     }
 
     // Se il link è stato aperto da un pulsante "Condividi" (vedi shareCurrentView
@@ -1186,7 +1682,12 @@
     const sharedLat = parseFloat(sharedViewParams.get('lat'));
     const sharedLon = parseFloat(sharedViewParams.get('lon'));
     const sharedZoom = parseInt(sharedViewParams.get('z'), 10);
-    const hasSharedView = Number.isFinite(sharedLat) && Number.isFinite(sharedLon);
+    // "Condividi l'auto" (vedi shareCar): ?car=lat,lon&note=...
+    const sharedCar = (() => {
+      const m = String(sharedViewParams.get('car') || '').match(/^(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/);
+      return m ? { lat: +m[1], lon: +m[2], note: (sharedViewParams.get('note') || '').slice(0, 200) } : null;
+    })();
+    const hasSharedView = (Number.isFinite(sharedLat) && Number.isFinite(sharedLon)) || !!sharedCar;
     // Senza link condiviso si riparte dall'ultima vista usata (così i dati in
     // cache della zona compaiono subito), e solo al primo avvio da Milano.
     const LAST_VIEW_KEY = 'parkLastView_v1';
@@ -1197,7 +1698,8 @@
       } catch (err) { /* storage non disponibile */ }
       return null;
     }
-    const initialView = hasSharedView
+    const initialView = sharedCar && !Number.isFinite(sharedLat) ? [[sharedCar.lat, sharedCar.lon], 18]
+      : hasSharedView
       ? [[sharedLat, sharedLon], Number.isFinite(sharedZoom) ? sharedZoom : 17]
       : (readLastView() || [[45.4642, 9.19], 15]);
 
@@ -1232,11 +1734,11 @@
       osm: { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', maxNativeZoom: 19, attribution: OSM_ATTRIBUTION },
       light: {
         url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', maxNativeZoom: 19,
-        attribution: OSM_ATTRIBUTION + ', stile <a href="https://www.hotosm.org/" target="_blank">Humanitarian OSM Team</a>'
+        attribution: OSM_ATTRIBUTION + ', ' + t('stile') + ' <a href="https://www.hotosm.org/" target="_blank">Humanitarian OSM Team</a>'
       },
       satellite: {
         url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', maxNativeZoom: 19,
-        attribution: 'Immagini &copy; Esri, Maxar, Earthstar Geographics | ' + OSM_ATTRIBUTION
+        attribution: t('Immagini') + ' &copy; Esri, Maxar, Earthstar Geographics | ' + OSM_ATTRIBUTION
       }
     };
     let baseLayer = null;
@@ -1273,6 +1775,12 @@
     map.createPane('parkometersPane');
     map.getPane('parkometersPane').style.zIndex = 430;
 
+    // Parcheggi moto e bici sopra alle aree, colonnine sopra a tutto il resto
+    map.createPane('twoWheelPane');
+    map.getPane('twoWheelPane').style.zIndex = 415;
+    map.createPane('chargingPane');
+    map.getPane('chargingPane').style.zIndex = 440;
+
     // Posizione utente sopra a tutti i dati (ma sotto ai popup, pane 700)
     map.createPane('userLocationPane');
     map.getPane('userLocationPane').style.zIndex = 650;
@@ -1280,14 +1788,22 @@
     var parkingAreasLayer = L.layerGroup().addTo(map);
     var parkingSpacesLayer = L.layerGroup().addTo(map);
     var parkometersLayer = L.layerGroup().addTo(map);
+    var chargingLayer = L.layerGroup().addTo(map);
+    var motoLayer = L.layerGroup().addTo(map);
+    var bikesLayer = L.layerGroup().addTo(map);
 	var loadedIds = new Set();
 	var idToLayer = new Map(); // uniqueId -> { layer, group, lat, lon }
 
     // Livelli accesi/spenti dalla pagina Impostazioni
-    const LAYER_GROUPS = { areas: parkingAreasLayer, spaces: parkingSpacesLayer, meters: parkometersLayer };
+    const LAYER_GROUPS = {
+      areas: parkingAreasLayer, spaces: parkingSpacesLayer, meters: parkometersLayer,
+      charging: chargingLayer, moto: motoLayer, bikes: bikesLayer
+    };
+    // Un filtro attivo mostra il suo livello anche se spento (es. "Bici")
+    const LAYER_FILTERS = { charging: 'ev', moto: 'moto', bikes: 'bike' };
     function applyLayerVisibility() {
       Object.entries(LAYER_GROUPS).forEach(([key, group]) => {
-        if (settings.layers[key]) { if (!map.hasLayer(group)) group.addTo(map); }
+        if (settings.layers[key] || activeFilters.has(LAYER_FILTERS[key])) { if (!map.hasLayer(group)) group.addTo(map); }
         else if (map.hasLayer(group)) map.removeLayer(group);
       });
     }
@@ -1338,6 +1854,9 @@
 
     function translateOsmTime(str) {
       if (!str) return '';
+      if (LANG === 'en') {
+        return str.replace(/PH/g, 'public holidays').replace(/\boff\b/g, 'closed').replace(/24\/7/g, 'always open');
+      }
       return str
         .replace(/Mo/g, 'Lun').replace(/Tu/g, 'Mar').replace(/We/g, 'Mer')
         .replace(/Th/g, 'Gio').replace(/Fr/g, 'Ven')
@@ -1351,7 +1870,7 @@
       const s = raw.toLowerCase();
 
       if (!raw) return '';
-      if (['no', 'none', 'unlimited'].includes(s)) return 'senza limite';
+      if (['no', 'none', 'unlimited'].includes(s)) return t('senza limite');
 
       const m = s.match(/^(\d+(?:[.,]\d+)?)\s*(hour|hours|minute|minutes|day|days|week|weeks|month|months|year|years)$/);
       if (!m) return raw;
@@ -1361,12 +1880,12 @@
       const one = Math.abs(num - 1) < 1e-9;
       const unit = m[2];
 
-      if (unit === 'hour' || unit === 'hours') return one ? '1 ora' : `${numStr} ore`;
-      if (unit === 'minute' || unit === 'minutes') return one ? '1 minuto' : `${numStr} minuti`;
-      if (unit === 'day' || unit === 'days') return one ? '1 giorno' : `${numStr} giorni`;
-      if (unit === 'week' || unit === 'weeks') return one ? '1 settimana' : `${numStr} settimane`;
-      if (unit === 'month' || unit === 'months') return one ? '1 mese' : `${numStr} mesi`;
-      if (unit === 'year' || unit === 'years') return one ? '1 anno' : `${numStr} anni`;
+      if (unit === 'hour' || unit === 'hours') return one ? t('1 ora') : t('{n} ore', { n: numStr });
+      if (unit === 'minute' || unit === 'minutes') return one ? t('1 minuto') : t('{n} minuti', { n: numStr });
+      if (unit === 'day' || unit === 'days') return one ? t('1 giorno') : t('{n} giorni', { n: numStr });
+      if (unit === 'week' || unit === 'weeks') return one ? t('1 settimana') : t('{n} settimane', { n: numStr });
+      if (unit === 'month' || unit === 'months') return one ? t('1 mese') : t('{n} mesi', { n: numStr });
+      if (unit === 'year' || unit === 'years') return one ? t('1 anno') : t('{n} anni', { n: numStr });
 
       return raw;
     }
@@ -1383,9 +1902,9 @@
     function formatMaxstayConditionalItalian(str) {
       return splitOsmRules(str).map(rule => {
         const parsed = parseConditionalRule(rule);
-        if (!parsed) return 'Tempo massimo (cond): ' + translateOsmTime(rule);
+        if (!parsed) return t('Tempo massimo (cond): ') + translateOsmTime(rule);
 
-        return `Tempo massimo: ${maxstayValueToItalian(parsed.value)} nei giorni/orari: ${parsed.condition}`;
+        return t('Tempo massimo: {v} nei giorni/orari: {c}', { v: maxstayValueToItalian(parsed.value), c: parsed.condition });
       });
     }
 
@@ -1398,9 +1917,8 @@
         if (!parsed) return { text: translateOsmTime(rule), danger: false };
 
         const value = parsed.value.toLowerCase();
-        if (value === 'yes') return { text: `${yesLabel} nei giorni/orari: ${parsed.condition}`, danger: false };
-        if (value === 'no') return { text: `${noLabel} nei giorni/orari: ${parsed.condition}`, danger: true };
-        return { text: `${parsed.value} nei giorni/orari: ${parsed.condition}`, danger: false };
+        const label = value === 'yes' ? yesLabel : (value === 'no' ? noLabel : parsed.value);
+        return { text: t('{label} nei giorni/orari: {c}', { label, c: parsed.condition }), danger: value === 'no' };
       });
     }
 
@@ -1487,15 +2005,15 @@
         const rawCondition = m[2].trim();
 
         if (value === 'yes') {
-          return { text: `A pagamento nei giorni/orari: ${translateOsmTime(rawCondition)}`, danger: false };
+          return { text: t('A pagamento nei giorni/orari: {c}', { c: translateOsmTime(rawCondition) }), danger: false };
         }
         if (value === 'no') {
           const paidSchedule = invertConditionToPaidSchedule(rawCondition);
           return paidSchedule
-            ? { text: `A pagamento nei giorni/orari: ${paidSchedule}`, danger: false }
-            : { text: `Gratuito nei giorni/orari: ${translateOsmTime(rawCondition)}`, danger: false };
+            ? { text: t('A pagamento nei giorni/orari: {c}', { c: paidSchedule }), danger: false }
+            : { text: t('Gratuito nei giorni/orari: {c}', { c: translateOsmTime(rawCondition) }), danger: false };
         }
-        return { text: `${value} nei giorni/orari: ${translateOsmTime(rawCondition)}`, danger: false };
+        return { text: t('{label} nei giorni/orari: {c}', { label: value, c: translateOsmTime(rawCondition) }), danger: false };
       });
     }
 
@@ -1514,12 +2032,16 @@
         motorcycle: 'Moto',
         bus: 'Bus'
       };
-      return names[ps] || '';
+      return names[ps] ? t(names[ps]) : '';
     }
 
     // Stessi colori usati per disegnare i marker sulla mappa, riusati nell'header del popup
     function getPopupTheme(tags) {
       var ps = tags.parking_space || '';
+      if (tags.amenity === 'charging_station') return { c1: '#34d399', c2: '#047857', icon: 'plug-zap' };
+      if (tags.amenity === 'motorcycle_parking') return { c1: '#f87171', c2: '#b91c1c', icon: 'bike' };
+      if (tags.amenity === 'bicycle_parking') return { c1: '#a3e635', c2: '#4d7c0f', icon: 'bike' };
+      if (tags.amenity === 'vending_machine') return { c1: '#fdba74', c2: '#f97316', icon: 'ticket' };
 
       if (tags.amenity === 'parking_space' && ps !== 'normal') {
         if (ps === 'disabled') return { c1: '#fde047', c2: '#eab308', icon: 'accessibility' };
@@ -1554,239 +2076,291 @@
       return { c1: '#94a3b8', c2: '#64748b', icon: 'square-parking' };
     }
 
-    function buildPopupContent(tags, lat, lon, osmMeta) {
-      var name = tags.name || tags.ref ||
-        (tags.amenity === 'parking_space' ? (getSpecialStallName(tags.parking_space) || 'Stallo speciale') : 'Area di Sosta');
-      var operator = tags.operator || '';
-
-      var accessRaw = tags.access || '';
-      var accessConditional = tags['access:conditional'] || '';
-      var vehicleAccess = tags.vehicle || '';
-      var access = 'Pubblico';
-      if (accessRaw === 'private') access = 'Privato';
-      else if (accessRaw === 'customers') access = 'Solo clienti';
-      else if (accessRaw === 'permissive') access = 'Autorizzato';
-      else if (accessRaw === 'destination') access = 'Solo residenti';
-      else if (accessRaw === 'permit' || vehicleAccess === 'permit') access = 'Solo con permesso';
-      else if (accessRaw === 'no') access = 'Vietato';
-
-      var accessNoteHtml = '';
-      if (accessConditional) {
-        accessNoteHtml = formatYesNoConditional(accessConditional, 'Aperto', 'Vietato')
-          .map(r => `<div class="badge-note ${r.danger ? 'danger' : ''}">${escapeHtml(r.text)}</div>`)
-          .join('');
-      }
-
-      var feeRaw = tags.fee || '';
-      var feeConditional = tags['fee:conditional'] || '';
-      var fee = 'Non specificato';
-      var feeNoteHtml = '';
-
-      if (feeRaw === 'no') fee = 'Gratuito';
-      else if (feeRaw === 'yes') fee = 'A pagamento';
-      else if (feeRaw === 'conditional') fee = 'Condizionato:';
-
-      if (feeConditional) {
-        fee = (fee === 'Non specificato') ? 'Condizionato:' : (fee);
-
-        feeNoteHtml = formatFeeConditional(feeConditional)
-          .map(r => `<div class="badge-note ${r.danger ? 'danger' : ''}">${escapeHtml(r.text)}</div>`)
-          .join('');
-      }
-
-      // ===== Limitazioni (badge viola per "a tempo") =====
-      var notes = [];        // testo normale (con <br>)
-      var notesBadges = [];  // HTML badge
-
-      var cond = tags['parking:condition'] || '';
-      var interval = tags['parking:condition:time_interval'] || '';
-      var maxstay = tags.maxstay || '';
-      var maxstayConditional = tags['maxstay:conditional'] || '';
-
-      if ((cond || '').toLowerCase().includes('disc')) {
-        notesBadges.push(`<div class="badge-note time">Disco orario</div>`);
-      }
-
-      if (interval) {
-        notesBadges.push(
-          `<div class="badge-note time">${escapeHtml('Validità: ' + translateOsmTime(interval))}</div>`
-        );
-      }
-
-      if (maxstay) {
-        const ms = String(maxstay).toLowerCase().trim();
-        if (!['no','none','unlimited','0'].includes(ms)) {
-          const vIt = maxstayValueToItalian(maxstay);
-          notesBadges.push(`<div class="badge-note time">${escapeHtml('Tempo massimo: ' + vIt)}</div>`);
-        }
-      }
-
-      if (maxstayConditional) {
-        formatMaxstayConditionalItalian(maxstayConditional).forEach(line => {
-          notesBadges.push(`<div class="badge-note time">${escapeHtml(line)}</div>`);
-        });
-      }
-
-      if ((cond || '').toLowerCase().includes('ticket')) notes.push('Sosta a ticket');
-      if ((cond || '').toLowerCase().includes('resident')) notes.push('Riservato residenti');
-
-      var notesParts = [];
-      if (notesBadges.length) notesParts.push(notesBadges.join(''));
-      if (notes.length) notesParts.push(notes.map(x => escapeHtml(x)).join('<br>'));
-      var notesHtml = notesParts.join('<br>');
-
-      var ps = tags.parking_space || '';
-      var typeLabel = getSpecialStallName(ps) || ps || '';
-
-      /* charge=* e payment:* */
-      var chargeRaw = tags.charge || '';
-      var chargeConditional = tags['charge:conditional'] || '';
-      var chargeHtml = '';
-
-      if (chargeRaw) {
-        chargeHtml += `<div class="badge-note">${escapeHtml(chargeRaw)}</div>`;
-      }
-      if (chargeConditional) {
-        chargeHtml += splitOsmRules(chargeConditional).map(p => {
-          p = p.trim();
-          return `<div class="badge-note">${escapeHtml(translateOsmTime(p))}</div>`;
-        }).join('');
-      }
-
-      function paymentLabel(method) {
-        const m = (method || '').toLowerCase();
-        if (m === 'cash') return 'Contanti';
-        if (m === 'coins') return 'Monete';
-        if (m === 'notes') return 'Banconote';
-        if (m === 'credit_cards') return 'Carte di credito';
-        if (m === 'debit_cards') return 'Bancomat / carte di debito';
-        if (m === 'cards') return 'Carte';
-        if (m === 'contactless') return 'Contactless';
-        if (m === 'visa') return 'Visa';
-        if (m === 'mastercard') return 'Mastercard';
-        if (m === 'maestro') return 'Maestro';
-        if (m === 'apple_pay') return 'Apple Pay';
-        if (m === 'google_pay') return 'Google Pay';
-        if (m === 'sms') return 'SMS';
-        if (m === 'phone') return 'Telefono';
-        return (method || '').replace(/_/g, ' ');
-      }
-
-      var paymentMethods = Object.keys(tags)
+    // Pezzi comuni dei popup: intestazione colorata, sezioni, pulsanti in fondo
+    function popupHeaderHtml(tags, title) {
+      const theme = getPopupTheme(tags);
+      return `<div class="popup-header-container" style="background:linear-gradient(135deg, ${theme.c1}, ${theme.c2})">
+          <div class="popup-icon-box"><i data-lucide="${theme.icon}"></i></div>
+          <div class="popup-title">${escapeHtml(title)}</div>
+        </div>`;
+    }
+    function popupSection(label, valHtml) {
+      return valHtml ? `<div class="popup-section"><span class="label">${escapeHtml(label)}</span><span class="val">${valHtml}</span></div>` : '';
+    }
+    function popupLinksHtml(lat, lon, osmMeta) {
+      return `<div class="popup-links">
+          <a href="${buildNavUrl(lat, lon, 'driving')}" target="_blank" rel="noopener"><i data-lucide="navigation"></i> ${t('Vai a')}</a>
+          <a href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank" rel="noopener"><i data-lucide="pencil"></i> ${t('Modifica')}</a>
+          ${favButtonHtml(osmMeta, lat, lon)}
+          ${reportButtonHtml(osmMeta, lat, lon)}
+        </div>`;
+    }
+    function badgesHtml(items) {
+      return items.map(r => `<div class="badge-note ${r.danger ? 'danger' : ''}">${escapeHtml(r.text)}</div>`).join('');
+    }
+    function accessLabel(tags) {
+      const a = tags.access || '';
+      if (a === 'private') return t('Privato');
+      if (a === 'customers') return t('Solo clienti');
+      if (a === 'permissive') return t('Autorizzato');
+      if (a === 'destination') return t('Solo residenti');
+      if (a === 'permit' || tags.vehicle === 'permit') return t('Solo con permesso');
+      if (a === 'no') return t('Vietato');
+      return t('Pubblico');
+    }
+    function feeLabel(tags) {
+      if (tags.fee === 'no') return t('Gratuito');
+      if (tags.fee === 'yes') return t('A pagamento');
+      if (tags.fee === 'conditional' || tags['fee:conditional']) return t('Condizionato:');
+      return t('Non specificato');
+    }
+    function paymentLabel(method) {
+      const labels = {
+        cash: 'Contanti', coins: 'Monete', notes: 'Banconote', credit_cards: 'Carte di credito',
+        debit_cards: 'Bancomat / carte di debito', cards: 'Carte', contactless: 'Contactless', visa: 'Visa',
+        mastercard: 'Mastercard', maestro: 'Maestro', apple_pay: 'Apple Pay', google_pay: 'Google Pay',
+        sms: 'SMS', phone: 'Telefono', app: 'App'
+      };
+      const m = (method || '').toLowerCase();
+      return labels[m] ? t(labels[m]) : (method || '').replace(/_/g, ' ');
+    }
+    function paymentHtml(tags) {
+      const methods = Object.keys(tags)
         .filter(k => k.startsWith('payment:'))
         .map(k => ({ method: k.slice('payment:'.length), val: String(tags[k] || '').toLowerCase() }))
         .filter(x => x.val === 'yes' || x.val === 'only')
-        .map(x => paymentLabel(x.method) + (x.val === 'only' ? ' (solo)' : ''));
-
-      var paymentHtml = paymentMethods.length
-        ? `<div class="badge-note">${escapeHtml(paymentMethods.join(', '))}</div>`
-        : '';
-
-      var theme = getPopupTheme(tags);
-
-      var html = `
-        <div class="popup-header-container" style="background:linear-gradient(135deg, ${theme.c1}, ${theme.c2})">
-          <div class="popup-icon-box"><i data-lucide="${theme.icon}"></i></div>
-          <div class="popup-title">${escapeHtml(name)}</div>
-        </div>
-
-        ${operator ? `
-        <div class="popup-section">
-          <span class="label">Gestore</span>
-          <span class="val">${escapeHtml(operator)}</span>
-        </div>` : ''}
-
-        <div class="popup-section">
-          <span class="label">Accesso</span>
-          <span class="val">${escapeHtml(access)} ${accessNoteHtml}</span>
-        </div>
-
-        <div class="popup-section">
-          <span class="label">Costo</span>
-          <span class="val">${escapeHtml(fee)} ${feeNoteHtml}</span>
-        </div>
-
-        ${(chargeHtml) ? `
-        <div class="popup-section">
-          <span class="label">Tariffa</span>
-          <span class="val">${chargeHtml}</span>
-        </div>` : ''}
-
-        ${(paymentHtml) ? `
-        <div class="popup-section">
-          <span class="label">Metodi di pagamento</span>
-          <span class="val">${paymentHtml}</span>
-        </div>` : ''}
-
-        ${notesHtml ? `
-        <div class="popup-section">
-          <span class="label">Limitazioni</span>
-          <span class="val">${notesHtml}</span>
-        </div>` : ''}
-
-        ${tags.capacity || typeLabel ? `
-        <div class="popup-section" style="flex-direction: row; gap: 20px;">
-          ${tags.capacity ? `<div><span class="label">Posti </span><span class="val">${escapeHtml(tags.capacity)}</span></div>` : ''}
-          ${typeLabel ? `<div><span class="label">Tipo </span><span class="val">${escapeHtml(typeLabel)}</span></div>` : ''}
-        </div>` : ''}
-
-        ${tags.note ? `
-        <div class="popup-section">
-          <span class="label">Note</span>
-          <span class="val">${escapeHtml(tags.note)}</span>
-        </div>` : ''}
-
-        <div class="popup-links">
-          <a href="${buildNavUrl(lat, lon, 'driving')}" target="_blank" rel="noopener"><i data-lucide="navigation"></i> Vai a</a>
-          <a href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank" rel="noopener"><i data-lucide="pencil"></i> Modifica</a>
-          ${favButtonHtml(osmMeta, lat, lon)}
-          ${reportButtonHtml(osmMeta, lat, lon)}
-        </div>
-      `;
-
+        .map(x => paymentLabel(x.method) + (x.val === 'only' ? ' ' + t('(solo)') : ''));
+      return methods.length ? `<div class="badge-note">${escapeHtml(methods.join(', '))}</div>` : '';
+    }
+    function chargeHtml(tags) {
+      let html = tags.charge ? `<div class="badge-note">${escapeHtml(tags.charge)}</div>` : '';
+      if (tags['charge:conditional']) {
+        html += splitOsmRules(tags['charge:conditional']).map(p => `<div class="badge-note">${escapeHtml(translateOsmTime(p.trim()))}</div>`).join('');
+      }
       return html;
     }
 
-    function buildParkingMeterPopup(tags, lat, lon, osmMeta){
-      const name = tags.name || tags.ref || 'Parcometro';
-      const operator = tags.operator || '';
-      const paymentMethods = Object.keys(tags)
-        .filter(k => k.startsWith('payment:'))
-        .map(k => ({ method: k.slice('payment:'.length), val: String(tags[k] || '').toLowerCase() }))
-        .filter(x => x.val === 'yes' || x.val === 'only')
-        .map(x => x.method.replace(/_/g,' ') + (x.val === 'only' ? ' (solo)' : ''));
+    function buildPopupContent(tags, lat, lon, osmMeta) {
+      const kind = elementKind(tags);
+      if (kind === 'charging') return buildChargingPopup(tags, lat, lon, osmMeta);
+      if (kind === 'moto' || kind === 'bike') return buildTwoWheelPopup(tags, lat, lon, osmMeta);
+
+      const accessNoteHtml = tags['access:conditional']
+        ? badgesHtml(formatYesNoConditional(tags['access:conditional'], t('Aperto'), t('Vietato'))) : '';
+      const feeNoteHtml = tags['fee:conditional'] ? badgesHtml(formatFeeConditional(tags['fee:conditional'])) : '';
+
+      // ===== Limitazioni (badge viola per "a tempo") =====
+      const cond = (tags['parking:condition'] || '').toLowerCase();
+      const interval = tags['parking:condition:time_interval'] || '';
+      const notesBadges = [], notes = [];
+      if (cond.includes('disc')) notesBadges.push(`<div class="badge-note time">${t('Disco orario')}</div>`);
+      if (interval) notesBadges.push(`<div class="badge-note time">${escapeHtml(t('Validità: ') + translateOsmTime(interval))}</div>`);
+      if (tags.maxstay && !['no', 'none', 'unlimited', '0'].includes(String(tags.maxstay).toLowerCase().trim())) {
+        notesBadges.push(`<div class="badge-note time">${escapeHtml(t('Tempo massimo: ') + maxstayValueToItalian(tags.maxstay))}</div>`);
+      }
+      if (tags['maxstay:conditional']) {
+        formatMaxstayConditionalItalian(tags['maxstay:conditional']).forEach(line => notesBadges.push(`<div class="badge-note time">${escapeHtml(line)}</div>`));
+      }
+      if (cond.includes('ticket')) notes.push(t('Sosta a ticket'));
+      if (cond.includes('resident')) notes.push(t('Riservato residenti'));
+      const notesHtml = [notesBadges.join(''), notes.map(escapeHtml).join('<br>')].filter(Boolean).join('<br>');
+
+      const typeLabel = getSpecialStallName(tags.parking_space || '') || tags.parking_space || '';
+      const name = elementTitle(tags);
 
       return `
-        <div class="popup-header-container" style="background:linear-gradient(135deg, #fdba74, var(--meter-fill))">
-          <div class="popup-icon-box"><i data-lucide="ticket"></i></div>
-          <div class="popup-title">${escapeHtml(name)}</div>
-        </div>
-
-        ${operator ? `
-        <div class="popup-section">
-          <span class="label">Gestore</span>
-          <span class="val">${escapeHtml(operator)}</span>
+        ${popupHeaderHtml(tags, name)}
+        ${popupSection(t('Gestore'), tags.operator ? escapeHtml(tags.operator) : '')}
+        ${popupSection(t('Accesso'), escapeHtml(accessLabel(tags)) + ' ' + accessNoteHtml)}
+        ${popupSection(t('Costo'), escapeHtml(feeLabel(tags)) + ' ' + feeNoteHtml)}
+        ${popupSection(t('Tariffa'), chargeHtml(tags))}
+        ${costEstimatorHtml(tags, osmMeta)}
+        ${popupSection(t('Metodi di pagamento'), paymentHtml(tags))}
+        ${popupSection(t('Limitazioni'), notesHtml)}
+        ${tags.capacity || typeLabel ? `
+        <div class="popup-section" style="flex-direction: row; gap: 20px;">
+          ${tags.capacity ? `<div><span class="label">${t('Posti')} </span><span class="val">${escapeHtml(tags.capacity)}</span></div>` : ''}
+          ${typeLabel ? `<div><span class="label">${t('Tipo')} </span><span class="val">${escapeHtml(typeLabel)}</span></div>` : ''}
         </div>` : ''}
-
-        ${paymentMethods.length ? `
-        <div class="popup-section">
-          <span class="label">Metodi di pagamento (raw)</span>
-          <span class="val">${escapeHtml(paymentMethods.join(', '))}</span>
-        </div>` : ''}
-
-        ${tags.note ? `
-        <div class="popup-section">
-          <span class="label">Note</span>
-          <span class="val">${escapeHtml(tags.note)}</span>
-        </div>` : ''}
-
-        <div class="popup-links">
-          <a href="${buildNavUrl(lat, lon, 'driving')}" target="_blank" rel="noopener"><i data-lucide="navigation"></i> Vai a</a>
-          <a href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank" rel="noopener"><i data-lucide="pencil"></i> Modifica</a>
-          ${favButtonHtml(osmMeta, lat, lon)}
-          ${reportButtonHtml(osmMeta, lat, lon)}
-        </div>
+        ${popupSection(t('Note'), tags.note ? escapeHtml(tags.note) : '')}
+        ${popupLinksHtml(lat, lon, osmMeta)}
       `;
+    }
+
+    function buildParkingMeterPopup(tags, lat, lon, osmMeta) {
+      return `
+        ${popupHeaderHtml(tags, elementTitle(tags))}
+        ${popupSection(t('Gestore'), tags.operator ? escapeHtml(tags.operator) : '')}
+        ${popupSection(t('Metodi di pagamento'), paymentHtml(tags))}
+        ${popupSection(t('Note'), tags.note ? escapeHtml(tags.note) : '')}
+        ${popupLinksHtml(lat, lon, osmMeta)}
+      `;
+    }
+
+    // ─── Colonnine di ricarica ───
+    const SOCKET_NAMES = {
+      type2: 'Type 2', type2_cable: 'Type 2 (cavo)', type2_combo: 'CCS Combo 2', chademo: 'CHAdeMO',
+      type1: 'Type 1', type1_combo: 'CCS Combo 1', tesla_supercharger: 'Tesla Supercharger',
+      tesla_destination: 'Tesla Destination', tesla_standard: 'Tesla', nacs: 'NACS (Tesla)',
+      schuko: 'Schuko', typee: 'Type E', type3a: 'Type 3A', type3c: 'Type 3C', cee_blue: 'CEE blu',
+      cee_red_16a: 'CEE rossa 16A', cee_red_32a: 'CEE rossa 32A', gb_dc: 'GB/T DC', gb_ac: 'GB/T AC',
+      bs1363: 'BS 1363', as3112: 'AS/NZS 3112'
+    };
+    function parsePowerKw(v) {
+      const m = String(v || '').match(/(\d+(?:[.,]\d+)?)\s*(kw|w|kva)?/i);
+      if (!m) return null;
+      const n = parseFloat(m[1].replace(',', '.'));
+      return (m[2] || '').toLowerCase() === 'w' ? n / 1000 : n;
+    }
+    function formatKw(kw) {
+      return kw.toLocaleString(LOCALE, { maximumFractionDigits: 1 }) + ' kW';
+    }
+    function chargingSockets(tags) {
+      const out = [];
+      Object.keys(tags).forEach(k => {
+        const m = k.match(/^socket:([a-z0-9_]+)$/i);
+        if (!m || tags[k] === 'no' || tags[k] === '0') return;
+        const type = m[1].toLowerCase();
+        const outputs = String(tags[k + ':output'] || '').split(';').map(parsePowerKw).filter(x => x != null);
+        const count = parseInt(tags[k], 10);
+        out.push({
+          name: SOCKET_NAMES[type] ? t(SOCKET_NAMES[type]) : type.replace(/_/g, ' '),
+          count: count > 0 ? count : null,
+          kw: outputs.length ? Math.max(...outputs) : null
+        });
+      });
+      return out.sort((a, b) => (b.kw || 0) - (a.kw || 0));
+    }
+    function chargingMaxKw(tags) {
+      const list = chargingSockets(tags).map(x => x.kw).filter(Boolean);
+      const station = parsePowerKw(tags['charging_station:output']);
+      if (station) list.push(station);
+      return list.length ? Math.max(...list) : null;
+    }
+    function buildChargingPopup(tags, lat, lon, osmMeta) {
+      const sockets = chargingSockets(tags);
+      const kw = chargingMaxKw(tags);
+      const socketsHtml = sockets.map(x =>
+        `<div>${x.count ? x.count + ' × ' : ''}${escapeHtml(x.name)}${x.kw ? ' · ' + formatKw(x.kw) : ''}</div>`).join('');
+      const powerHtml = kw ? escapeHtml(formatKw(kw)) + (kw >= 50 ? ` <div class="badge-note time">${t('Ricarica rapida')}</div>` : '') : '';
+      const operator = [tags.operator, tags.network && tags.network !== tags.operator ? tags.network : null].filter(Boolean).join(' · ');
+      const feeHtml = tags.fee === 'no' ? t('Gratuita') : (tags.fee === 'yes' ? t('A pagamento') : '');
+      return `
+        ${popupHeaderHtml(tags, elementTitle(tags))}
+        ${popupSection(t('Gestore'), operator ? escapeHtml(operator) : '')}
+        ${popupSection(t('Prese'), socketsHtml)}
+        ${popupSection(t('Potenza massima'), powerHtml)}
+        ${popupSection(t('Costo'), [escapeHtml(feeHtml), chargeHtml(tags)].filter(Boolean).join(' '))}
+        ${popupSection(t('Metodi di pagamento'), paymentHtml(tags))}
+        ${popupSection(t('Orari'), tags.opening_hours ? escapeHtml(translateOsmTime(tags.opening_hours)) : '')}
+        ${popupSection(t('Accesso'), isRestricted(tags) ? escapeHtml(accessLabel(tags)) : '')}
+        ${popupSection(t('Veicoli in ricarica insieme'), tags.capacity ? escapeHtml(tags.capacity) : '')}
+        ${popupSection(t('Note'), tags.note ? escapeHtml(tags.note) : '')}
+        ${!sockets.length && !kw ? `<div class="popup-section"><span class="val" style="font-weight:500;color:var(--text-light);font-size:13px">${t('Prese e potenza non indicate su OpenStreetMap.')}</span></div>` : ''}
+        ${popupLinksHtml(lat, lon, osmMeta)}
+      `;
+    }
+
+    // ─── Parcheggi per moto e bici ───
+    const BICYCLE_PARKING_TYPES = {
+      stands: 'Archetti', wall_loops: 'Ferma-ruote', rack: 'Rastrelliera', shed: 'Deposito coperto',
+      lockers: 'Armadietti', building: 'Edificio', bollard: 'Paletti', anchors: 'Ancoraggi',
+      two_tier: 'Su due livelli', ground_slots: 'Ferma-ruote a terra', informal: 'Informale'
+    };
+    function buildTwoWheelPopup(tags, lat, lon, osmMeta) {
+      const bikeType = tags.bicycle_parking && BICYCLE_PARKING_TYPES[tags.bicycle_parking];
+      return `
+        ${popupHeaderHtml(tags, elementTitle(tags))}
+        ${popupSection(t('Gestore'), tags.operator ? escapeHtml(tags.operator) : '')}
+        ${popupSection(t('Tipo'), bikeType ? escapeHtml(t(bikeType)) : '')}
+        ${popupSection(t('Posti'), tags.capacity ? escapeHtml(tags.capacity) : '')}
+        ${popupSection(t('Coperto'), tags.covered === 'yes' ? t('Sì') : (tags.covered === 'no' ? t('No') : ''))}
+        ${popupSection(t('Accesso'), escapeHtml(accessLabel(tags)))}
+        ${popupSection(t('Costo'), tags.fee ? escapeHtml(feeLabel(tags)) + ' ' + chargeHtml(tags) : '')}
+        ${popupSection(t('Note'), tags.note ? escapeHtml(tags.note) : '')}
+        ${popupLinksHtml(lat, lon, osmMeta)}
+      `;
+    }
+
+    // ─── Costo stimato della sosta (tag charge di OSM) ───
+    // Riconosce le forme più comuni: "1.50 EUR/hour", "1,50 €/h", "0.50 EUR/30 min",
+    // "EUR 2/day", con charge:conditional anche le tariffe per fascia oraria, e
+    // salta le ore gratuite di fee:conditional (es. pausa pranzo, notte).
+    const CURRENCIES = { '€': 'EUR', '$': 'USD', '£': 'GBP' };
+    function parseChargeRate(str) {
+      const m = String(str || '').trim().match(/^(?:(EUR|USD|GBP|CHF|€|\$|£)\s*)?(\d+(?:[.,]\d+)?)\s*(EUR|USD|GBP|CHF|€|\$|£)?\s*(?:\/|per\s+|a\s+)\s*(\d+(?:[.,]\d+)?)?\s*(hours?|hrs?|h|ora|ore|minutes?|mins?|minuti|m|days?|d|giorn[oi])\b/i);
+      if (!m) return null;
+      const n = m[4] ? parseFloat(m[4].replace(',', '.')) : 1;
+      const unit = m[5].toLowerCase();
+      const minutes = /^(h|hrs?|hours?|ora|ore)$/.test(unit) ? 60 * n : (/^(m|mins?|minutes?|minuti)$/.test(unit) ? n : 1440 * n);
+      const cur = (m[1] || m[3] || 'EUR').toUpperCase();
+      return { amount: parseFloat(m[2].replace(',', '.')), currency: CURRENCIES[cur] || cur, minutes };
+    }
+    function chargeRules(tags) {
+      const rates = splitOsmRules(tags.charge).map(parseChargeRate).filter(Boolean);
+      const conditional = [];
+      splitOsmRules(tags['charge:conditional']).forEach(r => {
+        const m = r.match(/^(.+?)\s*@\s*\(?(.+?)\)?\s*$/);
+        const rate = m && parseChargeRate(m[1]);
+        if (rate) conditional.push({ rate, cond: m[2] });
+      });
+      return {
+        base: rates.find(r => r.minutes < 1440) || rates[0] || null,
+        dailyCap: rates.find(r => r.minutes >= 1440 && rates.some(o => o.minutes < 1440)) || null,
+        conditional
+      };
+    }
+    function hasCostInfo(tags) {
+      const kind = elementKind(tags);
+      if (kind !== 'parking' && kind !== 'space') return false;
+      return !!(tags.charge || tags['charge:conditional'] || tags['fee:conditional'] || tags.fee === 'yes');
+    }
+    // { total, currency, freeMinutes } oppure null se la tariffa non è leggibile
+    function estimateParkingCost(tags, minutes, from) {
+      const { base, dailyCap, conditional } = chargeRules(tags);
+      const STEP = 5;
+      let total = 0, freeMinutes = 0, paidMinutes = 0, currency = null, dailyOnly = null;
+      for (let m = 0; m < minutes; m += STEP) {
+        const at = new Date(from.getTime() + m * 60000);
+        const step = Math.min(STEP, minutes - m);
+        if (feeStateAt(tags, at) === 'free') { freeMinutes += step; continue; }
+        const rule = conditional.find(r => osmConditionMatches(r.cond, at));
+        const rate = rule ? rule.rate : base;
+        if (!rate) return null;
+        currency = currency || rate.currency;
+        paidMinutes += step;
+        if (rate.minutes >= 1440) dailyOnly = rate;
+        else total += rate.amount * step / rate.minutes;
+      }
+      if (dailyOnly) total += dailyOnly.amount * Math.ceil(paidMinutes / 1440);
+      if (dailyCap) total = Math.min(total, dailyCap.amount * Math.ceil(minutes / 1440));
+      return { total, currency: currency || (base && base.currency) || 'EUR', freeMinutes };
+    }
+    function formatMoney(amount, currency) {
+      try { return new Intl.NumberFormat(LOCALE, { style: 'currency', currency }).format(amount); }
+      catch (err) { return amount.toFixed(2) + ' ' + currency; }
+    }
+    const COST_DURATIONS = [30, 60, 120, 240, 480];
+    function costEstimatorHtml(tags, osmMeta) {
+      if (!hasCostInfo(tags)) return '';
+      const key = osmMeta.type + ':' + osmMeta.id;
+      return `<div class="popup-section">
+          <span class="label">${t('Costo stimato')}</span>
+          <div class="cost-chips">${COST_DURATIONS.map(min =>
+            `<button type="button" class="cost-chip" data-pm-action="cost" data-key="${key}" data-min="${min}">${min < 60 ? min + ' min' : (min / 60) + ' h'}</button>`).join('')}</div>
+          <span class="val cost-result">${t('Quanto resti? Tocca una durata.')}</span>
+        </div>`;
+    }
+    function costResultHtml(tags, minutes) {
+      const from = new Date();
+      const until = formatClock(from.getTime() + minutes * 60000);
+      if (tags.fee === 'no' && !tags['fee:conditional']) return t('Gratis');
+      const est = estimateParkingCost(tags, minutes, from);
+      if (!est) return t('A pagamento, ma la tariffa non è indicata su OpenStreetMap.');
+      if (est.total < 0.005) return t('Gratis fino alle {time}', { time: until });
+      const free = est.freeMinutes ? `<small>${t('di cui {d} gratis', { d: formatDuration(est.freeMinutes * 60000) })}</small>` : '';
+      return t('Circa {cost} fino alle {time}', { cost: '<b>' + formatMoney(est.total, est.currency) + '</b>', time: until }) + free +
+        `<small>${t('Stima dalle tariffe su OpenStreetMap: controlla sul posto.')}</small>`;
     }
 
     // Mirror Overpass pubblici interrogati IN PARALLELO. Appena il primo
@@ -1908,16 +2482,24 @@
     // quello al centro.
     const TILE_DEG = 0.01;
     const TILE_FRESH_MS = 6 * 60 * 60 * 1000;   // entro 6 ore una tessera non si riscarica
-    const TILE_PERSIST_PREFIX = 'parkTile_v1:';
-    const TILE_INDEX_KEY = 'parkTileIndex_v1';
+    const TILE_PERSIST_PREFIX = 'parkTile_v2:';
+    const TILE_INDEX_KEY = 'parkTileIndex_v2';
     const TILE_PERSIST_MAX = 400;
     const MAX_TILES_SPAN = 7;                   // al massimo 7x7 tessere attorno al centro
     const BLOCK_SIZE = 3;
     const MAX_PARALLEL_BLOCKS = 2;
     const MIN_DATA_ZOOM = 12;
 
-    // Vecchia cache a chiavi "centro+zoom", sostituita dalle tessere: libera spazio
-    try { localStorage.removeItem('parkOverpassCache_v1'); } catch (err) {}
+    // Cache delle versioni precedenti (a chiavi "centro+zoom", tessere v1 senza
+    // colonnine/moto/bici): libera spazio
+    try {
+      localStorage.removeItem('parkOverpassCache_v1');
+      const oldIndex = JSON.parse(localStorage.getItem('parkTileIndex_v1') || 'null');
+      if (oldIndex) {
+        Object.keys(oldIndex).forEach(k => localStorage.removeItem('parkTile_v1:' + k));
+        localStorage.removeItem('parkTileIndex_v1');
+      }
+    } catch (err) {}
 
     const tileStore = new Map();      // key -> { ts, elements }
     const inflightTiles = new Set();
@@ -2185,6 +2767,8 @@
         node["amenity"="vending_machine"]["vending"="parking_tickets"];
         way["amenity"="vending_machine"]["vending"="parking_tickets"];
         relation["amenity"="vending_machine"]["vending"="parking_tickets"];
+
+        nw["amenity"~"^(charging_station|motorcycle_parking|bicycle_parking)$"];
       );out body geom qt;`;
     }
 
@@ -2202,7 +2786,8 @@
       return `SELECT osm_type, osm_id, tags, geom FROM postpass_pointlinepolygon WHERE (` +
         `tags->>'amenity' = 'parking' OR ` +
         `(tags->>'amenity' = 'parking_space' AND tags->>'parking_space' <> 'normal') OR ` +
-        `(tags->>'amenity' = 'vending_machine' AND tags->>'vending' = 'parking_tickets')` +
+        `(tags->>'amenity' = 'vending_machine' AND tags->>'vending' = 'parking_tickets') OR ` +
+        `tags->>'amenity' IN ('charging_station', 'motorcycle_parking', 'bicycle_parking')` +
         `) AND geom && ST_MakeEnvelope(${w},${s},${e},${n},4326)`;
     }
 
@@ -2371,6 +2956,7 @@
 
       const visible = new Set(tilesForView().map(t => t.key));
       buckets.forEach((elements, key) => { if (visible.has(key)) renderParking(elements, key); });
+      scheduleListRefresh();
     }
 
     // Messaggio "Caricamento..." solo se la zona al centro è ancora vuota: se
@@ -2381,7 +2967,7 @@
       const loading = activeBlocks + activeStaticCells > 0;
       document.getElementById('refreshBtn').classList.toggle('loading', loading);
       if (loading && (loadingStatusShown || !getTile(centerTileKey()))) {
-        if (!loadingStatusShown) { setStatus('Caricamento parcheggi...'); loadingStatusShown = true; }
+        if (!loadingStatusShown) { setStatus(t('Caricamento parcheggi...')); loadingStatusShown = true; }
       } else if (loadingStatusShown) {
         setStatus('');
         loadingStatusShown = false;
@@ -2391,7 +2977,7 @@
     function reportLoadError() {
       if (getTile(centerTileKey())) return; // si continua a mostrare la cache, anche se vecchia
       loadingStatusShown = false;
-      setStatus('Errore connessione. Riprova più tardi.');
+      setStatus(t('Errore connessione. Riprova più tardi.'));
       setTimeout(() => setStatus(''), 3000);
     }
 
@@ -2501,8 +3087,57 @@
             registerElement(uniqueId, meterLayer, parkometersLayer, tile, tags);
           }
         }
+
+        /* ===== Colonnine di ricarica ===== */
+        if (tags.amenity === 'charging_station') {
+          const c = elementCenter(el);
+          if (c) {
+            const evLayer = L.marker([c.lat, c.lon], { icon: EV_ICON, pane: 'chargingPane', keyboard: false })
+              .bindPopup(() => buildChargingPopup(tags, c.lat, c.lon, osmMeta));
+            registerElement(uniqueId, evLayer, chargingLayer, tile, tags);
+          }
+        }
+
+        /* ===== Parcheggi moto e bici ===== */
+        if (tags.amenity === 'motorcycle_parking' || tags.amenity === 'bicycle_parking') {
+          const moto = tags.amenity === 'motorcycle_parking';
+          const style = moto ? { color: '#b91c1c', fillColor: '#fca5a5' } : { color: '#4d7c0f', fillColor: '#bef264' };
+          const group = moto ? motoLayer : bikesLayer;
+          let twLayer = null, lat0, lon0;
+          if (el.geometry && el.geometry.length > 1) {
+            const pts = el.geometry.map(g => [g.lat, g.lon]);
+            [lat0, lon0] = pts[0];
+            twLayer = (pts.length > 2 && pts[0][0] === pts[pts.length - 1][0] && pts[0][1] === pts[pts.length - 1][1])
+              ? L.polygon(pts, { ...style, weight: 2, fillOpacity: 0.6, pane: 'twoWheelPane' })
+              : L.polyline(pts, { color: style.color, weight: 4, pane: 'twoWheelPane' });
+          } else if (el.lat != null) {
+            lat0 = el.lat; lon0 = el.lon;
+            twLayer = L.circleMarker([el.lat, el.lon], { ...style, radius: 5, weight: 2, fillOpacity: 0.95, pane: 'twoWheelPane' });
+          }
+          if (twLayer) {
+            twLayer.bindPopup(() => buildTwoWheelPopup(tags, lat0, lon0, osmMeta));
+            registerElement(uniqueId, twLayer, group, tile, tags);
+          }
+        }
       });
     }
+
+    // Centro di un elemento: il nodo stesso o la media dei punti della way
+    function elementCenter(el) {
+      if (el.lat != null) return { lat: el.lat, lon: el.lon };
+      if (!el.geometry || !el.geometry.length) return null;
+      let lat = 0, lon = 0;
+      el.geometry.forEach(g => { lat += g.lat; lon += g.lon; });
+      return { lat: lat / el.geometry.length, lon: lon / el.geometry.length };
+    }
+
+    // Icona delle colonnine: fulmine bianco su cerchio verde (SVG inline, niente lucide per ogni marker)
+    const EV_ICON = L.divIcon({
+      className: 'ev-marker-icon',
+      html: '<div class="ev-marker"><svg viewBox="0 0 24 24"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg></div>',
+      iconSize: [22, 22],
+      iconAnchor: [11, 11]
+    });
 
     // Letti una volta sola: getComputedStyle per ogni parcometro rallentava il render
     const rootStyle = getComputedStyle(document.documentElement);
@@ -2558,20 +3193,23 @@
         return;
       }
 
-      box.innerHTML = items.map((r, i) => {
-        return `<div class="search-result-item" data-lat="${r.lat}" data-lon="${r.lon}">
-                  ${i+1}) ${escapeHtml(r.display_name)}
-                </div>`;
-      }).join('');
+      box.innerHTML = items.map((r, i) => `<div class="search-result-item" data-i="${i}">${i + 1}) ${escapeHtml(r.display_name)}</div>`).join('');
       box.style.display = 'block';
-
       box.querySelectorAll('.search-result-item').forEach(el => {
-        el.onclick = () => {
-          map.setView([parseFloat(el.dataset.lat), parseFloat(el.dataset.lon)], 17);
-          showSearchResults([]);
-          setStatus('Posizione aggiornata');
-        };
+        el.onclick = () => goToSearchResult(items[+el.dataset.i]);
       });
+    }
+
+    function goToSearchResult(r) {
+      showSearchResults([]);
+      if (r.place) {
+        clearDestination();
+        map.setView([r.lat, r.lon], r.zoom || 16);
+        setStatus(t('Posizione aggiornata'));
+        setTimeout(() => setStatus(''), 1200);
+      } else {
+        setDestination(r);
+      }
     }
 
     // ─── Ricerca località (tutto il mondo) ───
@@ -2636,7 +3274,7 @@
       if (near.length) {
         near.sort((a, b) => distanceFromView(a.lat, a.lon) - distanceFromView(b.lat, b.lon));
         map.setView([near[0].lat, near[0].lon], 15);
-        setStatus('CAP trovato');
+        setStatus(t('CAP trovato'));
         setTimeout(() => setStatus(''), 1200);
         return true;
       }
@@ -2645,7 +3283,7 @@
         const a = r.address || {};
         return {
           lat: +r.lat, lon: +r.lon,
-          name: code,
+          name: code, place: true, zoom: 15,
           display_name: [code, a.city || a.town || a.village || a.county, a.country].filter(Boolean).join(', ')
         };
       }).sort((a, b) => distanceFromView(a.lat, a.lon) - distanceFromView(b.lat, b.lon));
@@ -2653,11 +3291,11 @@
       if (!results.length) return false;
       if (results.length === 1) {
         map.setView([results[0].lat, results[0].lon], 15);
-        setStatus('CAP trovato');
+        setStatus(t('CAP trovato'));
         setTimeout(() => setStatus(''), 1200);
       } else {
         showSearchResults(results.slice(0, 6));
-        setStatus('Seleziona un risultato');
+        setStatus(t('Seleziona un risultato'));
       }
       return true;
     }
@@ -2687,8 +3325,8 @@
           .map(p => ({
             lat: p.lat,
             lon: p.lon,
-            name: p.tags.name,
-            display_name: p.tags.name + (placeTypeLabels[p.tags.place] ? ` (${placeTypeLabels[p.tags.place]})` : '')
+            name: p.tags.name, place: true,
+            display_name: p.tags.name + (placeTypeLabels[p.tags.place] ? ` (${t(placeTypeLabels[p.tags.place])})` : '')
           }));
       } catch (err) {
         console.warn('Errore ricerca nodo esatto:', err);
@@ -2696,8 +3334,10 @@
       }
     }
 
-    // Nominatim su tutto il mondo. Per alcune città importanti il nodo place=* viene
-    // "assorbito" nel confine amministrativo, quindi si accettano anche i boundary.
+    // Nominatim su tutto il mondo: località e anche indirizzi e luoghi (es.
+    // "Via Roma 10, Bergamo", "Stazione Centrale"), che diventano la destinazione
+    // attorno a cui cercare parcheggio. Per alcune città importanti il nodo
+    // place=* viene "assorbito" nel confine amministrativo: si accettano i boundary.
     async function geocodePlaceWorldwide(q) {
       try {
         const results = await nominatimSearch('q=' + encodeURIComponent(q) + '&limit=25');
@@ -2705,26 +3345,34 @@
         const qLower = q.trim().toLowerCase();
 
         return results
-          .filter(r => (r.class === 'place' && placeTypeLabels[r.type]) ||
-                       (r.class === 'boundary' && r.type === 'administrative'))
           .map(r => {
-            const name = (r.display_name.split(',')[0] || '').trim();
-            const label = placeTypeLabels[r.type] || (r.addresstype ? placeTypeLabels[r.addresstype] : null);
-            const country = r.address && r.address.country;
-            return {
-              lat: +r.lat,
-              lon: +r.lon,
-              name,
-              display_name: (label ? `${name} (${label})` : name) + (country ? `, ${country}` : '')
-            };
+            const a = r.address || {};
+            const country = a.country;
+            const isPlace = (r.class === 'place' && placeTypeLabels[r.type]) || (r.class === 'boundary' && r.type === 'administrative');
+            if (isPlace) {
+              const name = (r.display_name.split(',')[0] || '').trim();
+              const label = placeTypeLabels[r.type] || (r.addresstype ? placeTypeLabels[r.addresstype] : null);
+              return {
+                lat: +r.lat, lon: +r.lon, name, place: true,
+                zoom: ['city', 'town', 'municipality'].includes(r.type) || r.class === 'boundary' ? 15 : 16,
+                display_name: (label ? `${name} (${t(label)})` : name) + (country ? `, ${country}` : '')
+              };
+            }
+            const street = a.road ? a.road + (a.house_number ? ' ' + a.house_number : '') : '';
+            const name = r.name || street || (r.display_name.split(',')[0] || '').trim();
+            const city = a.city || a.town || a.village || a.suburb || a.county;
+            const detail = [r.name && street && street !== name ? street : null, city].filter(Boolean).join(', ');
+            return { lat: +r.lat, lon: +r.lon, name, place: false, display_name: name + (detail ? ' · ' + detail : '') + (country ? `, ${country}` : '') };
           })
+          // Una strada lunga arriva a pezzi con lo stesso nome: se ne tiene uno
+          .filter((r, i, all) => all.findIndex(o => o.display_name === r.display_name) === i)
           // Il nome identico alla ricerca prima delle frazioni omonime, poi i più vicini
           .sort((a, b) =>
             ((a.name.toLowerCase() === qLower ? 0 : 1) - (b.name.toLowerCase() === qLower ? 0 : 1)) ||
             (distanceFromView(a.lat, a.lon) - distanceFromView(b.lat, b.lon)))
           .slice(0, 6);
       } catch (err) {
-        console.warn('Errore ricerca città:', err);
+        console.warn('Errore ricerca:', err);
         return [];
       }
     }
@@ -2733,12 +3381,12 @@
       if (!q) return;
 
       showSearchResults([]);
-      setStatus('Cerco località...');
+      setStatus(t('Cerco località...'));
 
       // Codici postali numerici (IT, FR, DE, ES, US: 5 cifre; CH, AT, BE...: 4; ecc.)
       if (/^\d{4,6}$/.test(q)) {
         if (await geocodePostcode(q)) return;
-        setStatus('CAP non trovato su OSM');
+        setStatus(t('CAP non trovato su OSM'));
         return;
       }
 
@@ -2747,11 +3395,72 @@
       const worldwide = geocodePlaceWorldwide(q);
       let placeResults = await geocodeExactPlaceNode(q);
       if (!placeResults.length) placeResults = await worldwide;
-      if (!placeResults.length) { setStatus('Nessun risultato'); return; }
+      if (!placeResults.length) { setStatus(t('Nessun risultato')); return; }
 
       showSearchResults(placeResults.slice(0, 6));
-      setStatus('Seleziona un risultato');
+      setStatus(t('Seleziona un risultato'));
     }
+
+    /* ===== Destinazione: parcheggi attorno a un indirizzo cercato ===== */
+    let destination = null, destMarker = null, destWaitTimer = null;
+    const destIcon = L.divIcon({
+      className: 'dest-marker-icon',
+      html: '<div class="dest-marker"><svg viewBox="0 0 34 42"><path d="M17 41s14-12.6 14-24A14 14 0 0 0 3 17c0 11.4 14 24 14 24z" fill="#be123c" stroke="#fff" stroke-width="2.5"/><path d="M12.5 23V11.5c3-1.6 5.5 1.6 9 0v7c-3.5 1.6-6-1.6-9 0" fill="#fff" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg></div>',
+      iconSize: [34, 42],
+      iconAnchor: [17, 41]
+    });
+
+    function updateDestChip() {
+      const chip = document.getElementById('destChip');
+      chip.hidden = !destination;
+      if (destination) document.getElementById('destChipText').textContent = t('Vicino a {name}', { name: destination.name });
+    }
+
+    function setDestination(r) {
+      destination = { lat: r.lat, lon: r.lon, name: r.name };
+      if (destMarker) map.removeLayer(destMarker);
+      destMarker = L.marker([r.lat, r.lon], { icon: destIcon, pane: 'userLocationPane', keyboard: false, zIndexOffset: 500, title: r.name }).addTo(map);
+      destMarker.on('click', openDestinationList);
+      map.setView([r.lat, r.lon], 17);
+      updateDestChip();
+      setStatus('');
+      // Appena i parcheggi della zona sono arrivati si apre l'elenco ordinato
+      // per distanza a piedi dalla destinazione
+      whenDataReady(() => { if (destination) openDestinationList(); });
+    }
+
+    function clearDestination() {
+      destination = null;
+      clearTimeout(destWaitTimer);
+      if (destMarker) { map.removeLayer(destMarker); destMarker = null; }
+      updateDestChip();
+    }
+
+    function openDestinationList() {
+      if (destination && map.distance(map.getCenter(), L.latLng(destination.lat, destination.lon)) > 3000) {
+        map.setView([destination.lat, destination.lon], 17);
+      }
+      listTab = 'near';
+      renderList();
+      openSheet(listSheetEl);
+    }
+
+    // Richiama fn quando i dati della zona al centro sono caricati (al massimo 10 s)
+    function whenDataReady(fn) {
+      clearTimeout(destWaitTimer);
+      const started = Date.now();
+      const check = () => {
+        const ready = isTileFresh(getTile(centerTileKey())) && activeBlocks + activeStaticCells === 0;
+        if (ready || Date.now() - started > 10000) fn();
+        else destWaitTimer = setTimeout(check, 300);
+      };
+      destWaitTimer = setTimeout(check, 400);
+    }
+
+    document.getElementById('destChip').onclick = (e) => {
+      if (e.target.closest('#destChipClose')) clearDestination();
+      else openDestinationList();
+    };
 
     document.getElementById('searchBtn').onclick = () => geocode(document.getElementById('searchInput').value.trim());
     document.getElementById('searchInput').onkeydown = (e) => {
@@ -2806,7 +3515,7 @@
       if (centerOnNextFix) {
         centerOnNextFix = false;
         map.setView(ll, Math.max(map.getZoom(), 17));
-        setStatus('Posizione trovata');
+        setStatus(t('Posizione trovata'));
         setTimeout(() => setStatus(''), 1200);
       }
       triggerInitialLoad();
@@ -2815,7 +3524,7 @@
     function onUserPositionError(err) {
       if (centerOnNextFix) {
         centerOnNextFix = false;
-        setStatus(err && err.code === 1 ? 'Permesso posizione negato' : 'Posizione non disponibile');
+        setStatus(err && err.code === 1 ? t('Permesso posizione negato') : t('Posizione non disponibile'));
         setTimeout(() => setStatus(''), 2500);
       }
       if (err && err.code === 1) {
@@ -2840,7 +3549,7 @@
 
     function locateUser() {
       if (!navigator.geolocation) {
-        setStatus('GPS non disponibile');
+        setStatus(t('GPS non disponibile'));
         triggerInitialLoad();
         return;
       }
@@ -2849,7 +3558,7 @@
         map.setView(lastFix.ll, Math.max(map.getZoom(), 17));
       } else {
         centerOnNextFix = true;
-        setStatus('Cerco la tua posizione...');
+        setStatus(t('Cerco la tua posizione...'));
       }
       startWatchingPosition();
     }
@@ -2880,13 +3589,13 @@
     }
 
     function promptCopyUrl(url) {
-      window.prompt('Copia il link:', url);
+      window.prompt(t('Copia il link:'), url);
     }
 
     function copyShareUrl(url) {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(url).then(() => {
-          setStatus('Link copiato negli appunti');
+          setStatus(t('Link copiato negli appunti'));
           setTimeout(() => setStatus(''), 1800);
         }).catch(() => promptCopyUrl(url));
       } else {
@@ -2894,21 +3603,26 @@
       }
     }
 
-    async function shareCurrentView() {
-      const url = buildShareUrl();
-
-      // Web Share API (mobile): apre il menu di condivisione nativo del
-      // sistema. Se non disponibile (es. desktop), fallback su clipboard.
+    // Web Share API (mobile): apre il menu di condivisione del sistema; nella
+    // WebView dell'app non esiste e si usa l'intent di Android. Altrimenti
+    // (es. desktop) il link si copia negli appunti.
+    async function shareLink(text, url) {
+      if (IS_NATIVE_APP) {
+        try { await nativeCall('ParkMapNative', 'share', { title: 'ParkMap', text, url }); return; } catch (err) {}
+      }
       if (navigator.share) {
         try {
-          await navigator.share({ title: 'ParkMap', text: 'Guarda questa posizione su ParkMap', url });
+          await navigator.share({ title: 'ParkMap', text, url });
           return;
         } catch (err) {
           if (err.name === 'AbortError') return; // utente ha annullato la condivisione
-          // Qualunque altro errore (es. share non permesso in questo contesto): fallback su copia.
         }
       }
       copyShareUrl(url);
+    }
+
+    function shareCurrentView() {
+      return shareLink(t('Guarda questa posizione su ParkMap'), buildShareUrl());
     }
 
     document.getElementById('shareBtn').onclick = shareCurrentView;
@@ -2928,7 +3642,7 @@
       tileStore.forEach(t => { t.ts = 0; });
       staticFetchCache = 'no-cache'; // scavalca la cache HTTP: prende l'ultima generazione notturna
 
-      setStatus('Aggiornamento dati...');
+      setStatus(t('Aggiornamento dati...'));
       loadingStatusShown = true; // il messaggio sparisce quando arrivano i dati
       loadVisibleTiles();
     }
@@ -2975,21 +3689,21 @@
       const c = map.getCenter();
       const staticCoversCenter = !!staticIndex && staticIndex.covered.has(cellKeyOfTile(latToTile(c.lat), lonToTile(c.lng)));
       const staticDate = staticIndex && staticIndex.osmTimestamp
-        ? new Date(staticIndex.osmTimestamp).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })
+        ? new Date(staticIndex.osmTimestamp).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short', year: 'numeric' })
         : '';
-      const staticLabel = !staticIndex ? 'non disponibili'
-        : (staticCoversCenter ? `OSM del ${staticDate}` : 'fuori area (Overpass)');
+      const staticLabel = !staticIndex ? t('non disponibili')
+        : (staticCoversCenter ? t('OSM del {date}', { date: staticDate }) : t('fuori area (Postpass)'));
 
       const panel = document.createElement('div');
       panel.id = 'diagPanel';
       panel.innerHTML = `
         <div class="diag-header">
-          <span>Provider dati OSM</span>
-          <button type="button" class="diag-close" aria-label="Chiudi">✕</button>
+          <span>${t('Provider dati OSM')}</span>
+          <button type="button" class="diag-close" aria-label="${t('Chiudi')}">✕</button>
         </div>
         <div class="diag-table-wrap">
           <table class="diag-table">
-            <thead><tr><th>Provider</th><th>Rete</th><th>Query</th></tr></thead>
+            <thead><tr><th>Provider</th><th>${t('Rete')}</th><th>Query</th></tr></thead>
             <tbody>
               ${[POSTPASS_URL, ...OVERPASS_MIRRORS].map(url => {
                 const label = url === POSTPASS_URL ? POSTPASS_LABEL : shortOverpassLabel(url);
@@ -3003,14 +3717,14 @@
           </table>
         </div>
         <div class="diag-cache-row">
-          <span>Cache per questa zona</span>
-          <strong style="color:${hasSessionCache || hasPersistentCache ? '#16a34a' : '#94a3b8'}">${hasSessionCache ? 'attiva' : (hasPersistentCache ? 'disponibile' : 'assente')}</strong>
+          <span>${t('Cache per questa zona')}</span>
+          <strong style="color:${hasSessionCache || hasPersistentCache ? '#16a34a' : '#94a3b8'}">${hasSessionCache ? t('attiva') : (hasPersistentCache ? t('disponibile') : t('assente'))}</strong>
         </div>
         <div class="diag-cache-row">
-          <span>Dati precalcolati</span>
+          <span>${t('Dati precalcolati')}</span>
           <strong style="color:${staticCoversCenter ? '#16a34a' : '#94a3b8'}">${staticLabel}</strong>
         </div>
-        <button type="button" class="diag-run-btn">Aggiorna ora</button>
+        <button type="button" class="diag-run-btn">${t('Aggiorna ora')}</button>
       `;
       document.body.appendChild(panel);
       diagPanelEl = panel;
@@ -3067,11 +3781,11 @@
 
       if (!document.fullscreenElement) {
         if (!root.requestFullscreen) {
-          setStatus('Schermo intero non supportato');
+          setStatus(t('Schermo intero non supportato'));
           return;
         }
         root.requestFullscreen()
-          .catch(() => setStatus('Impossibile attivare schermo intero'));
+          .catch(() => setStatus(t('Impossibile attivare schermo intero')));
       } else {
         if (document.exitFullscreen) document.exitFullscreen();
       }
@@ -3108,10 +3822,10 @@
     function refreshDataInfo() {
       const c = map.getCenter();
       const ck = cellKeyOfTile(latToTile(c.lat), lonToTile(c.lng));
-      let source = 'Postpass (in tempo reale)';
+      let source = t('Postpass (in tempo reale)');
       if (staticIndex && staticIndex.covered.has(ck)) {
         const d = staticIndex.osmTimestamp ? new Date(staticIndex.osmTimestamp) : null;
-        source = 'Precalcolati' + (d ? ' · OSM del ' + d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) : '');
+        source = t('Precalcolati') + (d ? ' · ' + t('OSM del {date}', { date: d.toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' }) }) : '');
       }
       document.getElementById('setDataSource').textContent = source;
 
@@ -3122,7 +3836,7 @@
           if (v) { zones++; bytes += v.length * 2; }
         });
       } catch (err) {}
-      document.getElementById('setCacheInfo').textContent = zones ? `${zones} zone · ${formatBytes(bytes)}` : 'nessuna zona';
+      document.getElementById('setCacheInfo').textContent = zones ? t('{n} zone', { n: zones }) + ' · ' + formatBytes(bytes) : t('nessuna zona');
     }
 
     function refreshSettingsUI() {
@@ -3195,7 +3909,7 @@
       clearPersistedTiles();
       tileStore.clear();
       refreshDataInfo();
-      setStatus('Cache svuotata');
+      setStatus(t('Cache svuotata'));
       setTimeout(() => setStatus(''), 1500);
       refreshAllData();
     };
@@ -3246,13 +3960,13 @@
       const notesLink = document.getElementById('updateNotesLink');
 
       if (!IS_NATIVE_APP) {
-        document.getElementById('setVersionLabel').textContent = 'Versione web';
-        document.getElementById('setVersion').textContent = 'sempre aggiornata';
+        document.getElementById('setVersionLabel').textContent = t('Versione web');
+        document.getElementById('setVersion').textContent = t('sempre aggiornata');
         document.getElementById('autoUpdateRow').hidden = true;
         statusRow.hidden = false;
         statusEl2.className = 'set-note';
-        statusEl2.textContent = "Su Android puoi installare l'app: si apre subito e usa il GPS del telefono.";
-        checkBtn.innerHTML = '<i data-lucide="download"></i> Scarica l\'app Android';
+        statusEl2.textContent = t("Su Android puoi installare l'app: si apre subito e usa il GPS del telefono.");
+        checkBtn.innerHTML = '<i data-lucide="download"></i> ' + escapeHtml(t("Scarica l'app Android"));
         checkBtn.onclick = () => window.open(`https://github.com/${GITHUB_REPO}/releases/latest`, '_blank');
         installBtn.hidden = true;
         notesLink.hidden = true;
@@ -3260,18 +3974,18 @@
         return;
       }
 
-      document.getElementById('setVersion').textContent = APP_VERSION || 'sviluppo';
+      document.getElementById('setVersion').textContent = APP_VERSION || t('sviluppo');
       const messages = {
         idle: null,
-        checking: ['Controllo in corso…', ''],
-        latest: ["Hai già l'ultima versione.", 'ok'],
-        error: ['Impossibile contattare GitHub. Riprova più tardi.', 'warn'],
-        downloading: ["Download avviato: al termine apri il file .apk e conferma l'aggiornamento.", 'ok']
+        checking: [t('Controllo in corso…'), ''],
+        latest: [t("Hai già l'ultima versione."), 'ok'],
+        error: [t('Impossibile contattare GitHub. Riprova più tardi.'), 'warn'],
+        downloading: [t("Download avviato: al termine apri il file .apk e conferma l'aggiornamento."), 'ok']
       };
       let msg = messages[updateState];
       if (updateState === 'available') {
-        const d = latestRelease.publishedAt ? new Date(latestRelease.publishedAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }) : '';
-        msg = [`Nuova versione ${latestRelease.version} disponibile${d ? ' (' + d + ')' : ''}.`, 'new'];
+        const d = latestRelease.publishedAt ? new Date(latestRelease.publishedAt).toLocaleDateString(LOCALE, { day: 'numeric', month: 'long' }) : '';
+        msg = [t('Nuova versione {v} disponibile', { v: latestRelease.version }) + (d ? ' (' + d + ')' : '') + '.', 'new'];
       }
       statusRow.hidden = !msg;
       if (msg) { statusEl2.textContent = msg[0]; statusEl2.className = 'set-note ' + msg[1]; }
@@ -3299,7 +4013,7 @@
       renderUpdateInfo();
       setUpdateBadge();
       if (silent && updateState === 'available') {
-        setStatus(`Nuova versione ${latestRelease.version}: apri le impostazioni`);
+        setStatus(t('Nuova versione {v}: apri le impostazioni', { v: latestRelease.version }));
         setTimeout(() => setStatus(''), 3500);
       }
     }
@@ -3327,6 +4041,7 @@
         if (activeFilters.has(f)) activeFilters.delete(f); else activeFilters.add(f);
         chip.classList.toggle('active', activeFilters.has(f));
         chip.setAttribute('aria-pressed', activeFilters.has(f) ? 'true' : 'false');
+        applyLayerVisibility();
         applyFilters();
         if (!listSheetEl.hidden) renderList();
       };
@@ -3336,29 +4051,43 @@
 
     function formatDistance(m) {
       if (m < 1000) return Math.round(m / 10) * 10 + ' m';
-      return (m / 1000).toFixed(m < 10000 ? 1 : 0).replace('.', ',') + ' km';
+      return (m / 1000).toLocaleString(LOCALE, { maximumFractionDigits: m < 10000 ? 1 : 0 }) + ' km';
     }
+    // Minuti a piedi: in linea d'aria × 1,25 (le strade non sono dritte), 80 m al minuto
+    function walkingMinutes(m) { return Math.max(1, Math.round(m * 1.25 / 80)); }
 
-    // Punto da cui misurare le distanze: la mia posizione se è nella zona
-    // che sto guardando, altrimenti il centro della mappa
+    // Punto da cui misurare le distanze: la destinazione cercata se è nella
+    // zona che sto guardando, poi la mia posizione, altrimenti il centro della mappa
     function referencePoint() {
       const c = map.getCenter();
-      if (lastFix && map.distance(c, L.latLng(lastFix.ll)) < 30000) return L.latLng(lastFix.ll);
-      return c;
+      if (destination && map.distance(c, L.latLng(destination.lat, destination.lon)) < 3000) {
+        return { latlng: L.latLng(destination.lat, destination.lon), kind: 'dest' };
+      }
+      if (lastFix && map.distance(c, L.latLng(lastFix.ll)) < 30000) return { latlng: L.latLng(lastFix.ll), kind: 'me' };
+      return { latlng: c, kind: 'center' };
     }
 
     /* ===== Elenco parcheggi vicini e preferiti ===== */
     const listSheetEl = document.getElementById('listSheet');
     let listTab = 'near';
 
-    function listRowHtml({ key, tags, name, summary, dist, removable }) {
+    function listRowHtml({ key, tags, name, summary, dist, walk, removable }) {
       const theme = getPopupTheme(tags || {});
       return `<div class="list-row" data-key="${escapeHtml(key)}" role="button" tabindex="0">
         <span class="list-dot" style="background:${theme.c1}; border-color:${theme.c2}"></span>
         <span class="list-main"><span class="list-title">${escapeHtml(name)}</span><span class="list-sub">${escapeHtml(summary)}</span></span>
-        ${dist != null ? `<span class="list-dist">${formatDistance(dist)}</span>` : ''}
-        ${removable ? `<button type="button" class="list-del" data-del="${escapeHtml(key)}" aria-label="Rimuovi dai preferiti"><i data-lucide="trash-2"></i></button>` : ''}
+        ${dist != null ? `<span class="list-dist">${formatDistance(dist)}${walk ? `<br><small>${t('{n} min a piedi', { n: walkingMinutes(dist) })}</small>` : ''}</span>` : ''}
+        ${removable ? `<button type="button" class="list-del" data-del="${escapeHtml(key)}" aria-label="${t('Rimuovi dai preferiti')}"><i data-lucide="trash-2"></i></button>` : ''}
       </div>`;
+    }
+
+    // Con l'elenco aperto, i dati appena arrivati lo aggiornano
+    let listRefreshTimer = null;
+    function scheduleListRefresh() {
+      const sheet = document.getElementById('listSheet');
+      if (sheet.hidden || listTab !== 'near') return;
+      clearTimeout(listRefreshTimer);
+      listRefreshTimer = setTimeout(() => { if (!sheet.hidden) renderList(); }, 400);
     }
 
     function openElementOnMap(key, latlng) {
@@ -3378,21 +4107,29 @@
       document.querySelectorAll('#listTabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === listTab));
       const card = document.getElementById('listCard');
       const hint = document.getElementById('listHint');
-      const ref = referencePoint();
+      const refPoint = referencePoint(), ref = refPoint.latlng;
+      const walk = refPoint.kind !== 'center';
+      document.getElementById('listTitle').textContent = refPoint.kind === 'dest' && listTab === 'near'
+        ? t('Vicino a {name}', { name: destination.name }) : t('Parcheggi');
 
       if (listTab === 'near') {
         const rows = [];
+        // Parcheggi per auto; moto, bici e colonnine solo con il loro filtro attivo
+        const listFilters = { charging: 'ev', moto: 'moto', bike: 'bike' };
         idToLayer.forEach((entry, key) => {
-          if (entry.tags.amenity === 'vending_machine') return;
+          const kind = elementKind(entry.tags);
+          if (kind === 'meter' || (listFilters[kind] && !activeFilters.has(listFilters[kind]))) return;
           if (!map.hasLayer(entry.group) || !entry.group.hasLayer(entry.layer)) return;
           rows.push({ key, entry, dist: map.distance(ref, entry.center) });
         });
         rows.sort((a, b) => a.dist - b.dist);
         card.innerHTML = rows.length
-          ? rows.slice(0, 60).map(r => listRowHtml({ key: r.key, tags: r.entry.tags, name: elementTitle(r.entry.tags), summary: elementSummary(r.entry.tags), dist: r.dist })).join('')
-          : '<div class="list-empty">Nessun parcheggio in questa zona' + (activeFilters.size ? ' con i filtri scelti.' : '. Sposta la mappa o allarga la vista.') + '</div>';
-        hint.textContent = (lastFix && ref.equals(L.latLng(lastFix.ll)) ? 'Distanze dalla tua posizione' : 'Distanze dal centro della mappa') +
-          (activeFilters.size ? ' · filtri attivi' : '') + (rows.length > 60 ? ` · i 60 più vicini su ${rows.length}` : '');
+          ? rows.slice(0, 60).map(r => listRowHtml({ key: r.key, tags: r.entry.tags, name: elementTitle(r.entry.tags), summary: elementSummary(r.entry.tags), dist: r.dist, walk })).join('')
+          : '<div class="list-empty">' + (activeFilters.size ? t('Nessun parcheggio in questa zona con i filtri scelti.') : t('Nessun parcheggio in questa zona. Sposta la mappa o allarga la vista.')) + '</div>';
+        const from = refPoint.kind === 'dest' ? t('Distanze a piedi da {name}', { name: destination.name })
+          : (refPoint.kind === 'me' ? t('Distanze dalla tua posizione') : t('Distanze dal centro della mappa'));
+        hint.textContent = from + (activeFilters.size ? ' · ' + t('filtri attivi') : '') +
+          (rows.length > 60 ? ' · ' + t('i 60 più vicini su {n}', { n: rows.length }) : '');
         card.querySelectorAll('.list-row').forEach(row => {
           row.onclick = () => { const e = idToLayer.get(row.dataset.key); if (e) openElementOnMap(row.dataset.key, e.center); };
         });
@@ -3400,8 +4137,8 @@
         const rows = favorites.map(f => ({ ...f, dist: map.distance(ref, L.latLng(f.lat, f.lon)) })).sort((a, b) => a.dist - b.dist);
         card.innerHTML = rows.length
           ? rows.map(f => listRowHtml({ key: f.id, tags: f.tags, name: f.name, summary: f.summary, dist: f.dist, removable: true })).join('')
-          : '<div class="list-empty">Nessun preferito.<br>Apri un parcheggio sulla mappa e tocca <b>Salva</b> per ritrovarlo qui.</div>';
-        hint.textContent = rows.length ? 'I preferiti restano salvati su questo dispositivo.' : '';
+          : '<div class="list-empty">' + t('Nessun preferito.<br>Apri un parcheggio sulla mappa e tocca <b>Salva</b> per ritrovarlo qui.') + '</div>';
+        hint.textContent = rows.length ? t('I preferiti restano salvati su questo dispositivo.') : '';
         card.querySelectorAll('.list-row').forEach(row => {
           row.onclick = (ev) => {
             if (ev.target.closest('.list-del')) return;
@@ -3424,11 +4161,11 @@
       const key = osmMeta.type + ':' + osmMeta.id;
       const on = isFavorite(key);
       return `<button type="button" class="fav${on ? ' on' : ''}" data-pm-action="fav" data-key="${key}" data-lat="${lat}" data-lon="${lon}">` +
-        `<i data-lucide="star"></i> ${on ? 'Salvato' : 'Salva'}</button>`;
+        `<i data-lucide="star"></i> ${on ? t('Salvato') : t('Salva')}</button>`;
     }
     function reportButtonHtml(osmMeta, lat, lon) {
       return `<button type="button" data-pm-action="report" data-osm="${osmMeta.type}/${osmMeta.id}" data-lat="${lat}" data-lon="${lon}">` +
-        `<i data-lucide="flag"></i> Segnala</button>`;
+        `<i data-lucide="flag"></i> ${t('Segnala')}</button>`;
     }
 
     map.on('popupopen', (e) => {
@@ -3445,14 +4182,25 @@
               id: key, name: elementTitle(tags), summary: elementSummary(tags),
               lat: +btn.dataset.lat, lon: +btn.dataset.lon, savedAt: Date.now(),
               tags: { amenity: tags.amenity, parking_space: tags.parking_space, fee: tags.fee, access: tags.access, vehicle: tags.vehicle,
-                      'fee:conditional': tags['fee:conditional'], 'parking:condition': tags['parking:condition'], maxstay: tags.maxstay }
+                      'fee:conditional': tags['fee:conditional'], 'parking:condition': tags['parking:condition'], maxstay: tags.maxstay,
+                      charge: tags.charge }
             });
           }
           saveFavorites();
           const on = isFavorite(key);
           btn.classList.toggle('on', on);
-          btn.innerHTML = `<i data-lucide="star"></i> ${on ? 'Salvato' : 'Salva'}`;
+          btn.innerHTML = `<i data-lucide="star"></i> ${on ? t('Salvato') : t('Salva')}`;
           lucide.createIcons({ root: btn });
+        };
+      });
+      root.querySelectorAll('[data-pm-action="cost"]').forEach(btn => {
+        btn.onclick = () => {
+          const entry = idToLayer.get(btn.dataset.key);
+          if (!entry) return;
+          btn.parentNode.querySelectorAll('.cost-chip').forEach(b => b.classList.toggle('active', b === btn));
+          btn.closest('.popup-section').querySelector('.cost-result').innerHTML = costResultHtml(entry.tags, +btn.dataset.min);
+          // Il popup cresce: si riposiziona senza rigenerare il contenuto (update() lo farebbe)
+          e.popup._updateLayout(); e.popup._updatePosition(); e.popup._adjustPan();
         };
       });
       root.querySelectorAll('[data-pm-action="report"]').forEach(btn => {
@@ -3470,10 +4218,10 @@
     // volontari le vedono sulla mappa e correggono i dati.
     const OSM_NOTES_API = 'https://api.openstreetmap.org/api/0.6/notes.json';
     const REPORT_TYPES = {
-      missing: { label: 'Parcheggio mancante', placeholder: 'Es. parcheggio gratuito con circa 20 posti, ingresso da via Roma.' },
-      wrong: { label: 'Informazioni sbagliate', placeholder: 'Cosa non è corretto? Es. ora è a pagamento dal lunedì al sabato, 8–20.' },
-      gone: { label: 'Non esiste più', placeholder: 'Es. il parcheggio è stato chiuso per lavori / trasformato in area pedonale.' },
-      other: { label: 'Altro', placeholder: 'Descrivi la situazione.' }
+      missing: { label: t('Parcheggio mancante'), placeholder: t('Es. parcheggio gratuito con circa 20 posti, ingresso da via Roma.') },
+      wrong: { label: t('Informazioni sbagliate'), placeholder: t('Cosa non è corretto? Es. ora è a pagamento dal lunedì al sabato, 8–20.') },
+      gone: { label: t('Non esiste più'), placeholder: t('Es. il parcheggio è stato chiuso per lavori / trasformato in area pedonale.') },
+      other: { label: t('Altro'), placeholder: t('Descrivi la situazione.') }
     };
     const reportSheetEl = document.getElementById('reportSheet');
     let reportCtx = null;
@@ -3505,20 +4253,20 @@
       if (text.length < 10) {
         resultRow.hidden = false;
         result.className = 'set-note warn';
-        result.textContent = 'Scrivi qualche dettaglio in più (almeno 10 caratteri): aiuta chi dovrà correggere la mappa.';
+        result.textContent = t('Scrivi qualche dettaglio in più (almeno 10 caratteri): aiuta chi dovrà correggere la mappa.');
         return;
       }
       const body = [
-        `${REPORT_TYPES[reportCtx.type].label} (segnalato con l'app ParkMap)`,
+        REPORT_TYPES[reportCtx.type].label + ' ' + t("(segnalato con l'app ParkMap)"),
         '',
         text,
-        reportCtx.osmRef ? `\nElemento: https://www.openstreetmap.org/${reportCtx.osmRef}` : '',
+        reportCtx.osmRef ? '\n' + t('Elemento:') + ` https://www.openstreetmap.org/${reportCtx.osmRef}` : '',
         '#ParkMap'
       ].join('\n');
       sendBtn.disabled = true;
       resultRow.hidden = false;
       result.className = 'set-note';
-      result.textContent = 'Invio in corso…';
+      result.textContent = t('Invio in corso…');
       try {
         const res = await fetch(OSM_NOTES_API, {
           method: 'POST',
@@ -3529,28 +4277,43 @@
         const note = await res.json();
         const id = note && note.properties && note.properties.id;
         result.className = 'set-note ok';
-        result.innerHTML = 'Grazie! Segnalazione inviata' +
-          (id ? `: <a href="https://www.openstreetmap.org/note/${id}" target="_blank" rel="noopener">nota #${id}</a>` : '.');
+        result.innerHTML = t('Grazie! Segnalazione inviata') +
+          (id ? `: <a href="https://www.openstreetmap.org/note/${id}" target="_blank" rel="noopener">${t('nota')} #${id}</a>` : '.');
       } catch (err) {
         console.warn('Nota OSM non inviata:', err.message);
         sendBtn.disabled = false;
         result.className = 'set-note warn';
-        result.textContent = 'Invio non riuscito. Controlla la connessione e riprova.';
+        result.textContent = t('Invio non riuscito. Controlla la connessione e riprova.');
       }
     };
 
-    /* ===== La mia auto + promemoria della sosta ===== */
+    /* ===== La mia auto: posizione, note e foto, promemoria, storico ===== */
     const CAR_KEY = 'parkCar_v1';
+    const CAR_HISTORY_KEY = 'parkCarHistory_v1';
+    const CAR_HISTORY_MAX = 30;
     const CAR_NOTIFY_IDS = [7101, 7102];       // 10 minuti prima, alla scadenza
     const CAR_WARNING_MS = 10 * 60 * 1000;
     const carSheetEl = document.getElementById('carSheet');
     let car = null;
     try { car = JSON.parse(localStorage.getItem(CAR_KEY)); } catch (err) { car = null; }
+    let carHistory = [];
+    try { carHistory = JSON.parse(localStorage.getItem(CAR_HISTORY_KEY)) || []; } catch (err) { carHistory = []; }
     let carMarker = null, carLine = null, carWebTimers = [];
+    let carPhotoUrl = null;      // foto dell'auto attuale (data URL letta da IndexedDB)
+    let showAllHistory = false, noteSaveTimer = null;
 
     function saveCar() {
       try { car ? localStorage.setItem(CAR_KEY, JSON.stringify(car)) : localStorage.removeItem(CAR_KEY); } catch (err) {}
       pushCarToNative();
+    }
+
+    // La sosta finita (auto spostata o "Ho lasciato il parcheggio") va nello storico
+    function archiveCar(endTs) {
+      if (!car) return;
+      carHistory.unshift({ lat: car.lat, lon: car.lon, ts: car.ts, end: endTs || Date.now(), address: car.address || '', note: car.note || '' });
+      carHistory = carHistory.slice(0, CAR_HISTORY_MAX);
+      try { localStorage.setItem(CAR_HISTORY_KEY, JSON.stringify(carHistory)); } catch (err) {}
+      if (car.photo) setCarPhoto(null);
     }
 
     // App Android: l'auto è condivisa con il widget "La mia auto"
@@ -3560,7 +4323,31 @@
       nativeCall('ParkMapNative', 'setCar', { car: car ? JSON.stringify(car) : null }).catch(() => {});
     }
 
-    // Azioni chieste dal widget: "Ho parcheggiato" e "Apri"
+    // Auto salvata dall'app chiusa alla disconnessione dal Bluetooth
+    // (BluetoothCarReceiver): la pagina la adotta, la precedente va nello storico
+    async function adoptNativeCar() {
+      if (!IS_NATIVE_APP) return false;
+      try {
+        const res = await nativeCall('ParkMapNative', 'takePendingCar');
+        if (!res || !res.car) return false;
+        const fromNative = JSON.parse(res.car);
+        if (car && car.ts >= fromNative.ts) return false;
+        if (car) archiveCar(fromNative.ts);
+        car = fromNative;
+        carNotifyWarning = '';
+        saveCar();
+        scheduleCarNotifications();
+        renderCarOnMap();
+        updateCarChip();
+        if (!carSheetEl.hidden) renderCarSheet();
+        lookupCarAddress();
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    // Azioni chieste da widget, scorciatoie dell'icona e notifiche
     async function handleNativeAction() {
       if (!IS_NATIVE_APP) return;
       try {
@@ -3568,10 +4355,14 @@
         const action = res && res.action;
         if (action === 'saveCar') {
           openCarSheet();
-          if (!car) saveCarFromGps();
+          saveCarFromGps();
         } else if (action === 'showCar') {
           if (car) map.setView([car.lat, car.lon], Math.max(map.getZoom(), 17));
           openCarSheet();
+        } else if (action === 'nearby') {
+          clearDestination();
+          if (lastFix) map.setView(lastFix.ll, Math.max(map.getZoom(), 16)); else locateUser();
+          whenDataReady(() => { listTab = 'near'; renderList(); openSheet(listSheetEl); });
         }
       } catch (err) {}
     }
@@ -3586,16 +4377,17 @@
 
     function formatDuration(ms) {
       const totalMin = Math.max(0, Math.round(ms / 60000));
-      const h = Math.floor(totalMin / 60), m = totalMin % 60;
+      const d = Math.floor(totalMin / 1440), h = Math.floor(totalMin % 1440 / 60), m = totalMin % 60;
+      if (d) return `${d} ${d === 1 ? t('giorno') : t('giorni')}${h ? ' ' + h + ' h' : ''}`;
       return h ? `${h} h${m ? ' ' + m + ' min' : ''}` : `${m} min`;
     }
     function formatClock(ts) {
-      return new Date(ts).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+      return new Date(ts).toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit' });
     }
     function formatParkedAt(ts) {
       const d = new Date(ts), today = new Date();
-      const sameDay = d.toDateString() === today.toDateString();
-      return (sameDay ? 'oggi' : d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })) + ' alle ' + formatClock(ts);
+      if (d.toDateString() === today.toDateString()) return t('oggi alle {time}', { time: formatClock(ts) });
+      return t('{date} alle {time}', { date: d.toLocaleDateString(LOCALE, { weekday: 'short', day: 'numeric', month: 'short' }), time: formatClock(ts) });
     }
 
     function renderCarOnMap() {
@@ -3607,7 +4399,7 @@
       const ll = [car.lat, car.lon];
       if (!carMarker) {
         carMarker = L.marker(ll, {
-          pane: 'userLocationPane', keyboard: false, title: 'La mia auto', zIndexOffset: 1000, // sopra al pallino della posizione
+          pane: 'userLocationPane', keyboard: false, title: t('La mia auto'), zIndexOffset: 1000, // sopra al pallino della posizione
           icon: L.divIcon({ className: 'car-marker-icon', html: '<div class="car-marker"><i data-lucide="car"></i></div>', iconSize: [36, 36], iconAnchor: [18, 18] })
         }).addTo(map);
         carMarker.on('click', openCarSheet);
@@ -3630,13 +4422,13 @@
       if (!car) { chip.hidden = true; return; }
       chip.hidden = false;
       chip.classList.remove('warn', 'expired');
-      let text = 'Auto';
+      let text = t('Auto');
       if (car.expiry) {
         const left = car.expiry - Date.now();
-        if (left <= 0) { text = 'Sosta scaduta da ' + formatDuration(-left); chip.classList.add('expired'); }
-        else { text = 'Sosta: ' + formatDuration(left); if (left <= CAR_WARNING_MS) chip.classList.add('warn'); }
+        if (left <= 0) { text = t('Sosta scaduta da {d}', { d: formatDuration(-left) }); chip.classList.add('expired'); }
+        else { text = t('Sosta: {d}', { d: formatDuration(left) }); if (left <= CAR_WARNING_MS) chip.classList.add('warn'); }
       } else if (lastFix) {
-        text = 'Auto a ' + formatDistance(map.distance(L.latLng(lastFix.ll), L.latLng(car.lat, car.lon)));
+        text = t('Auto a {d}', { d: formatDistance(map.distance(L.latLng(lastFix.ll), L.latLng(car.lat, car.lon))) });
       }
       document.getElementById('carChipText').textContent = text;
     }
@@ -3648,10 +4440,10 @@
       const plan = [];
       if (car && car.expiry) {
         if (car.expiry - CAR_WARNING_MS > now + 30000) {
-          plan.push({ id: CAR_NOTIFY_IDS[0], at: car.expiry - CAR_WARNING_MS, title: 'Sosta in scadenza', body: `Il tuo parcheggio scade alle ${formatClock(car.expiry)}: mancano 10 minuti.` });
+          plan.push({ id: CAR_NOTIFY_IDS[0], at: car.expiry - CAR_WARNING_MS, title: t('Sosta in scadenza'), body: t('Il tuo parcheggio scade alle {time}: mancano 10 minuti.', { time: formatClock(car.expiry) }) });
         }
         if (car.expiry > now) {
-          plan.push({ id: CAR_NOTIFY_IDS[1], at: car.expiry, title: 'Sosta scaduta', body: 'Il tempo del parcheggio è finito.' });
+          plan.push({ id: CAR_NOTIFY_IDS[1], at: car.expiry, title: t('Sosta scaduta'), body: t('Il tempo del parcheggio è finito.') });
         }
       }
 
@@ -3699,13 +4491,14 @@
       renderCarSheet();
       const ok = await scheduleCarNotifications();
       carNotifyWarning = (expiry && !ok)
-        ? (IS_NATIVE_APP ? 'Le notifiche sono disattivate per ParkMap: abilitale nelle impostazioni di Android per ricevere il promemoria.'
-                         : 'Il browser non consente le notifiche: vedrai l\'avviso solo dentro la pagina.')
+        ? (IS_NATIVE_APP ? t('Le notifiche sono disattivate per ParkMap: abilitale nelle impostazioni di Android per ricevere il promemoria.')
+                         : t("Il browser non consente le notifiche: vedrai l'avviso solo dentro la pagina."))
         : '';
       renderCarSheet();
     }
 
     function saveCarAt(lat, lon, source) {
+      if (car) archiveCar();
       car = { lat, lon, ts: Date.now(), expiry: null, source };
       carNotifyWarning = '';
       saveCar();
@@ -3713,7 +4506,8 @@
       renderCarOnMap();
       updateCarChip();
       renderCarSheet();
-      setStatus('Posizione dell\'auto salvata');
+      lookupCarAddress();
+      setStatus(t("Posizione dell'auto salvata"));
       setTimeout(() => setStatus(''), 1800);
     }
 
@@ -3722,14 +4516,152 @@
         saveCarAt(lastFix.ll[0], lastFix.ll[1], 'gps');
         return;
       }
-      if (!navigator.geolocation) { setStatus('GPS non disponibile: usa il centro della mappa'); return; }
-      setStatus('Cerco la tua posizione…');
+      if (!navigator.geolocation) { setStatus(t('GPS non disponibile: usa il centro della mappa')); return; }
+      setStatus(t('Cerco la tua posizione...'));
       navigator.geolocation.getCurrentPosition(
         p => { onUserPosition(p); saveCarAt(p.coords.latitude, p.coords.longitude, 'gps'); },
-        () => { setStatus('Posizione non disponibile: usa il centro della mappa'); setTimeout(() => setStatus(''), 2500); },
+        () => { setStatus(t('Posizione non disponibile: usa il centro della mappa')); setTimeout(() => setStatus(''), 2500); },
         { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
       );
       startWatchingPosition();
+    }
+
+    function leaveParking() {
+      archiveCar();
+      car = null;
+      carNotifyWarning = '';
+      saveCar();
+      scheduleCarNotifications();
+      renderCarOnMap();
+      updateCarChip();
+    }
+
+    // Via e città dell'auto (Nominatim, una richiesta per salvataggio)
+    async function lookupCarAddress() {
+      const target = car;
+      if (!target || target.address) return;
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&zoom=18&addressdetails=1&lat=${target.lat}&lon=${target.lon}`,
+          { headers: { 'Accept-Language': LANG } });
+        if (!res.ok) return;
+        const json = await res.json();
+        const a = json.address || {};
+        // Alcune way hanno nomi tecnici (es. "1_33051"): si scartano quelli senza lettere
+        const named = (v) => v && /\p{L}{3}/u.test(v) ? v : '';
+        const road = named(a.road) || named(a.pedestrian) || named(a.square) || named(a.footway) || named(json.name);
+        const street = road ? road + (a.house_number && named(a.road) ? ' ' + a.house_number : '') : '';
+        const address = [street, a.city || a.town || a.village || a.suburb].filter(Boolean).join(', ');
+        if (address && car === target) {
+          car.address = address;
+          saveCar();
+          if (!carSheetEl.hidden && !carSheetEl.contains(document.activeElement)) renderCarSheet();
+        }
+      } catch (err) { /* senza indirizzo si mostrano solo mappa e distanza */ }
+    }
+
+    // ─── Foto dell'auto: in IndexedDB (localStorage è già occupato dalle tessere) ───
+    function photoStore(mode, fn) {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open('parkmap', 1);
+        req.onupgradeneeded = () => req.result.createObjectStore('photos');
+        req.onerror = () => reject(req.error);
+        req.onsuccess = () => {
+          const db = req.result;
+          const tx = db.transaction('photos', mode);
+          const r = fn(tx.objectStore('photos'));
+          tx.oncomplete = () => { db.close(); resolve(r.result); };
+          tx.onerror = () => { db.close(); reject(tx.error); };
+        };
+      });
+    }
+    function setCarPhoto(dataUrl) {
+      carPhotoUrl = dataUrl;
+      return photoStore('readwrite', st => dataUrl ? st.put(dataUrl, 'car') : st.delete('car'))
+        .catch(err => { console.warn('Foto non salvata:', err); throw err; });
+    }
+    function loadCarPhoto() {
+      if (!car || !car.photo) return Promise.resolve();
+      return photoStore('readonly', st => st.get('car')).then(url => { carPhotoUrl = url || null; }).catch(() => {});
+    }
+    // Foto ridotta (lato lungo 1280 px, JPEG): qualche centinaio di KB invece di MB
+    function resizePhoto(file, maxSide) {
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          const k = Math.min(1, (maxSide || 1280) / Math.max(img.naturalWidth, img.naturalHeight));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.naturalWidth * k);
+          canvas.height = Math.round(img.naturalHeight * k);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(url);
+          resolve(canvas.toDataURL('image/jpeg', 0.72));
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Immagine non leggibile')); };
+        img.src = url;
+      });
+    }
+    document.getElementById('carPhotoInput').onchange = async (e) => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (!file || !car) return;
+      try {
+        await setCarPhoto(await resizePhoto(file));
+        car.photo = true;
+        saveCar();
+        renderCarSheet();
+      } catch (err) {
+        setStatus(t('Foto non salvata'));
+        setTimeout(() => setStatus(''), 2000);
+      }
+    };
+    const photoViewerEl = document.getElementById('photoViewer');
+    photoViewerEl.onclick = () => { photoViewerEl.hidden = true; };
+
+    // ─── Condividi l'auto: link che apre la mappa sull'auto ───
+    function buildCarShareUrl(c) {
+      const url = new URL(IS_NATIVE_APP ? PUBLIC_SITE_URL : window.location.href);
+      url.search = '';
+      url.hash = '';
+      url.searchParams.set('car', c.lat.toFixed(6) + ',' + c.lon.toFixed(6));
+      if (c.note) url.searchParams.set('note', c.note.slice(0, 200));
+      return url.toString();
+    }
+    function shareCar() {
+      if (!car) return;
+      const text = t('La mia auto è qui') + (car.address ? ': ' + car.address : '') + (car.note ? ' (' + car.note + ')' : '');
+      shareLink(text, buildCarShareUrl(car));
+    }
+
+    function historyHtml() {
+      if (!carHistory.length) return '';
+      const items = showAllHistory ? carHistory : carHistory.slice(0, 5);
+      return `
+          <div class="set-group">
+            <div class="set-title">${t('Ultime soste')}</div>
+            <div class="set-card">
+              ${items.map((h, i) => `<div class="list-row" data-hist="${i}" role="button" tabindex="0">
+                <span class="list-dot" style="background:#93c5fd; border-color:#1d4ed8; border-radius:50%"></span>
+                <span class="list-main"><span class="list-title">${escapeHtml(h.address || (h.lat.toFixed(5) + ', ' + h.lon.toFixed(5)))}</span>
+                <span class="list-sub">${escapeHtml(formatParkedAt(h.ts) + ' · ' + formatDuration(h.end - h.ts) + (h.note ? ' · ' + h.note : ''))}</span></span>
+              </div>`).join('')}
+              <div class="set-actions">
+                ${carHistory.length > items.length ? `<button type="button" class="set-btn" data-car="history-all">${t('Mostra tutte ({n})', { n: carHistory.length })}</button>` : ''}
+                <button type="button" class="set-btn danger" data-car="history-clear"><i data-lucide="trash-2"></i> ${t('Cancella storico')}</button>
+              </div>
+            </div>
+          </div>`;
+    }
+
+    function showHistoryStop(h) {
+      closeSheet();
+      map.setView([h.lat, h.lon], Math.max(map.getZoom(), 17));
+      const html = `<div class="ctx-menu">
+        <div class="ctx-title">${escapeHtml(t('Sosta di {when}', { when: formatParkedAt(h.ts) }))}</div>
+        <div class="ctx-note">${escapeHtml([h.address, t('durata {d}', { d: formatDuration(h.end - h.ts) }), h.note].filter(Boolean).join(' · '))}</div>
+        <a class="set-btn" href="${buildNavUrl(h.lat, h.lon, 'driving')}" target="_blank" rel="noopener"><i data-lucide="navigation"></i> ${t('Naviga fin qui')}</a>
+      </div>`;
+      L.popup({ className: 'ctx-popup' }).setLatLng([h.lat, h.lon]).setContent(html).openOn(map);
     }
 
     function renderCarSheet() {
@@ -3738,60 +4670,78 @@
         body.innerHTML = `
           <div class="set-group">
             <div class="set-card">
-              <div class="set-row"><span class="set-note">Salva dove hai lasciato l'auto: la ritrovi sulla mappa, con la strada a piedi per tornarci e un promemoria per il ticket o il disco orario.</span></div>
+              <div class="set-row"><span class="set-note">${t("Salva dove hai lasciato l'auto: la ritrovi sulla mappa, con la strada a piedi per tornarci e un promemoria per il ticket o il disco orario.")}</span></div>
               <div class="set-actions">
-                <button type="button" class="set-btn primary" data-car="gps"><i data-lucide="locate-fixed"></i> Salva la mia posizione</button>
-                <button type="button" class="set-btn" data-car="center"><i data-lucide="map-pin"></i> Usa il centro della mappa</button>
+                <button type="button" class="set-btn primary" data-car="gps"><i data-lucide="locate-fixed"></i> ${t('Salva la mia posizione')}</button>
+                <button type="button" class="set-btn" data-car="center"><i data-lucide="map-pin"></i> ${t('Usa il centro della mappa')}</button>
               </div>
             </div>
-            <p class="set-hint">Puoi anche tenere premuto un punto della mappa e scegliere "Ho parcheggiato qui".</p>
-          </div>`;
+            <p class="set-hint">${t('Puoi anche tenere premuto un punto della mappa e scegliere "Ho parcheggiato qui".')}${IS_NATIVE_APP ? ' ' + t('Oppure attiva nelle Impostazioni il salvataggio automatico via Bluetooth.') : ''}</p>
+          </div>
+          ${historyHtml()}`;
       } else {
         const dist = lastFix ? map.distance(L.latLng(lastFix.ll), L.latLng(car.lat, car.lon)) : null;
         const left = car.expiry ? car.expiry - Date.now() : null;
-        const timerText = !car.expiry ? 'Nessun promemoria impostato.'
-          : left > 0 ? `Scade alle <b>${formatClock(car.expiry)}</b> · tra ${formatDuration(left)}`
-          : `<b>Scaduta</b> alle ${formatClock(car.expiry)} (${formatDuration(-left)} fa)`;
+        const timerText = !car.expiry ? t('Nessun promemoria impostato.')
+          : left > 0 ? t('Scade alle {time} · tra {d}', { time: '<b>' + formatClock(car.expiry) + '</b>', d: formatDuration(left) })
+          : t('Scaduta alle {time} ({d} fa)', { time: '<b>' + formatClock(car.expiry) + '</b>', d: formatDuration(-left) });
         const defaultTime = formatClock((car.expiry && left > 0 ? car.expiry : Date.now() + 3600000));
         body.innerHTML = `
           <div class="set-group">
             <div class="set-card">
-              <div class="set-row"><span class="set-label"><i data-lucide="car"></i> Parcheggiata ${formatParkedAt(car.ts)}</span></div>
-              ${dist != null ? `<div class="set-row"><span class="set-label"><i data-lucide="footprints"></i> A ${formatDistance(dist)} da te · circa ${Math.max(1, Math.round(dist / 80))} min a piedi</span></div>` : ''}
+              <div class="set-row"><span class="set-label"><i data-lucide="car"></i> ${t('Parcheggiata {when}', { when: formatParkedAt(car.ts) })}</span></div>
+              ${car.address ? `<div class="set-row"><span class="set-label"><i data-lucide="map-pin"></i> ${escapeHtml(car.address)}</span></div>` : ''}
+              ${car.source === 'bluetooth' ? `<div class="set-row"><span class="set-label"><i data-lucide="bluetooth"></i> ${escapeHtml(t('Salvata da sola scollegandoti da {name}', { name: car.device || 'Bluetooth' }))}</span></div>` : ''}
+              ${dist != null ? `<div class="set-row"><span class="set-label"><i data-lucide="footprints"></i> ${t('A {d} da te · circa {n} min a piedi', { d: formatDistance(dist), n: walkingMinutes(dist) })}</span></div>` : ''}
               <div class="set-actions">
-                <a class="set-btn primary" href="${buildNavUrl(car.lat, car.lon, 'walking')}" target="_blank" rel="noopener"><i data-lucide="navigation"></i> Portami all'auto</a>
-                <button type="button" class="set-btn" data-car="show"><i data-lucide="map-pin"></i> Mostra sulla mappa</button>
+                <a class="set-btn primary" href="${buildNavUrl(car.lat, car.lon, 'walking')}" target="_blank" rel="noopener"><i data-lucide="navigation"></i> ${t("Portami all'auto")}</a>
+                <button type="button" class="set-btn" data-car="show"><i data-lucide="map-pin"></i> ${t('Mostra sulla mappa')}</button>
+                <button type="button" class="set-btn" data-car="share"><i data-lucide="share-2"></i> ${t('Condividi')}</button>
               </div>
             </div>
           </div>
           <div class="set-group">
-            <div class="set-title">Promemoria sosta</div>
+            <div class="set-title">${t('Note e foto')}</div>
+            <div class="set-card">
+              <div class="set-row column">
+                <textarea class="set-textarea" id="carNote" maxlength="300" rows="2" style="min-height:64px" placeholder="${escapeHtml(t('Es. piano -2, colonna B14'))}">${escapeHtml(car.note || '')}</textarea>
+                ${car.photo && carPhotoUrl ? `<img class="car-photo" id="carPhoto" src="${carPhotoUrl}" alt="${escapeHtml(t("Foto dell'auto"))}">` : ''}
+              </div>
+              <div class="set-actions">
+                <button type="button" class="set-btn" data-car="photo"><i data-lucide="camera"></i> ${car.photo ? t('Cambia foto') : t('Scatta una foto')}</button>
+                ${car.photo ? `<button type="button" class="set-btn danger" data-car="photo-del"><i data-lucide="trash-2"></i> ${t('Elimina foto')}</button>` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="set-group">
+            <div class="set-title">${t('Promemoria sosta')}</div>
             <div class="set-card">
               <div class="set-row"><span class="set-note">${timerText}</span></div>
               <div class="set-row column">
                 <div class="opt-chips">
                   <button type="button" class="opt-chip" data-car-min="30">30 min</button>
-                  <button type="button" class="opt-chip" data-car-min="60">1 ora</button>
-                  <button type="button" class="opt-chip" data-car-min="120">2 ore</button>
-                  <button type="button" class="opt-chip" data-car-min="180">3 ore</button>
+                  <button type="button" class="opt-chip" data-car-min="60">${t('1 ora')}</button>
+                  <button type="button" class="opt-chip" data-car-min="120">${t('2 ore')}</button>
+                  <button type="button" class="opt-chip" data-car-min="180">${t('3 ore')}</button>
                 </div>
                 <div class="inline-row">
-                  <span class="set-note">Oppure fino alle</span>
+                  <span class="set-note">${t('Oppure fino alle')}</span>
                   <input type="time" class="set-input" id="carUntil" value="${defaultTime}">
-                  <button type="button" class="set-btn" data-car="until">Imposta</button>
+                  <button type="button" class="set-btn" data-car="until">${t('Imposta')}</button>
                 </div>
               </div>
-              ${car.expiry ? '<div class="set-actions"><button type="button" class="set-btn" data-car="clear-timer"><i data-lucide="bell-off"></i> Togli promemoria</button></div>' : ''}
+              ${car.expiry ? `<div class="set-actions"><button type="button" class="set-btn" data-car="clear-timer"><i data-lucide="bell-off"></i> ${t('Togli promemoria')}</button></div>` : ''}
             </div>
-            <p class="set-hint">${carNotifyWarning ? '<b>' + escapeHtml(carNotifyWarning) + '</b> ' : ''}Ti avviso 10 minuti prima e alla scadenza.${IS_NATIVE_APP ? '' : ' Sul sito l\'avviso arriva solo con la pagina aperta; con l\'app Android anche a telefono bloccato.'}</p>
+            <p class="set-hint">${carNotifyWarning ? '<b>' + escapeHtml(carNotifyWarning) + '</b> ' : ''}${t('Ti avviso 10 minuti prima e alla scadenza.')}${IS_NATIVE_APP ? '' : ' ' + t("Sul sito l'avviso arriva solo con la pagina aperta; con l'app Android anche a telefono bloccato.")}</p>
           </div>
           <div class="set-group">
             <div class="set-card">
               <div class="set-actions">
-                <button type="button" class="set-btn danger" data-car="remove"><i data-lucide="log-out"></i> Ho lasciato il parcheggio</button>
+                <button type="button" class="set-btn danger" data-car="remove"><i data-lucide="log-out"></i> ${t('Ho lasciato il parcheggio')}</button>
               </div>
             </div>
-          </div>`;
+          </div>
+          ${historyHtml()}`;
       }
       lucide.createIcons({ root: body });
 
@@ -3801,7 +4751,12 @@
           if (action === 'gps') saveCarFromGps();
           else if (action === 'center') { const c = map.getCenter(); saveCarAt(c.lat, c.lng, 'map'); }
           else if (action === 'show') { closeSheet(); map.setView([car.lat, car.lon], Math.max(map.getZoom(), 17)); }
+          else if (action === 'share') shareCar();
+          else if (action === 'photo') document.getElementById('carPhotoInput').click();
+          else if (action === 'photo-del') { car.photo = false; setCarPhoto(null).catch(() => {}); saveCar(); renderCarSheet(); }
           else if (action === 'clear-timer') setCarExpiry(null);
+          else if (action === 'history-all') { showAllHistory = true; renderCarSheet(); }
+          else if (action === 'history-clear') { carHistory = []; try { localStorage.removeItem(CAR_HISTORY_KEY); } catch (err) {} renderCarSheet(); }
           else if (action === 'until') {
             const v = document.getElementById('carUntil').value;
             if (!/^\d{2}:\d{2}$/.test(v)) return;
@@ -3810,12 +4765,7 @@
             if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1); // orario già passato: domani
             setCarExpiry(d.getTime());
           } else if (action === 'remove') {
-            car = null;
-            carNotifyWarning = '';
-            saveCar();
-            scheduleCarNotifications();
-            renderCarOnMap();
-            updateCarChip();
+            leaveParking();
             closeSheet();
           }
         };
@@ -3823,6 +4773,19 @@
       body.querySelectorAll('[data-car-min]').forEach(btn => {
         btn.onclick = () => setCarExpiry(Date.now() + parseInt(btn.dataset.carMin, 10) * 60000);
       });
+      body.querySelectorAll('[data-hist]').forEach(row => {
+        row.onclick = () => showHistoryStop(carHistory[+row.dataset.hist]);
+      });
+      const noteEl = body.querySelector('#carNote');
+      if (noteEl) {
+        noteEl.oninput = () => {
+          car.note = noteEl.value;
+          clearTimeout(noteSaveTimer);
+          noteSaveTimer = setTimeout(saveCar, 400);
+        };
+      }
+      const photoEl = body.querySelector('#carPhoto');
+      if (photoEl) photoEl.onclick = () => { photoViewerEl.querySelector('img').src = carPhotoUrl; photoViewerEl.hidden = false; };
     }
 
     function openCarSheet() {
@@ -3841,12 +4804,43 @@
 
     renderCarOnMap();
     updateCarChip();
+    loadCarPhoto();
+    if (car && !car.address) lookupCarAddress();
     if (car && car.expiry && !IS_NATIVE_APP) scheduleCarNotifications(); // sul sito i timer non sopravvivono alla ricarica
     if (IS_NATIVE_APP) {
-      pushCarToNative(); // il widget riparte sempre dallo stato della pagina
-      handleNativeAction();
-      // Tornando nell'app dal widget si esegue l'azione scelta
-      document.addEventListener('visibilitychange', () => { if (!document.hidden) handleNativeAction(); });
+      // Prima l'eventuale auto salvata via Bluetooth, poi il widget riparte dallo stato della pagina
+      adoptNativeCar().then(adopted => { if (!adopted) pushCarToNative(); handleNativeAction(); });
+      // Tornando nell'app (widget, scorciatoia, notifica) si adotta l'auto e si esegue l'azione
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) return;
+        adoptNativeCar().then(handleNativeAction);
+        if (!settingsSheetEl.hidden) refreshBluetoothUI();
+      });
+    }
+
+    /* ===== Auto condivisa da un'altra persona (link ?car=) ===== */
+    if (sharedCar) {
+      const sharedMarker = L.marker([sharedCar.lat, sharedCar.lon], {
+        pane: 'userLocationPane', keyboard: false, zIndexOffset: 900, title: t('Auto condivisa'),
+        icon: L.divIcon({ className: 'car-marker-icon', html: '<div class="car-marker shared"><i data-lucide="car"></i></div>', iconSize: [36, 36], iconAnchor: [18, 18] })
+      }).addTo(map);
+      lucide.createIcons({ root: sharedMarker.getElement() });
+      sharedMarker.bindPopup(() => `<div class="ctx-menu">
+          <div class="ctx-title">${t('Auto condivisa')}</div>
+          ${sharedCar.note ? `<div class="ctx-note">${escapeHtml(sharedCar.note)}</div>` : ''}
+          <a class="set-btn" href="${buildNavUrl(sharedCar.lat, sharedCar.lon, 'walking')}" target="_blank" rel="noopener"><i data-lucide="navigation"></i> ${t("Portami all'auto")}</a>
+          <button type="button" class="set-btn" data-pm-action="adopt-car"><i data-lucide="car"></i> ${t('Salva come la mia auto')}</button>
+        </div>`, { className: 'ctx-popup' });
+      map.on('popupopen', (e) => {
+        const btn = e.popup._contentNode.querySelector('[data-pm-action="adopt-car"]');
+        if (btn) btn.onclick = () => {
+          map.closePopup();
+          saveCarAt(sharedCar.lat, sharedCar.lon, 'shared');
+          if (sharedCar.note) { car.note = sharedCar.note; saveCar(); }
+          openCarSheet();
+        };
+      });
+      setTimeout(() => sharedMarker.openPopup(), 700);
     }
 
     /* ===== Pressione prolungata sulla mappa ===== */
@@ -3854,21 +4848,25 @@
       const { lat, lng } = e.latlng;
       const html = `<div class="ctx-menu">
         <div class="ctx-title">${lat.toFixed(5)}, ${lng.toFixed(5)}</div>
-        <button type="button" class="set-btn" data-ctx="car"><i data-lucide="car"></i> Ho parcheggiato qui</button>
-        <button type="button" class="set-btn" data-ctx="report"><i data-lucide="map-pin-plus"></i> Segnala parcheggio mancante</button>
-        <a class="set-btn" href="${buildNavUrl(lat, lng, 'driving')}" target="_blank" rel="noopener"><i data-lucide="navigation"></i> Naviga fin qui</a>
+        <button type="button" class="set-btn" data-ctx="car"><i data-lucide="car"></i> ${t('Ho parcheggiato qui')}</button>
+        <button type="button" class="set-btn" data-ctx="dest"><i data-lucide="flag"></i> ${t('Parcheggi vicino a questo punto')}</button>
+        <button type="button" class="set-btn" data-ctx="report"><i data-lucide="map-pin-plus"></i> ${t('Segnala parcheggio mancante')}</button>
+        <a class="set-btn" href="${buildNavUrl(lat, lng, 'driving')}" target="_blank" rel="noopener"><i data-lucide="navigation"></i> ${t('Naviga fin qui')}</a>
       </div>`;
       const popup = L.popup({ className: 'ctx-popup', autoPanPadding: [20, 80] }).setLatLng(e.latlng).setContent(html).openOn(map);
       const root = popup.getElement();
       lucide.createIcons({ root });
       root.querySelector('[data-ctx="car"]').onclick = () => { map.closePopup(); saveCarAt(lat, lng, 'map'); openCarSheet(); };
+      root.querySelector('[data-ctx="dest"]').onclick = () => { map.closePopup(); setDestination({ lat, lon: lng, name: t('punto scelto') }); };
       root.querySelector('[data-ctx="report"]').onclick = () => { map.closePopup(); openReport({ lat, lon: lng, type: 'missing' }); };
     });
 
-    /* ===== Impostazioni aggiuntive: tema e app di navigazione ===== */
+    /* ===== Impostazioni aggiuntive: tema, app di navigazione, lingua ===== */
     function refreshExtraSettingsUI() {
       document.querySelectorAll('#themeControl button').forEach(b => b.classList.toggle('active', b.dataset.themeOpt === settings.theme));
       document.querySelectorAll('#navAppControl button').forEach(b => b.classList.toggle('active', b.dataset.nav === settings.navApp));
+      document.querySelectorAll('#langControl button').forEach(b => b.classList.toggle('active', b.dataset.lang === (settings.lang || 'auto')));
+      if (IS_NATIVE_APP) refreshBluetoothUI();
     }
     document.querySelectorAll('#themeControl button').forEach(b => {
       b.onclick = () => { settings.theme = b.dataset.themeOpt; saveSettings(); applyTheme(); refreshExtraSettingsUI(); };
@@ -3876,6 +4874,110 @@
     document.querySelectorAll('#navAppControl button').forEach(b => {
       b.onclick = () => { settings.navApp = b.dataset.nav; saveSettings(); refreshExtraSettingsUI(); };
     });
+    // La lingua si applica ricaricando la pagina (testi, date e numeri)
+    document.querySelectorAll('#langControl button').forEach(b => {
+      b.onclick = () => {
+        if ((settings.lang || 'auto') === b.dataset.lang) return;
+        settings.lang = b.dataset.lang;
+        saveSettings();
+        location.reload();
+      };
+    });
+
+    /* ===== Auto via Bluetooth (solo app Android, vedi BluetoothCarReceiver) ===== */
+    const btToggleEl = document.getElementById('setBtAuto');
+    const btPickerEl = document.getElementById('btPicker');
+    const btActionsEl = document.getElementById('btActions');
+    const btGrantEl = document.getElementById('btGrant');
+    let btStatus = null;
+
+    function btNote(text, cls) {
+      document.getElementById('btNoteRow').hidden = !text;
+      const note = document.getElementById('btNote');
+      note.textContent = text || '';
+      note.className = 'set-note ' + (cls || '');
+    }
+
+    async function refreshBluetoothUI() {
+      const group = document.getElementById('btGroup');
+      try { btStatus = await nativeCall('ParkMapNative', 'bluetoothStatus'); } catch (err) { group.hidden = true; return; }
+      group.hidden = false;
+      btActionsEl.hidden = true;
+      if (!btStatus.supported) {
+        btToggleEl.disabled = true;
+        btNote(t('Bluetooth non disponibile su questo telefono.'), 'warn');
+        return;
+      }
+      const dev = btStatus.device, p = btStatus.permissions;
+      btToggleEl.checked = !!dev;
+      document.getElementById('btDeviceRow').hidden = !dev;
+      if (dev) document.getElementById('btDeviceName').textContent = dev.name || dev.address;
+      if (dev && (!p.bluetooth || !p.location || !p.backgroundLocation)) {
+        btNote(!p.bluetooth ? t('Manca il permesso «Dispositivi nelle vicinanze»: senza, ParkMap non sa quando ti scolleghi.')
+          : t("Per salvare la posizione con l'app chiusa serve la posizione «Consenti sempre»."), 'warn');
+        btActionsEl.hidden = false;
+        btGrantEl.hidden = false;
+      } else if (dev) {
+        btNote(t("Attivo: quando ti scolleghi da {name} salvo da solo dove hai lasciato l'auto.", { name: dev.name || dev.address }), 'ok');
+      } else if (btPickerEl.hidden) {
+        btNote('');
+      }
+    }
+
+    async function requestBluetoothLocation() {
+      const fg = await nativeCall('ParkMapNative', 'requestAccess', { which: 'location' }).catch(() => ({ granted: false }));
+      if (!fg.granted) return;
+      btNote(t('Ora scegli «Consenti sempre» per la posizione di ParkMap.'), '');
+      await nativeCall('ParkMapNative', 'requestAccess', { which: 'backgroundLocation' }).catch(() => {});
+    }
+
+    async function showBluetoothPicker() {
+      const perm = await nativeCall('ParkMapNative', 'requestAccess', { which: 'bluetooth' }).catch(() => ({ granted: false }));
+      if (!perm.granted) {
+        btNote(t('Serve il permesso «Dispositivi nelle vicinanze» per vedere i dispositivi Bluetooth associati.'), 'warn');
+        btActionsEl.hidden = false;
+        btGrantEl.hidden = true;
+        return;
+      }
+      let devices = [];
+      try { devices = (await nativeCall('ParkMapNative', 'listBluetoothDevices')).devices || []; } catch (err) {}
+      devices.sort((a, b) => (b.car - a.car) || String(a.name).localeCompare(String(b.name)));
+      btPickerEl.hidden = false;
+      btNote('');
+      btPickerEl.innerHTML = devices.length
+        ? `<div class="set-row"><span class="set-note">${t("Scegli il Bluetooth della tua auto:")}</span></div>` +
+          devices.map((d, i) => `<button type="button" class="bt-device" data-i="${i}"><i data-lucide="${d.car ? 'car' : 'bluetooth'}"></i> ${escapeHtml(d.name)}${d.car ? ` <span class="list-badge">${t('auto')}</span>` : ''}</button>`).join('')
+        : `<div class="set-row"><span class="set-note warn">${t("Nessun dispositivo associato: collega prima il telefono al Bluetooth dell'auto.")}</span></div>`;
+      lucide.createIcons({ root: btPickerEl });
+      btPickerEl.querySelectorAll('.bt-device').forEach(b => {
+        b.onclick = async () => {
+          const dev = devices[+b.dataset.i];
+          btPickerEl.hidden = true;
+          await nativeCall('ParkMapNative', 'setBluetoothCar', { address: dev.address, name: dev.name }).catch(() => {});
+          await requestBluetoothLocation();
+          nativeCall('LocalNotifications', 'requestPermissions').catch(() => {}); // per la notifica "Auto salvata qui"
+          refreshBluetoothUI();
+        };
+      });
+    }
+
+    btToggleEl.onchange = async () => {
+      if (!btToggleEl.checked) {
+        await nativeCall('ParkMapNative', 'setBluetoothCar', { address: null }).catch(() => {});
+        btPickerEl.hidden = true;
+        refreshBluetoothUI();
+        return;
+      }
+      btToggleEl.checked = false; // si accende davvero solo dopo aver scelto l'auto
+      showBluetoothPicker();
+    };
+    document.getElementById('btDeviceRow').onclick = showBluetoothPicker;
+    btGrantEl.onclick = async () => {
+      if (btStatus && !btStatus.permissions.bluetooth) await nativeCall('ParkMapNative', 'requestAccess', { which: 'bluetooth' }).catch(() => {});
+      await requestBluetoothLocation();
+      refreshBluetoothUI();
+    };
+    document.getElementById('btOpenSettings').onclick = () => nativeCall('ParkMapNative', 'openAppSettings').catch(() => {});
 
     /* ===== Funzionamento offline del sito ===== */
     // Il service worker conserva l'app e le tessere di mappa già viste: senza
@@ -3887,8 +4989,8 @@
         navigator.serviceWorker.register('sw.js').catch(err => console.warn('Service worker non registrato:', err.message));
       });
     }
-    window.addEventListener('offline', () => { setStatus('Sei offline: mostro i dati salvati'); setTimeout(() => setStatus(''), 3000); });
-    window.addEventListener('online', () => { setStatus('Di nuovo online'); setTimeout(() => setStatus(''), 1500); loadVisibleTiles(); });
+    window.addEventListener('offline', () => { setStatus(t('Sei offline: mostro i dati salvati')); setTimeout(() => setStatus(''), 3000); });
+    window.addEventListener('online', () => { setStatus(t('Di nuovo online')); setTimeout(() => setStatus(''), 1500); loadVisibleTiles(); });
 
     updateFullscreenIcon();
   </script>

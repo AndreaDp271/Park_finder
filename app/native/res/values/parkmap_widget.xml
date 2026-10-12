@@ -4,16 +4,5 @@
     <color name="parkmap_widget_text">#1E293B</color>
     <color name="parkmap_widget_text_secondary">#64748B</color>
     <color name="parkmap_widget_accent">#2563EB</color>
-
-    <string name="parkmap_widget_label">La mia auto</string>
-    <string name="parkmap_widget_description">Dove hai parcheggiato e quanto manca alla fine della sosta</string>
-    <string name="parkmap_widget_no_car">Nessuna auto salvata</string>
-    <string name="parkmap_widget_no_car_hint">Salva dove parcheggi</string>
-    <string name="parkmap_widget_save">Ho parcheggiato</string>
-    <string name="parkmap_widget_parked">Auto parcheggiata</string>
-    <string name="parkmap_widget_open">Apri</string>
-    <string name="parkmap_widget_since">dalle %1$s</string>
-    <string name="parkmap_widget_expires">scade alle %1$s</string>
-    <string name="parkmap_widget_expired">sosta scaduta alle %1$s</string>
-
+    <color name="parkmap_brand">#2563EB</color>
 </resources>

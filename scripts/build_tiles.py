@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Genera i dati statici di ParkMap da un estratto OSM (.osm.pbf).
 
-Estrae aree di sosta, stalli speciali e parcometri e li scrive in file JSON a
+Estrae aree di sosta, stalli speciali, parcometri, colonnine di ricarica e
+parcheggi per moto e bici e li scrive in file JSON a
 celle fisse di CELL_DEG gradi, più un indice con le celle coperte
 dall'estratto. L'app scarica questi file da GitHub Pages invece di
 interrogare Overpass, che è spesso lento o irraggiungibile.
@@ -35,7 +36,13 @@ KEEP_TAGS = {
     'access', 'access:conditional', 'vehicle', 'fee', 'fee:conditional',
     'parking:condition', 'parking:condition:time_interval', 'maxstay',
     'maxstay:conditional', 'capacity', 'charge', 'charge:conditional', 'note',
+    'capacity:disabled', 'capacity:charging', 'capacity:motorcycle', 'motorcycle',
+    'network', 'brand', 'opening_hours', 'covered', 'bicycle_parking',
+    'charging_station:output', 'wheelchair',
 }
+# Prefissi di tag tenuti per intero: pagamenti e prese delle colonnine
+KEEP_PREFIXES = ('payment:', 'socket:')
+OTHER_AMENITIES = {'charging_station', 'motorcycle_parking', 'bicycle_parking'}
 
 
 def wanted(tags):
@@ -47,11 +54,11 @@ def wanted(tags):
         return bool(ps) and ps != 'normal'
     if amenity == 'vending_machine':
         return tags.get('vending') == 'parking_tickets'
-    return False
+    return amenity in OTHER_AMENITIES
 
 
 def slim_tags(tags):
-    return {t.k: t.v for t in tags if t.k in KEEP_TAGS or t.k.startswith('payment:')}
+    return {t.k: t.v for t in tags if t.k in KEEP_TAGS or t.k.startswith(KEEP_PREFIXES)}
 
 
 def cell_of(lat, lon):
