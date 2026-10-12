@@ -461,80 +461,56 @@
     .leaflet-container a.leaflet-popup-close-button span{ display:block; transform:translateY(-1px); }
     .leaflet-container a.leaflet-popup-close-button:hover{ background:rgba(255,255,255,0.32); color:#fff; }
 
-    .popup-header-container{
-      display:flex;
-      align-items:center;
-      gap:14px;
-      margin:0;
-      padding:18px 20px;
-      background:linear-gradient(135deg, var(--primary), var(--primary-dark));
-      transition:background .2s ease;
+    /* ─── Card dei parcheggi (popup compatto a chip) ─── */
+    .leaflet-popup-content{ min-width:270px !important; }
+    .leaflet-container a.leaflet-popup-close-button{ top:12px; right:10px; color:var(--text-light); background:var(--surface-3); }
+    .leaflet-container a.leaflet-popup-close-button:hover{ color:var(--text-main); background:var(--border); }
+    .pc{ color:var(--text-main); font-family:'Inter',system-ui,sans-serif; border-top:4px solid var(--pc2); }
+    .pc-head{ display:flex; align-items:center; gap:12px; padding:13px 44px 10px 16px; }
+    .pc-icon{
+      width:40px; height:40px; border-radius:12px; flex-shrink:0; color:#fff;
+      background:linear-gradient(135deg, var(--pc1), var(--pc2));
+      display:flex; align-items:center; justify-content:center; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.2);
     }
-    .popup-icon-box{
-      background:rgba(255,255,255,0.2);
-      color:#fff;
-      width:44px;height:44px;
-      border-radius:13px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      flex-shrink:0;
-      box-shadow:inset 0 0 0 1px rgba(255,255,255,0.25);
+    .pc-icon svg{ width:21px; height:21px; }
+    .pc-titles{ min-width:0; }
+    .pc-title{ font-weight:700; font-size:15.5px; line-height:1.25; }
+    .pc-sub{ font-size:12.5px; color:var(--text-light); margin-top:2px; }
+    .pc-chips{ display:flex; flex-wrap:wrap; gap:6px; padding:0 16px 12px; }
+    .pc-chip{
+      display:inline-flex; align-items:center; gap:5px; min-height:26px; padding:3px 9px; box-sizing:border-box;
+      border-radius:13px; font-size:12px; font-weight:600; line-height:1.2;
+      background:var(--surface-3); color:var(--text-main);
     }
-    .popup-icon-box i{ width:22px; height:22px; }
-    .popup-title{
-      font-size:16px;
-      font-weight:700;
-      color:#fff;
-      line-height:1.3;
+    .pc-chip svg{ width:13px; height:13px; flex-shrink:0; }
+    .pc-chip.ok{ background:#dcfce7; color:#15803d; }
+    .pc-chip.paid{ background:#dbeafe; color:#1d4ed8; }
+    .pc-chip.time{ background:#ede9fe; color:#6d28d9; }
+    .pc-chip.warn{ background:#ffedd5; color:#c2410c; }
+    .pc-chip.ev{ background:#d1fae5; color:#047857; }
+    .pc-rows{ padding:2px 16px; border-top:1px solid var(--border-soft); }
+    .pc-row{ display:grid; grid-template-columns:86px 1fr; gap:10px; padding:8px 0; font-size:13px; line-height:1.45; }
+    .pc-row + .pc-row{ border-top:1px dashed var(--border-soft); }
+    .pc-label{ color:var(--text-light); font-weight:600; font-size:12px; line-height:1.55; }
+    .pc-value{ font-weight:500; overflow-wrap:anywhere; }
+    .pc-muted{ padding:10px 16px; font-size:12.5px; color:var(--text-light); border-top:1px solid var(--border-soft); }
+    .pc-cost{ padding:10px 16px 6px; border-top:1px solid var(--border-soft); }
+    .pc-cost .pc-label{ display:block; margin-bottom:7px; }
+    .pc-actions{ display:flex; gap:8px; padding:10px 16px 14px; border-top:1px solid var(--border-soft); }
+    .leaflet-container a.pc-go, .pc-go{
+      flex:1; display:inline-flex; align-items:center; justify-content:center; gap:7px; height:40px; border-radius:12px;
+      background:var(--primary-dark); color:#fff; font-weight:700; font-size:13.5px; text-decoration:none;
     }
-    .leaflet-popup-content > div:not(.popup-header-container):not(.popup-links):not(.ctx-menu){ padding:0 20px; }
-    .leaflet-popup-content > .popup-header-container + *{ margin-top:18px; }
-    .popup-section{ margin-bottom:14px; padding-bottom:14px; display:flex; flex-direction:column; border-bottom:1px solid var(--border-soft); }
-    .popup-section:last-of-type{ margin-bottom:4px; padding-bottom:0; border-bottom:none; }
-    .label{
-      color:var(--text-light);
-      font-weight:700;
-      font-size:10.5px;
-      text-transform:uppercase;
-      letter-spacing:.07em;
-      margin-bottom:4px;
+    .pc-go:active{ transform:scale(0.97); }
+    .leaflet-container a.pc-icon-btn, .pc-icon-btn{
+      width:40px; height:40px; padding:0; border-radius:12px; flex-shrink:0; cursor:pointer;
+      border:1px solid var(--border); background:var(--surface-2); color:var(--text-main);
+      display:inline-flex; align-items:center; justify-content:center;
     }
-    .val{ color:var(--text-main); font-weight:600; font-size:14.5px; line-height:1.55; }
-
-    .badge-note{
-      background:var(--primary-light);
-      color:var(--primary-dark);
-      font-size:12px;
-      padding:6px 11px;
-      border-radius:20px;
-      margin-top:6px;
-      margin-right:6px;
-      font-weight:700;
-      display:inline-block;
-      transition:transform .15s ease;
-    }
-    .badge-note.danger{ background:#fef2f2; color:var(--danger); }
-    .badge-note.time{
-      background:#f3e8ff;
-      color:#6d28d9;
-      border:1px solid #e9d5ff;
-    }
-
-    .popup-links{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:16px 20px 20px; }
-    .popup-links a{
-      text-align:center;
-      padding:11px;
-      background:var(--surface-2);
-      border:1px solid var(--border);
-      border-radius:12px;
-      text-decoration:none;
-      font-weight:600;
-      font-size:12px;
-      color:var(--text-main);
-      transition:all .15s ease;
-    }
-    .popup-links a:hover{ background:var(--primary); color:#fff; border-color:var(--primary); transform:translateY(-1px); }
+    .pc-icon-btn:active{ transform:scale(0.94); }
+    .pc-go svg, .pc-icon-btn svg{ width:17px; height:17px; }
+    .pc-icon-btn.fav.on{ color:#d97706; border-color:#fcd34d; background:#fffbeb; }
+    .pc-icon-btn.fav.on svg{ fill:currentColor; }
 
     /* ─── Pallino pulsante della posizione utente ─── */
     .user-loc-icon{ background:none; border:none; }
@@ -672,19 +648,10 @@
     .inline-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 
     /* ─── Pulsanti nel popup di un parcheggio ─── */
-    .popup-links a, .popup-links button{ display:inline-flex; align-items:center; justify-content:center; gap:6px; }
-    .popup-links a svg, .popup-links button svg{ width:15px; height:15px; }
-    .popup-links button{
-      padding:11px; background:var(--surface-2); border:1px solid var(--border); border-radius:12px;
-      font:600 12px 'Inter',system-ui,sans-serif; color:var(--text-main); cursor:pointer; transition:all .15s ease;
-    }
-    .popup-links button:hover{ background:var(--primary); color:#fff; border-color:var(--primary); }
-    .popup-links button.fav.on{ color:#d97706; border-color:#fcd34d; background:#fffbeb; }
-    .popup-links button.fav.on svg{ fill:currentColor; }
 
     /* ─── Menu della pressione prolungata sulla mappa ─── */
     .ctx-popup .leaflet-popup-content{ min-width:230px !important; }
-    .ctx-popup a.leaflet-popup-close-button{ color:var(--text-light) !important; background:transparent !important; top:8px !important; right:8px !important; }
+    .leaflet-container .ctx-popup a.leaflet-popup-close-button{ color:var(--text-light); background:transparent; top:8px; right:8px; }
     .leaflet-popup-content > div.ctx-menu{ padding:16px 14px 14px; display:flex; flex-direction:column; gap:8px; }
     .ctx-title{ font-weight:700; font-size:13px; color:var(--text-light); margin:0 30px 4px 2px; }
     .ctx-menu .set-btn{ justify-content:flex-start; width:100%; box-sizing:border-box; height:auto; min-height:42px; padding:9px 12px; text-align:left; line-height:1.3; }
@@ -724,9 +691,12 @@
     html[data-theme="dark"] .leaflet-popup-content-wrapper,
     html[data-theme="dark"] .leaflet-popup-tip{ background:var(--surface); color:var(--text-main); }
     html[data-theme="dark"] .leaflet-control-attribution a{ color:#93c5fd; }
-    html[data-theme="dark"] .badge-note.danger{ background:#3f1d1d; }
-    html[data-theme="dark"] .badge-note.time{ background:#2e1f4d; color:#c4b5fd; border-color:#4c1d95; }
-    html[data-theme="dark"] .popup-links button.fav.on{ background:#3a2a0a; border-color:#92400e; color:#fbbf24; }
+    html[data-theme="dark"] .pc-chip.ok{ background:#14361f; color:#4ade80; }
+    html[data-theme="dark"] .pc-chip.paid{ background:#172b4d; color:#93c5fd; }
+    html[data-theme="dark"] .pc-chip.time{ background:#2e1f4d; color:#c4b5fd; }
+    html[data-theme="dark"] .pc-chip.warn{ background:#3b2412; color:#fdba74; }
+    html[data-theme="dark"] .pc-chip.ev{ background:#0f3a2e; color:#6ee7b7; }
+    html[data-theme="dark"] .pc-icon-btn.fav.on{ background:#3a2a0a; border-color:#92400e; color:#fbbf24; }
     html[data-theme="dark"] input.switch::after{ background:#f8fafc; }
 
     /* ─── Colonnine, destinazione, auto condivisa ─── */
@@ -1074,6 +1044,7 @@
     "A pagamento adesso": "Paid now",
     "A pagamento nei giorni/orari: {c}": "Paid on: {c}",
     "A pagamento, ma la tariffa non è indicata su OpenStreetMap.": "Paid, but the rate is not listed on OpenStreetMap.",
+    "A raso": "Surface",
     "A {d} da te · circa {n} min a piedi": "{d} from you · about {n} min walk",
     "Accesso": "Access",
     "Accesso limitato": "Restricted access",
@@ -1082,6 +1053,7 @@
     "Aggiorna ora": "Refresh now",
     "Aggiornamenti": "Updates",
     "Aggiornamento dati...": "Updating data...",
+    "Aggiunto ai preferiti": "Added to favourites",
     "Allontana": "Zoom out",
     "Altri servizi": "Other services",
     "Altro": "Other",
@@ -1105,6 +1077,7 @@
     "Banconote": "Notes",
     "Bici": "Bikes",
     "Bluetooth non disponibile su questo telefono.": "Bluetooth is not available on this phone.",
+    "Box": "Garage boxes",
     "Bus": "Bus",
     "CAP non trovato su OSM": "Postcode not found on OSM",
     "CAP trovato": "Postcode found",
@@ -1172,6 +1145,7 @@
     "Es. piano -2, colonna B14": "E.g. level -2, pillar B14",
     "Famiglie": "Families",
     "Famiglie/Rosa": "Families/Women",
+    "Fasce orarie": "Times",
     "Ferma-ruote": "Wheel benders",
     "Ferma-ruote a terra": "Ground slots",
     "Filtri": "Filters",
@@ -1222,16 +1196,20 @@
     "Link copiato negli appunti": "Link copied to clipboard",
     "Livelli visibili": "Visible layers",
     "Località": "Locality",
+    "Lungo la strada": "On street",
     "Manca il permesso «Dispositivi nelle vicinanze»: senza, ParkMap non sa quando ti scolleghi.": "The \"Nearby devices\" permission is missing: without it ParkMap cannot tell when you disconnect.",
     "Mappa": "Map",
+    "Max {v}": "Max {v}",
     "Metodi di pagamento": "Payment methods",
     "Mezzi pesanti": "Trucks",
     "Modifica": "Edit",
+    "Modifica su OpenStreetMap": "Edit on OpenStreetMap",
     "Monete": "Coins",
     "Mostra la precisione del GPS": "Show GPS accuracy",
     "Mostra sulla mappa": "Show on map",
     "Mostra tutte ({n})": "Show all ({n})",
     "Moto": "Motorcycles",
+    "Multipiano": "Multi-storey",
     "Naviga fin qui": "Navigate here",
     "Navigazione": "Navigation",
     "Nessun dispositivo associato: collega prima il telefono al Bluetooth dell'auto.": "No paired devices: first pair your phone with the car's Bluetooth.",
@@ -1270,6 +1248,7 @@
     "Parcometro (ticket)": "Parking meter (ticket)",
     "Per salvare la posizione con l'app chiusa serve la posizione «Consenti sempre».": "To save the location while the app is closed, location must be set to \"Allow all the time\".",
     "Permesso posizione negato": "Location permission denied",
+    "Piazzola": "Lay-by",
     "Polizia": "Police",
     "Portami all'auto": "Take me to the car",
     "Posizione": "Location",
@@ -1306,9 +1285,11 @@
     "Salva dove hai lasciato l'auto: la ritrovi sulla mappa, con la strada a piedi per tornarci e un promemoria per il ticket o il disco orario.": "Save where you left your car: find it on the map with walking directions back to it, and get a reminder for your ticket or parking disc.",
     "Salva l'auto quando mi scollego": "Save the car when I disconnect",
     "Salva la mia posizione": "Save my location",
+    "Salva nei preferiti": "Save to favourites",
     "Salvata da sola scollegandoti da {name}": "Saved automatically when you disconnected from {name}",
     "Salvati sul dispositivo": "Saved on device",
     "Salvato": "Saved",
+    "Salvato nei preferiti": "Saved to favourites",
     "Scade alle {time} · tra {d}": "Expires at {time} · in {d}",
     "Scaduta alle {time} ({d} fa)": "Expired at {time} ({d} ago)",
     "Scarica e installa": "Download and install",
@@ -1322,10 +1303,12 @@
     "Segnala": "Report",
     "Segnala parcheggio mancante": "Report missing parking",
     "Segnala su OpenStreetMap": "Report on OpenStreetMap",
+    "Segnala un errore": "Report a problem",
     "Segnala un problema": "Report a problem",
     "Sei offline: mostro i dati salvati": "You're offline: showing saved data",
     "Seleziona un risultato": "Pick a result",
     "Serve il permesso «Dispositivi nelle vicinanze» per vedere i dispositivi Bluetooth associati.": "The \"Nearby devices\" permission is needed to see your paired Bluetooth devices.",
+    "Si paga con": "Pay with",
     "Solo clienti": "Customers only",
     "Solo con permesso": "Permit only",
     "Solo residenti": "Residents only",
@@ -1335,6 +1318,7 @@
     "Sosta scaduta": "Parking expired",
     "Sosta scaduta da {d}": "Parking expired {d} ago",
     "Sosta: {d}": "Parking: {d}",
+    "Sotterraneo": "Underground",
     "Stalli speciali": "Special spaces",
     "Stallo speciale": "Special space",
     "Stato provider": "Provider status",
@@ -1343,6 +1327,7 @@
     "Su Android puoi installare l'app: si apre subito e usa il GPS del telefono.": "On Android you can install the app: it opens instantly and uses the phone GPS.",
     "Su due livelli": "Two-tier",
     "Sul sito l'avviso arriva solo con la pagina aperta; con l'app Android anche a telefono bloccato.": "On the website the alert only works with the page open; with the Android app it also works with the phone locked.",
+    "Sul tetto": "Rooftop",
     "Svuota cache": "Clear cache",
     "Sì": "Yes",
     "Tariffa": "Rate",
@@ -1351,20 +1336,24 @@
     "Tempo massimo (cond): ": "Max stay (cond): ",
     "Tempo massimo: ": "Max stay: ",
     "Tempo massimo: {v} nei giorni/orari: {c}": "Max stay: {v} on: {c}",
+    "Tettoie": "Carports",
     "Ti avviso 10 minuti prima e alla scadenza.": "I'll remind you 10 minutes before and when it expires.",
     "Tipo": "Type",
     "Togli promemoria": "Remove reminder",
+    "Tolto dai preferiti": "Removed from favourites",
     "Type 2 (cavo)": "Type 2 (cable)",
     "Ultime soste": "Recent parking",
     "Usa il centro della mappa": "Use the map centre",
     "Vai a": "Go",
     "Validità: ": "Valid: ",
     "Veicoli in ricarica insieme": "Vehicles charging at once",
+    "Veicoli insieme": "Vehicles at once",
     "Versione installata": "Installed version",
     "Versione web": "Web version",
     "Vicini": "Nearby",
     "Vicino a {name}": "Near {name}",
     "Vietato": "Not allowed",
+    "a {d} da te": "{d} from you",
     "assente": "none",
     "attiva": "active",
     "auto": "car",
@@ -1381,6 +1370,7 @@
     "non disponibili": "not available",
     "nota": "note",
     "oggi alle {time}": "today at {time}",
+    "ora": "hour",
     "punto scelto": "selected point",
     "sempre aggiornata": "always up to date",
     "senza limite": "no limit",
@@ -2077,28 +2067,42 @@
       return { c1: '#94a3b8', c2: '#64748b', icon: 'square-parking' };
     }
 
-    // Pezzi comuni dei popup: intestazione colorata, sezioni, pulsanti in fondo
-    function popupHeaderHtml(tags, title) {
+    // ─── Card dei parcheggi ───
+    // Intestazione (icona del tipo, nome, tipo e distanza), chip con le
+    // informazioni chiave, righe di dettaglio e pulsanti in una riga.
+    function pcChip(text, tone, icon) {
+      return `<span class="pc-chip ${tone || ''}">${icon ? `<i data-lucide="${icon}"></i>` : ''}${escapeHtml(text)}</span>`;
+    }
+    function pcRow(label, html) {
+      return html ? `<div class="pc-row"><span class="pc-label">${escapeHtml(label)}</span><span class="pc-value">${html}</span></div>` : '';
+    }
+    const lines = (list) => list.filter(Boolean).map(escapeHtml).join('<br>');
+    function popupCard(tags, lat, lon, osmMeta, { subtitle, chips, rows, extra }) {
       const theme = getPopupTheme(tags);
-      return `<div class="popup-header-container" style="background:linear-gradient(135deg, ${theme.c1}, ${theme.c2})">
-          <div class="popup-icon-box"><i data-lucide="${theme.icon}"></i></div>
-          <div class="popup-title">${escapeHtml(title)}</div>
-        </div>`;
-    }
-    function popupSection(label, valHtml) {
-      return valHtml ? `<div class="popup-section"><span class="label">${escapeHtml(label)}</span><span class="val">${valHtml}</span></div>` : '';
-    }
-    function popupLinksHtml(lat, lon, osmMeta) {
-      return `<div class="popup-links">
-          <a href="${buildNavUrl(lat, lon, 'driving')}" target="_blank" rel="noopener"><i data-lucide="navigation"></i> ${t('Vai a')}</a>
-          <a href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank" rel="noopener"><i data-lucide="pencil"></i> ${t('Modifica')}</a>
+      const dist = lastFix ? formatDistance(map.distance(L.latLng(lastFix.ll), L.latLng(lat, lon))) : '';
+      const sub = [subtitle, dist ? t('a {d} da te', { d: dist }) : ''].filter(Boolean).join(' · ');
+      chips = (chips || []).filter(Boolean);
+      rows = (rows || []).filter(Boolean);
+      return `<div class="pc" style="--pc1:${theme.c1}; --pc2:${theme.c2}">
+        <div class="pc-head">
+          <div class="pc-icon"><i data-lucide="${theme.icon}"></i></div>
+          <div class="pc-titles">
+            <div class="pc-title">${escapeHtml(elementTitle(tags))}</div>
+            ${sub ? `<div class="pc-sub">${escapeHtml(sub)}</div>` : ''}
+          </div>
+        </div>
+        ${chips.length ? `<div class="pc-chips">${chips.join('')}</div>` : ''}
+        ${rows.length ? `<div class="pc-rows">${rows.join('')}</div>` : ''}
+        ${extra || ''}
+        <div class="pc-actions">
+          <a class="pc-go" href="${buildNavUrl(lat, lon, 'driving')}" target="_blank" rel="noopener"><i data-lucide="navigation"></i> ${t('Vai a')}</a>
           ${favButtonHtml(osmMeta, lat, lon)}
+          <a class="pc-icon-btn" href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank" rel="noopener" title="${t('Modifica su OpenStreetMap')}" aria-label="${t('Modifica su OpenStreetMap')}"><i data-lucide="pencil"></i></a>
           ${reportButtonHtml(osmMeta, lat, lon)}
-        </div>`;
+        </div>
+      </div>`;
     }
-    function badgesHtml(items) {
-      return items.map(r => `<div class="badge-note ${r.danger ? 'danger' : ''}">${escapeHtml(r.text)}</div>`).join('');
-    }
+
     function accessLabel(tags) {
       const a = tags.access || '';
       if (a === 'private') return t('Privato');
@@ -2108,12 +2112,6 @@
       if (a === 'permit' || tags.vehicle === 'permit') return t('Solo con permesso');
       if (a === 'no') return t('Vietato');
       return t('Pubblico');
-    }
-    function feeLabel(tags) {
-      if (tags.fee === 'no') return t('Gratuito');
-      if (tags.fee === 'yes') return t('A pagamento');
-      if (tags.fee === 'conditional' || tags['fee:conditional']) return t('Condizionato:');
-      return t('Non specificato');
     }
     function paymentLabel(method) {
       const labels = {
@@ -2125,77 +2123,87 @@
       const m = (method || '').toLowerCase();
       return labels[m] ? t(labels[m]) : (method || '').replace(/_/g, ' ');
     }
-    function paymentHtml(tags) {
-      const methods = Object.keys(tags)
+    function paymentText(tags) {
+      return Object.keys(tags)
         .filter(k => k.startsWith('payment:'))
         .map(k => ({ method: k.slice('payment:'.length), val: String(tags[k] || '').toLowerCase() }))
         .filter(x => x.val === 'yes' || x.val === 'only')
-        .map(x => paymentLabel(x.method) + (x.val === 'only' ? ' ' + t('(solo)') : ''));
-      return methods.length ? `<div class="badge-note">${escapeHtml(methods.join(', '))}</div>` : '';
+        .map(x => paymentLabel(x.method) + (x.val === 'only' ? ' ' + t('(solo)') : ''))
+        .join(', ');
     }
-    function chargeHtml(tags) {
-      let html = tags.charge ? `<div class="badge-note">${escapeHtml(tags.charge)}</div>` : '';
-      if (tags['charge:conditional']) {
-        html += splitOsmRules(tags['charge:conditional']).map(p => `<div class="badge-note">${escapeHtml(translateOsmTime(p.trim()))}</div>`).join('');
+    // "5.00 EUR/hour" -> "5,00 €/ora"; se la tariffa non è leggibile resta com'è su OSM
+    function formatChargeRule(rule) {
+      const m = rule.match(/^(.+?)\s*@\s*\(?(.+?)\)?\s*$/);
+      const rate = parseChargeRate(m ? m[1] : rule);
+      if (!rate) return translateOsmTime(rule);
+      const unit = rate.minutes === 60 ? t('ora') : (rate.minutes === 1440 ? t('giorno') : (rate.minutes % 60 === 0 ? (rate.minutes / 60) + ' h' : rate.minutes + ' min'));
+      return formatMoney(rate.amount, rate.currency) + '/' + unit + (m ? ' · ' + translateOsmTime(m[2]) : '');
+    }
+    function chargeLines(tags) {
+      return lines([...splitOsmRules(tags.charge), ...splitOsmRules(tags['charge:conditional'])].map(formatChargeRule));
+    }
+    // Chip del costo: "gratis/a pagamento adesso" quando dipende dall'orario
+    function feeChip(tags, freeLabel) {
+      if (tags['fee:conditional']) {
+        return feeStateAt(tags, new Date()) === 'free' ? pcChip(t('Gratis adesso'), 'ok', 'clock') : pcChip(t('A pagamento adesso'), 'paid', 'clock');
       }
-      return html;
+      if (tags.fee === 'no') return pcChip(freeLabel || t('Gratuito'), 'ok', 'circle-check');
+      if (tags.fee === 'yes') return pcChip(t('A pagamento'), 'paid', 'coins');
+      return '';
     }
+    const PARKING_TYPES = {
+      surface: 'A raso', 'multi-storey': 'Multipiano', underground: 'Sotterraneo', rooftop: 'Sul tetto',
+      street_side: 'Lungo la strada', lane: 'Lungo la strada', on_kerb: 'Lungo la strada', half_on_kerb: 'Lungo la strada',
+      garage_boxes: 'Box', carports: 'Tettoie', layby: 'Piazzola'
+    };
 
     function buildPopupContent(tags, lat, lon, osmMeta) {
       const kind = elementKind(tags);
       if (kind === 'charging') return buildChargingPopup(tags, lat, lon, osmMeta);
       if (kind === 'moto' || kind === 'bike') return buildTwoWheelPopup(tags, lat, lon, osmMeta);
 
-      const accessNoteHtml = tags['access:conditional']
-        ? badgesHtml(formatYesNoConditional(tags['access:conditional'], t('Aperto'), t('Vietato'))) : '';
-      const feeNoteHtml = tags['fee:conditional'] ? badgesHtml(formatFeeConditional(tags['fee:conditional'])) : '';
-
-      // ===== Limitazioni (badge viola per "a tempo") =====
       const cond = (tags['parking:condition'] || '').toLowerCase();
-      const interval = tags['parking:condition:time_interval'] || '';
-      const notesBadges = [], notes = [];
-      if (cond.includes('disc')) notesBadges.push(`<div class="badge-note time">${t('Disco orario')}</div>`);
-      if (interval) notesBadges.push(`<div class="badge-note time">${escapeHtml(t('Validità: ') + translateOsmTime(interval))}</div>`);
-      if (tags.maxstay && !['no', 'none', 'unlimited', '0'].includes(String(tags.maxstay).toLowerCase().trim())) {
-        notesBadges.push(`<div class="badge-note time">${escapeHtml(t('Tempo massimo: ') + maxstayValueToItalian(tags.maxstay))}</div>`);
-      }
-      if (tags['maxstay:conditional']) {
-        formatMaxstayConditionalItalian(tags['maxstay:conditional']).forEach(line => notesBadges.push(`<div class="badge-note time">${escapeHtml(line)}</div>`));
-      }
-      if (cond.includes('ticket')) notes.push(t('Sosta a ticket'));
-      if (cond.includes('resident')) notes.push(t('Riservato residenti'));
-      const notesHtml = [notesBadges.join(''), notes.map(escapeHtml).join('<br>')].filter(Boolean).join('<br>');
+      const maxstay = String(tags.maxstay || '').toLowerCase().trim();
+      const hasMaxstay = !!maxstay && !['no', 'none', 'unlimited', '0'].includes(maxstay);
+      const stall = kind === 'space' ? getSpecialStallName(tags.parking_space || '') : '';
+      const type = PARKING_TYPES[tags.parking] ? t(PARKING_TYPES[tags.parking]) : '';
+      const subtitle = [stall && tags.name ? stall : '', type || (tags.name ? (kind === 'space' ? t('Stallo speciale') : t('Area di sosta')) : '')]
+        .filter(Boolean).join(' · ');
 
-      const typeLabel = getSpecialStallName(tags.parking_space || '') || tags.parking_space || '';
-      const name = elementTitle(tags);
-
-      return `
-        ${popupHeaderHtml(tags, name)}
-        ${popupSection(t('Gestore'), tags.operator ? escapeHtml(tags.operator) : '')}
-        ${popupSection(t('Accesso'), escapeHtml(accessLabel(tags)) + ' ' + accessNoteHtml)}
-        ${popupSection(t('Costo'), escapeHtml(feeLabel(tags)) + ' ' + feeNoteHtml)}
-        ${popupSection(t('Tariffa'), chargeHtml(tags))}
-        ${costEstimatorHtml(tags, osmMeta)}
-        ${popupSection(t('Metodi di pagamento'), paymentHtml(tags))}
-        ${popupSection(t('Limitazioni'), notesHtml)}
-        ${tags.capacity || typeLabel ? `
-        <div class="popup-section" style="flex-direction: row; gap: 20px;">
-          ${tags.capacity ? `<div><span class="label">${t('Posti')} </span><span class="val">${escapeHtml(tags.capacity)}</span></div>` : ''}
-          ${typeLabel ? `<div><span class="label">${t('Tipo')} </span><span class="val">${escapeHtml(typeLabel)}</span></div>` : ''}
-        </div>` : ''}
-        ${popupSection(t('Note'), tags.note ? escapeHtml(tags.note) : '')}
-        ${popupLinksHtml(lat, lon, osmMeta)}
-      `;
+      const chips = [
+        isRestricted(tags) ? pcChip(accessLabel(tags), 'warn', 'lock') : '',
+        feeChip(tags) || (!hasDiscRule(tags) && !isRestricted(tags) ? pcChip(t('Costo non indicato'), '', 'circle-help') : ''),
+        hasDiscRule(tags) ? pcChip(t('Disco orario'), 'time', 'timer') : '',
+        hasMaxstay ? pcChip(t('Max {v}', { v: maxstayValueToItalian(tags.maxstay) }), 'time', 'hourglass') : '',
+        tags.capacity ? pcChip(t('{n} posti', { n: tags.capacity }), '', 'car') : ''
+      ];
+      const limits = [
+        tags['parking:condition:time_interval'] ? t('Validità: ') + translateOsmTime(tags['parking:condition:time_interval']) : '',
+        ...(tags['maxstay:conditional'] ? formatMaxstayConditionalItalian(tags['maxstay:conditional']) : []),
+        cond.includes('ticket') ? t('Sosta a ticket') : '',
+        cond.includes('resident') ? t('Riservato residenti') : ''
+      ];
+      const rows = [
+        pcRow(t('Fasce orarie'), tags['fee:conditional'] ? lines(formatFeeConditional(tags['fee:conditional']).map(r => r.text)) : ''),
+        pcRow(t('Tariffa'), chargeLines(tags)),
+        pcRow(t('Accesso'), tags['access:conditional'] ? lines(formatYesNoConditional(tags['access:conditional'], t('Aperto'), t('Vietato')).map(r => r.text)) : ''),
+        pcRow(t('Limitazioni'), lines(limits)),
+        pcRow(t('Si paga con'), escapeHtml(paymentText(tags))),
+        pcRow(t('Gestore'), escapeHtml(tags.operator || '')),
+        pcRow(t('Note'), escapeHtml(tags.note || ''))
+      ];
+      return popupCard(tags, lat, lon, osmMeta, { subtitle, chips, rows, extra: costEstimatorHtml(tags, osmMeta) });
     }
 
     function buildParkingMeterPopup(tags, lat, lon, osmMeta) {
-      return `
-        ${popupHeaderHtml(tags, elementTitle(tags))}
-        ${popupSection(t('Gestore'), tags.operator ? escapeHtml(tags.operator) : '')}
-        ${popupSection(t('Metodi di pagamento'), paymentHtml(tags))}
-        ${popupSection(t('Note'), tags.note ? escapeHtml(tags.note) : '')}
-        ${popupLinksHtml(lat, lon, osmMeta)}
-      `;
+      return popupCard(tags, lat, lon, osmMeta, {
+        subtitle: tags.name || tags.ref ? t('Parcometro') : '',
+        rows: [
+          pcRow(t('Si paga con'), escapeHtml(paymentText(tags))),
+          pcRow(t('Gestore'), escapeHtml(tags.operator || '')),
+          pcRow(t('Note'), escapeHtml(tags.note || ''))
+        ]
+      });
     }
 
     // ─── Colonnine di ricarica ───
@@ -2241,25 +2249,29 @@
     function buildChargingPopup(tags, lat, lon, osmMeta) {
       const sockets = chargingSockets(tags);
       const kw = chargingMaxKw(tags);
-      const socketsHtml = sockets.map(x =>
-        `<div>${x.count ? x.count + ' × ' : ''}${escapeHtml(x.name)}${x.kw ? ' · ' + formatKw(x.kw) : ''}</div>`).join('');
-      const powerHtml = kw ? escapeHtml(formatKw(kw)) + (kw >= 50 ? ` <div class="badge-note time">${t('Ricarica rapida')}</div>` : '') : '';
-      const operator = [tags.operator, tags.network && tags.network !== tags.operator ? tags.network : null].filter(Boolean).join(' · ');
-      const feeHtml = tags.fee === 'no' ? t('Gratuita') : (tags.fee === 'yes' ? t('A pagamento') : '');
-      return `
-        ${popupHeaderHtml(tags, elementTitle(tags))}
-        ${popupSection(t('Gestore'), operator ? escapeHtml(operator) : '')}
-        ${popupSection(t('Prese'), socketsHtml)}
-        ${popupSection(t('Potenza massima'), powerHtml)}
-        ${popupSection(t('Costo'), [escapeHtml(feeHtml), chargeHtml(tags)].filter(Boolean).join(' '))}
-        ${popupSection(t('Metodi di pagamento'), paymentHtml(tags))}
-        ${popupSection(t('Orari'), tags.opening_hours ? escapeHtml(translateOsmTime(tags.opening_hours)) : '')}
-        ${popupSection(t('Accesso'), isRestricted(tags) ? escapeHtml(accessLabel(tags)) : '')}
-        ${popupSection(t('Veicoli in ricarica insieme'), tags.capacity ? escapeHtml(tags.capacity) : '')}
-        ${popupSection(t('Note'), tags.note ? escapeHtml(tags.note) : '')}
-        ${!sockets.length && !kw ? `<div class="popup-section"><span class="val" style="font-weight:500;color:var(--text-light);font-size:13px">${t('Prese e potenza non indicate su OpenStreetMap.')}</span></div>` : ''}
-        ${popupLinksHtml(lat, lon, osmMeta)}
-      `;
+      const count = sockets.reduce((n, x) => n + (x.count || 1), 0);
+      const network = tags.network && tags.network !== tags.operator && tags.network !== tags.name ? tags.network : '';
+      const operator = [tags.operator !== tags.name ? tags.operator : '', network].filter(Boolean).join(' · ');
+      return popupCard(tags, lat, lon, osmMeta, {
+        subtitle: tags.name || tags.operator || tags.network || tags.brand ? t('Colonnina di ricarica') : '',
+        chips: [
+          kw ? pcChip(t('fino a {kw}', { kw: formatKw(kw) }), 'ev', 'zap') : '',
+          kw >= 50 ? pcChip(t('Ricarica rapida'), 'ev', 'gauge') : '',
+          count ? pcChip(count === 1 ? t('1 presa') : t('{n} prese', { n: count }), '', 'plug') : '',
+          feeChip(tags, t('Gratuita')),
+          isRestricted(tags) ? pcChip(accessLabel(tags), 'warn', 'lock') : ''
+        ],
+        rows: [
+          pcRow(t('Prese'), lines(sockets.map(x => (x.count ? x.count + ' × ' : '') + x.name + (x.kw ? ' · ' + formatKw(x.kw) : '')))),
+          pcRow(t('Tariffa'), chargeLines(tags)),
+          pcRow(t('Orari'), escapeHtml(tags.opening_hours ? translateOsmTime(tags.opening_hours) : '')),
+          pcRow(t('Si paga con'), escapeHtml(paymentText(tags))),
+          pcRow(t('Veicoli insieme'), escapeHtml(tags.capacity || '')),
+          pcRow(t('Gestore'), escapeHtml(operator)),
+          pcRow(t('Note'), escapeHtml(tags.note || ''))
+        ],
+        extra: !sockets.length && !kw ? `<div class="pc-muted">${t('Prese e potenza non indicate su OpenStreetMap.')}</div>` : ''
+      });
     }
 
     // ─── Parcheggi per moto e bici ───
@@ -2269,18 +2281,22 @@
       two_tier: 'Su due livelli', ground_slots: 'Ferma-ruote a terra', informal: 'Informale'
     };
     function buildTwoWheelPopup(tags, lat, lon, osmMeta) {
+      const moto = elementKind(tags) === 'moto';
       const bikeType = tags.bicycle_parking && BICYCLE_PARKING_TYPES[tags.bicycle_parking];
-      return `
-        ${popupHeaderHtml(tags, elementTitle(tags))}
-        ${popupSection(t('Gestore'), tags.operator ? escapeHtml(tags.operator) : '')}
-        ${popupSection(t('Tipo'), bikeType ? escapeHtml(t(bikeType)) : '')}
-        ${popupSection(t('Posti'), tags.capacity ? escapeHtml(tags.capacity) : '')}
-        ${popupSection(t('Coperto'), tags.covered === 'yes' ? t('Sì') : (tags.covered === 'no' ? t('No') : ''))}
-        ${popupSection(t('Accesso'), escapeHtml(accessLabel(tags)))}
-        ${popupSection(t('Costo'), tags.fee ? escapeHtml(feeLabel(tags)) + ' ' + chargeHtml(tags) : '')}
-        ${popupSection(t('Note'), tags.note ? escapeHtml(tags.note) : '')}
-        ${popupLinksHtml(lat, lon, osmMeta)}
-      `;
+      return popupCard(tags, lat, lon, osmMeta, {
+        subtitle: [tags.name ? (moto ? t('Parcheggio moto') : t('Parcheggio bici')) : '', bikeType ? t(bikeType) : ''].filter(Boolean).join(' · '),
+        chips: [
+          isRestricted(tags) ? pcChip(accessLabel(tags), 'warn', 'lock') : '',
+          feeChip(tags),
+          tags.capacity ? pcChip(t('{n} posti', { n: tags.capacity }), '', moto ? 'bike' : 'bike') : '',
+          tags.covered === 'yes' ? pcChip(t('Coperto'), '', 'umbrella') : ''
+        ],
+        rows: [
+          pcRow(t('Tariffa'), chargeLines(tags)),
+          pcRow(t('Gestore'), escapeHtml(tags.operator || '')),
+          pcRow(t('Note'), escapeHtml(tags.note || ''))
+        ]
+      });
     }
 
     // ─── Costo stimato della sosta (tag charge di OSM) ───
@@ -2345,11 +2361,11 @@
     function costEstimatorHtml(tags, osmMeta) {
       if (!hasCostInfo(tags)) return '';
       const key = osmMeta.type + ':' + osmMeta.id;
-      return `<div class="popup-section">
-          <span class="label">${t('Costo stimato')}</span>
+      return `<div class="pc-cost">
+          <span class="pc-label">${t('Costo stimato')}</span>
           <div class="cost-chips">${COST_DURATIONS.map(min =>
             `<button type="button" class="cost-chip" data-pm-action="cost" data-key="${key}" data-min="${min}">${min < 60 ? min + ' min' : (min / 60) + ' h'}</button>`).join('')}</div>
-          <span class="val cost-result">${t('Quanto resti? Tocca una durata.')}</span>
+          <div class="cost-result">${t('Quanto resti? Tocca una durata.')}</div>
         </div>`;
     }
     function costResultHtml(tags, minutes) {
@@ -4161,12 +4177,13 @@
     function favButtonHtml(osmMeta, lat, lon) {
       const key = osmMeta.type + ':' + osmMeta.id;
       const on = isFavorite(key);
-      return `<button type="button" class="fav${on ? ' on' : ''}" data-pm-action="fav" data-key="${key}" data-lat="${lat}" data-lon="${lon}">` +
-        `<i data-lucide="star"></i> ${on ? t('Salvato') : t('Salva')}</button>`;
+      const label = on ? t('Salvato nei preferiti') : t('Salva nei preferiti');
+      return `<button type="button" class="pc-icon-btn fav${on ? ' on' : ''}" data-pm-action="fav" data-key="${key}" data-lat="${lat}" data-lon="${lon}" title="${label}" aria-label="${label}" aria-pressed="${on}">` +
+        `<i data-lucide="star"></i></button>`;
     }
     function reportButtonHtml(osmMeta, lat, lon) {
-      return `<button type="button" data-pm-action="report" data-osm="${osmMeta.type}/${osmMeta.id}" data-lat="${lat}" data-lon="${lon}">` +
-        `<i data-lucide="flag"></i> ${t('Segnala')}</button>`;
+      return `<button type="button" class="pc-icon-btn" data-pm-action="report" data-osm="${osmMeta.type}/${osmMeta.id}" data-lat="${lat}" data-lon="${lon}" title="${t('Segnala un errore')}" aria-label="${t('Segnala un errore')}">` +
+        `<i data-lucide="flag"></i></button>`;
     }
 
     map.on('popupopen', (e) => {
@@ -4189,9 +4206,13 @@
           }
           saveFavorites();
           const on = isFavorite(key);
+          const label = on ? t('Salvato nei preferiti') : t('Salva nei preferiti');
           btn.classList.toggle('on', on);
-          btn.innerHTML = `<i data-lucide="star"></i> ${on ? t('Salvato') : t('Salva')}`;
-          lucide.createIcons({ root: btn });
+          btn.setAttribute('aria-pressed', on);
+          btn.title = label;
+          btn.setAttribute('aria-label', label);
+          setStatus(on ? t('Aggiunto ai preferiti') : t('Tolto dai preferiti'));
+          setTimeout(() => setStatus(''), 1200);
         };
       });
       root.querySelectorAll('[data-pm-action="cost"]').forEach(btn => {
@@ -4199,7 +4220,7 @@
           const entry = idToLayer.get(btn.dataset.key);
           if (!entry) return;
           btn.parentNode.querySelectorAll('.cost-chip').forEach(b => b.classList.toggle('active', b === btn));
-          btn.closest('.popup-section').querySelector('.cost-result').innerHTML = costResultHtml(entry.tags, +btn.dataset.min);
+          btn.closest('.pc-cost').querySelector('.cost-result').innerHTML = costResultHtml(entry.tags, +btn.dataset.min);
           // Il popup cresce: si riposiziona senza rigenerare il contenuto (update() lo farebbe)
           e.popup._updateLayout(); e.popup._updatePosition(); e.popup._adjustPan();
         };
