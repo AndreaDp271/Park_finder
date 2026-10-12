@@ -16,5 +16,4 @@
     <string name="parkmap_widget_expires">scade alle %1$s</string>
     <string name="parkmap_widget_expired">sosta scaduta alle %1$s</string>
 
-    <string name="parkmap_car_title">Parcheggi vicini</string>
 </resources>

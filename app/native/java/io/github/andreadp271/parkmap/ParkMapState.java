@@ -8,8 +8,8 @@ import android.content.SharedPreferences;
 import org.json.JSONObject;
 
 /**
- * Stato condiviso tra la pagina web (tramite ParkMapNativePlugin), il widget
- * e Android Auto: la posizione dell'auto e l'azione chiesta dal widget.
+ * Stato condiviso tra la pagina web (tramite ParkMapNativePlugin) e il widget:
+ * la posizione dell'auto e l'azione chiesta dal widget.
  * L'auto è un JSON {lat, lon, ts, expiry} come in localStorage ("parkCar_v1").
  */
 public final class ParkMapState {
@@ -49,18 +49,6 @@ public final class ParkMapState {
         ed.apply();
         ParkMapWidget.updateAll(ctx);
         scheduleWidgetRefreshAtExpiry(ctx);
-    }
-
-    public static void saveCarHere(Context ctx, double lat, double lon) {
-        try {
-            JSONObject car = new JSONObject();
-            car.put("lat", lat);
-            car.put("lon", lon);
-            car.put("ts", System.currentTimeMillis());
-            car.put("expiry", JSONObject.NULL);
-            car.put("source", "auto");
-            setCarJson(ctx, car.toString());
-        } catch (Exception ignored) {}
     }
 
     public static long getExpiry(JSONObject car) {

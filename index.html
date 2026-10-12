@@ -3553,29 +3553,11 @@
       pushCarToNative();
     }
 
-    // App Android: l'auto è condivisa con il widget e con Android Auto
+    // App Android: l'auto è condivisa con il widget "La mia auto"
     // (SharedPreferences, vedi app/native/ParkMapState.java)
     function pushCarToNative() {
       if (!IS_NATIVE_APP) return;
       nativeCall('ParkMapNative', 'setCar', { car: car ? JSON.stringify(car) : null }).catch(() => {});
-    }
-
-    // Un'auto salvata da Android Auto ("Ho parcheggiato qui") è più recente di quella della pagina
-    async function syncNativeCar() {
-      if (!IS_NATIVE_APP) return;
-      try {
-        const res = await nativeCall('ParkMapNative', 'getCar');
-        const nativeCar = res && res.car ? JSON.parse(res.car) : null;
-        if (nativeCar && (!car || (nativeCar.ts || 0) > (car.ts || 0))) {
-          car = nativeCar;
-          try { localStorage.setItem(CAR_KEY, JSON.stringify(car)); } catch (err) {}
-          renderCarOnMap();
-          updateCarChip();
-          if (!carSheetEl.hidden) renderCarSheet();
-        } else if (car && !nativeCar) {
-          pushCarToNative(); // primo avvio dopo l'aggiornamento: il widget non la conosce ancora
-        }
-      } catch (err) { /* plugin assente (APK precedente) */ }
     }
 
     // Azioni chieste dal widget: "Ho parcheggiato" e "Apri"
@@ -3861,11 +3843,10 @@
     updateCarChip();
     if (car && car.expiry && !IS_NATIVE_APP) scheduleCarNotifications(); // sul sito i timer non sopravvivono alla ricarica
     if (IS_NATIVE_APP) {
-      syncNativeCar().then(handleNativeAction);
-      // Tornando nell'app (dal widget o da Android Auto) si rileggono auto e azioni
-      document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) syncNativeCar().then(handleNativeAction);
-      });
+      pushCarToNative(); // il widget riparte sempre dallo stato della pagina
+      handleNativeAction();
+      // Tornando nell'app dal widget si esegue l'azione scelta
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) handleNativeAction(); });
     }
 
     /* ===== Pressione prolungata sulla mappa ===== */

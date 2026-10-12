@@ -13,7 +13,7 @@ sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#&\n    
 grep -q ACCESS_FINE_LOCATION "$MANIFEST" || { echo "permessi non inseriti nel manifest" >&2; exit 1; }
 
 # Codice nativo di ParkMap (app/native): MainActivity con il plugin locale,
-# widget "La mia auto" e Android Auto. Sovrascrive la MainActivity generata.
+# widget "La mia auto". Sovrascrive la MainActivity generata.
 cp -r ../native/java/. app/src/main/java/
 cp -r ../native/res/. app/src/main/res/
 python3 - "$MANIFEST" <<'PY'
@@ -33,30 +33,12 @@ block = '''
                 android:name="android.appwidget.provider"
                 android:resource="@xml/parkmap_widget_info" />
         </receiver>
-
-        <!-- Android Auto: app della categoria parcheggi -->
-        <service
-            android:name=".car.ParkMapCarAppService"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="androidx.car.app.CarAppService" />
-                <category android:name="androidx.car.app.category.PARKING" />
-            </intent-filter>
-        </service>
-        <meta-data
-            android:name="com.google.android.gms.car.application"
-            android:resource="@xml/automotive_app_desc" />
-        <meta-data
-            android:name="androidx.car.app.minCarApiLevel"
-            android:value="1" />
 '''
 assert s.count('</application>') == 1
 s = s.replace('</application>', block + '    </application>')
 open(path, 'w', encoding='utf-8').write(s)
 PY
-grep -q "ParkMapCarAppService" "$MANIFEST" || { echo "manifest: Android Auto non inserito" >&2; exit 1; }
-sed -i 's#implementation project(.:capacitor-android.)#&\n    implementation "androidx.car.app:app:1.7.0"#' app/build.gradle
-grep -q "androidx.car.app:app" app/build.gradle || { echo "dipendenza Android Auto non inserita" >&2; exit 1; }
+grep -q "ParkMapWidget" "$MANIFEST" || { echo "manifest: widget non inserito" >&2; exit 1; }
 
 # Versione: cresce a ogni build, così Android accetta l'aggiornamento sopra la precedente
 sed -i -E "s/versionCode [0-9]+/versionCode ${BUILD}/; s/versionName \"[^\"]*\"/versionName \"1.0.${BUILD}\"/" app/build.gradle
