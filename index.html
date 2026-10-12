@@ -1578,7 +1578,8 @@
     function elementKind(tags) {
       switch (tags.amenity) {
         case 'parking': return 'parking';
-        case 'parking_space': return 'space';
+        // Lo stallo moto è un parcheggio moto come gli altri (livello, filtro, legenda)
+        case 'parking_space': return tags.parking_space === 'motorcycle' ? 'moto' : 'space';
         case 'vending_machine': return 'meter';
         case 'charging_station': return 'charging';
         case 'motorcycle_parking': return 'moto';
@@ -2047,7 +2048,7 @@
         if (ps === 'disabled') return { c1: '#fde047', c2: '#eab308', icon: 'accessibility' };
         if (ps === 'charging') return { c1: '#7dd3fc', c2: '#0284c7', icon: 'zap' };
         if (['emergency', 'police'].includes(ps)) return { c1: '#60a5fa', c2: '#1e40af', icon: 'shield' };
-        if (ps === 'motorcycle') return { c1: '#fca5a5', c2: '#dc2626', icon: 'bike' };
+        if (ps === 'motorcycle') return { c1: '#f87171', c2: '#b91c1c', icon: 'bike' };
         if (['delivery', 'loading', 'hgv'].includes(ps)) return { c1: '#fed7aa', c2: '#d97706', icon: 'truck' };
         if (['parent', 'women'].includes(ps)) return { c1: '#fbcfe8', c2: '#db2777', icon: 'baby' };
         if (ps === 'bus') return { c1: '#67e8f9', c2: '#0e7490', icon: 'bus' };
@@ -3047,7 +3048,7 @@
           if (ps === 'disabled') { cPs = '#eab308'; fPs = '#fde047'; }
           else if (ps === 'charging') { cPs = '#0284c7'; fPs = '#f0f9ff'; }
           else if (['emergency','police'].includes(ps)) { cPs = '#1e40af'; fPs = '#60a5fa'; }
-          else if (ps === 'motorcycle') { cPs = '#dc2626'; fPs = '#fca5a5'; }
+          else if (ps === 'motorcycle') { cPs = '#b91c1c'; fPs = '#fca5a5'; }
           else if (['delivery','loading','hgv'].includes(ps)) { cPs = '#d97706'; fPs = '#fed7aa'; }
           else if (['parent','women'].includes(ps)) { cPs = '#db2777'; fPs = '#fbcfe8'; }
           else if (ps === 'bus') { cPs = '#0e7490'; fPs = '#67e8f9'; }
@@ -3057,11 +3058,11 @@
             let pts2 = el.geometry.map(g => [g.lat, g.lon]);
             let layer2 = L.polygon(pts2, { color: cPs, weight: 2, fillColor: fPs, fillOpacity: 0.8, pane: 'parkingSpacesPane' })
               .bindPopup(() => buildPopupContent(tags, pts2[0][0], pts2[0][1], osmMeta));
-            registerElement(uniqueId, layer2, parkingSpacesLayer, tile, tags);
+            registerElement(uniqueId, layer2, ps === 'motorcycle' ? motoLayer : parkingSpacesLayer, tile, tags);
           } else if (el.lat) {
             let layer2 = L.circleMarker([el.lat, el.lon], { radius: 8, color: cPs, fillColor: fPs, fillOpacity: 0.9, pane: 'parkingSpacesPane' })
               .bindPopup(() => buildPopupContent(tags, el.lat, el.lon, osmMeta));
-            registerElement(uniqueId, layer2, parkingSpacesLayer, tile, tags);
+            registerElement(uniqueId, layer2, ps === 'motorcycle' ? motoLayer : parkingSpacesLayer, tile, tags);
           }
         }
 
