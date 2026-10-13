@@ -415,6 +415,8 @@
     .set-btn:active{ transform:scale(0.97); }
     .set-btn:disabled{ opacity:.6; cursor:default; }
     .set-btn.primary{ background:var(--primary-dark); border-color:var(--primary-dark); color:#fff; }
+    .leaflet-container .vec-invert{ filter:invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9); }
+    .leaflet-maplibre-gl-container, .leaflet-layer canvas.maplibregl-canvas{ pointer-events:none; }
     .style-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; width:100%; }
     .style-grid button{ display:flex; flex-direction:column; align-items:center; gap:5px; padding:5px 2px 6px; border:2px solid transparent; border-radius:14px; background:none; color:var(--text-main); font:600 11.5px 'Inter',system-ui,sans-serif; cursor:pointer; }
     .style-grid button.active{ border-color:var(--primary-dark); background:var(--primary-light); }
@@ -1338,6 +1340,7 @@
     "Manca il permesso «Dispositivi nelle vicinanze»: senza, ParkMap non sa quando ti scolleghi.": "The \"Nearby devices\" permission is missing: without it ParkMap cannot tell when you disconnect.",
     "Manda il link di questa zona della mappa": "Send a link to this part of the map",
     "Mappa": "Map",
+    "Mappa non disponibile, torno a Standard": "Map unavailable, going back to Standard",
     "Max {v}": "Max {v}",
     "Metodi di pagamento": "Payment methods",
     "Mezzi pesanti": "Trucks",
@@ -1876,6 +1879,7 @@
     const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>';
     // Solo fonti utilizzabili senza chiave API (CARTO ora la richiede: le sue
     // tessere mostrano "API KEY REQUIRED").
+    const OPENFREEMAP_ATTRIBUTION = '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> &copy; OpenMapTiles, ' + OSM_ATTRIBUTION;
     const MAP_STYLES = {
       osm: { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', maxNativeZoom: 19, attribution: OSM_ATTRIBUTION },
       light: {
@@ -1890,25 +1894,50 @@
         url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', maxNativeZoom: 17,
         attribution: OSM_ATTRIBUTION + ', SRTM, ' + t('stile') + ' <a href="https://opentopomap.org" target="_blank">OpenTopoMap</a>'
       },
-      gray: {
-        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', maxNativeZoom: 16,
-        attribution: t('Mappa') + ' &copy; Esri, HERE, Garmin | ' + OSM_ATTRIBUTION
-      },
-      dark: {
-        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', maxNativeZoom: 16,
-        attribution: t('Mappa') + ' &copy; Esri, HERE, Garmin | ' + OSM_ATTRIBUTION
-      },
+      // Stili vettoriali (OpenFreeMap, senza chiave): nitidi a ogni zoom
+      gray: { vector: 'positron', attribution: OPENFREEMAP_ATTRIBUTION },
+      dark: { vector: 'positron', invert: true, attribution: OPENFREEMAP_ATTRIBUTION },
       satellite: {
         url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', maxNativeZoom: 19,
         attribution: t('Immagini') + ' &copy; Esri, Maxar, Earthstar Geographics | ' + OSM_ATTRIBUTION
       },
       hybrid: {
         url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', maxNativeZoom: 19,
-        overlay: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', overlayNative: 17,
-        attribution: t('Immagini') + ' &copy; Esri, Maxar, Earthstar Geographics | ' + OSM_ATTRIBUTION
+        labels: true,
+        attribution: t('Immagini') + ' &copy; Esri, Maxar, Earthstar Geographics | ' + OPENFREEMAP_ATTRIBUTION
       }
     };
-    let baseLayer = null, labelLayer = null;
+    let baseLayer = null, labelLayer = null, styleToken = 0;
+    // MapLibre (mappe vettoriali) si carica solo quando serve
+    let mapLibrePromise = null;
+    function loadMapLibre() {
+      if (window.maplibregl && L.maplibreGL) return Promise.resolve();
+      if (mapLibrePromise) return mapLibrePromise;
+      const script = (src) => new Promise((ok, ko) => {
+        const el = document.createElement('script');
+        el.src = src; el.onload = ok; el.onerror = () => ko(new Error('script'));
+        document.head.appendChild(el);
+      });
+      const css = document.createElement('link');
+      css.rel = 'stylesheet'; css.href = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css';
+      document.head.appendChild(css);
+      mapLibrePromise = script('https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js')
+        .then(() => script('https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js'))
+        .catch((err) => { mapLibrePromise = null; throw err; });
+      return mapLibrePromise;
+    }
+    // Solo i nomi (strade, luoghi) dello stile "liberty", in bianco con alone scuro: per la vista ibrida
+    async function labelsOnlyStyle() {
+      const style = await (await fetch('https://tiles.openfreemap.org/styles/liberty')).json();
+      style.layers = style.layers.filter(l => l.type === 'symbol' && l.layout && l.layout['text-field']);
+      style.layers.forEach(l => {
+        l.paint = Object.assign({}, l.paint, { 'text-color': '#ffffff', 'text-halo-color': 'rgba(0,0,0,0.75)', 'text-halo-width': 1.4, 'icon-opacity': 0 });
+      });
+      return style;
+    }
+    function vectorLayer(style, opts) {
+      return L.maplibreGL(Object.assign({ style, interactive: false, attribution: '' }, opts || {}));
+    }
     function applyMapStyle(name) {
       if (!MAP_STYLES[name]) {
         // Stile salvato da una versione precedente e non più disponibile
@@ -1917,18 +1946,47 @@
         saveSettings();
       }
       const style = MAP_STYLES[name];
+      const token = ++styleToken;
+      map.fire('styleswitch');
       document.documentElement.dataset.map = name;
-      if (baseLayer) map.removeLayer(baseLayer);
-      if (labelLayer) { map.removeLayer(labelLayer); labelLayer = null; }
-      baseLayer = L.tileLayer(style.url, {
-        maxZoom: 20,
-        maxNativeZoom: style.maxNativeZoom,
-        subdomains: style.subdomains || 'abc',
-        attribution: style.attribution
-      }).addTo(map);
-      if (style.overlay) {
-        labelLayer = L.tileLayer(style.overlay, { maxZoom: 20, maxNativeZoom: style.overlayNative }).addTo(map);
+      const clear = () => {
+        if (baseLayer) map.removeLayer(baseLayer);
+        if (labelLayer) map.removeLayer(labelLayer);
+        baseLayer = labelLayer = null;
+      };
+      if (!style.vector && !style.labels) {
+        clear();
+        baseLayer = L.tileLayer(style.url, {
+          maxZoom: 20,
+          maxNativeZoom: style.maxNativeZoom,
+          subdomains: style.subdomains || 'abc',
+          attribution: style.attribution
+        }).addTo(map);
+        return;
       }
+      // Vettoriale: finché non è pronto resta la mappa precedente; se non si carica si torna a Standard
+      loadMapLibre().then(async () => {
+        const labelStyle = style.labels ? await labelsOnlyStyle() : null;
+        if (token !== styleToken) return;
+        clear();
+        if (style.vector) {
+          baseLayer = vectorLayer('https://tiles.openfreemap.org/styles/' + style.vector).addTo(map);
+          baseLayer.getContainer().classList.toggle('vec-invert', !!style.invert);
+        } else {
+          baseLayer = L.tileLayer(style.url, { maxZoom: 20, maxNativeZoom: style.maxNativeZoom, subdomains: 'abc' }).addTo(map);
+          labelLayer = vectorLayer(labelStyle).addTo(map);
+          labelLayer.getContainer().style.zIndex = 10;  // sopra la tessera satellitare
+        }
+        map.attributionControl.addAttribution(style.attribution);
+        const prev = style.attribution;
+        // l'attribuzione resta finché lo stile è attivo
+        map.once('styleswitch', () => map.attributionControl.removeAttribution(prev));
+      }).catch(() => {
+        if (token !== styleToken) return;
+        setStatus(t('Mappa non disponibile, torno a Standard'));
+        setTimeout(() => setStatus(''), 2500);
+        settings.mapStyle = 'osm'; saveSettings(); applyMapStyle('osm'); refreshSettingsUI();
+      });
     }
     applyMapStyle(settings.mapStyle);
     updateZoomButtons();
