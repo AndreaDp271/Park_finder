@@ -104,113 +104,61 @@
       z-index:1;
     }
 
+    /* ─── Barra in alto: ricerca in un'unica pillola di vetro, filtri sotto ─── */
     #topbar{
-      position:fixed;
-      top:calc(12px + var(--safe-top));
-      left:50%;
-      transform:translateX(-50%);
-      width:calc(100% - 24px);
-      max-width:600px;
-      z-index:1000;
-      display:flex;
-      align-items:center;
-      gap:10px;
-      pointer-events:none;
+      position:fixed; top:calc(12px + var(--safe-top)); left:50%; transform:translateX(-50%);
+      width:calc(100% - 24px); max-width:600px; z-index:1000;
     }
-    #topbar > *{ pointer-events:auto; box-shadow:var(--btn-shadow); }
-
-    #titleBadge{
-      background:var(--glass);
-      backdrop-filter:blur(10px);
-      -webkit-backdrop-filter:blur(10px);
-      border:var(--btn-border);
-      color:var(--text-main);
-      height:46px;
-      padding:0 16px;
-      border-radius:var(--radius);
-      display:flex;
-      align-items:center;
-      gap:8px;
-      font-weight:700;
-      font-size:15px;
-      white-space:nowrap;
-      flex-shrink:0;
-    }
-    #titleBadge{ cursor:pointer; }
-    #titleBadge .brand-mark{ width:24px; height:24px; flex-shrink:0; display:block; }
-
     #searchBox{
-      flex:1;
+      position:relative; height:54px; box-sizing:border-box; padding:6px 6px 6px 12px; gap:8px;
+      display:flex; align-items:center; border-radius:27px;
       background:var(--glass);
-      backdrop-filter:blur(10px);
-      -webkit-backdrop-filter:blur(10px);
-      border:var(--btn-border);
-      height:46px;
-      border-radius:var(--radius);
-      display:flex;
-      align-items:center;
-      padding:0 4px 0 16px;
-      transition:transform .2s ease, box-shadow .2s ease;
-      position:relative;
+      backdrop-filter:blur(22px) saturate(1.6); -webkit-backdrop-filter:blur(22px) saturate(1.6);
+      border:var(--btn-border); box-shadow:0 8px 28px rgb(15 23 42 / 0.16), 0 1px 3px rgb(15 23 42 / 0.1);
+      transition:box-shadow .2s ease;
     }
-    #searchBox:focus-within{
-      box-shadow:var(--shadow-md),0 0 0 2px var(--primary);
-      transform:translateY(-1px);
-    }
-
+    #searchBox:focus-within{ box-shadow:0 8px 28px rgb(15 23 42 / 0.2), 0 0 0 2px var(--primary); }
+    #titleBadge{ width:34px; height:34px; flex-shrink:0; display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:10px; }
+    #titleBadge .brand-mark{ width:30px; height:30px; display:block; }
     #searchInput{
-      flex:1;
-      border:none;
-      background:transparent;
-      font-family:inherit;
-      font-size:14px;
-      color:var(--text-main);
-      outline:none;
-      min-width:0;
-      padding:0;
+      flex:1; min-width:0; height:40px; border:none; background:transparent; outline:none; padding:0;
+      font:500 15.5px 'Inter',system-ui,sans-serif; color:var(--text-main);
     }
     #searchInput::placeholder{ color:var(--muted); }
-
-    #searchBtn{
-      background:var(--primary);
-      color:#fff;
-      height:36px;
-      padding:0 14px;
-      border-radius:8px;
-      font-weight:600;
-      font-size:13px;
-      border:none;
-      cursor:pointer;
-      display:flex;
-      align-items:center;
-      gap:6px;
-      margin-left:8px;
-      transition:background .15s ease, transform .15s ease;
+    #searchClear{
+      width:30px; height:30px; flex-shrink:0; border:none; border-radius:50%; cursor:pointer;
+      background:var(--surface-3); color:var(--text-light); display:flex; align-items:center; justify-content:center;
     }
-    #searchBtn:hover{ background:var(--primary-dark); }
-    #searchBtn:active{ transform:scale(0.95); }
+    #searchClear[hidden]{ display:none; }
+    #searchClear svg{ width:15px; height:15px; }
+    #searchBtn{
+      width:42px; height:42px; flex-shrink:0; border:none; border-radius:50%; cursor:pointer;
+      background:var(--primary-dark); color:#fff; display:flex; align-items:center; justify-content:center;
+      transition:transform .18s var(--ease-pop), background .15s ease;
+    }
+    #searchBtn:active{ transform:scale(0.9); }
+    #searchBtn svg{ width:20px; height:20px; }
 
     #searchResults{
-      position:absolute;
-      left:0;right:0;
-      top:calc(100% + 8px);
-      background:var(--surface);
-      border-radius:14px;
-      box-shadow:var(--shadow-lg);
-      overflow:hidden;
-      display:none;
-      z-index:2000;
-      border:1px solid var(--border);
+      position:absolute; left:0; right:0; top:calc(54px + 10px); z-index:2000; display:none;
+      max-height:min(60vh, 460px); overflow-y:auto; padding:6px; box-sizing:border-box; border-radius:24px;
+      background:var(--sheet-bg);
+      backdrop-filter:blur(26px) saturate(1.5); -webkit-backdrop-filter:blur(26px) saturate(1.5);
+      border:var(--btn-border); box-shadow:0 14px 40px rgb(15 23 42 / 0.22);
     }
-    .search-result-item{
-      padding:10px 12px;
-      font-size:14px;
-      cursor:pointer;
-      color:var(--text-main);
-      background:var(--surface);
+    .search-head{
+      display:flex; align-items:center; justify-content:space-between; padding:8px 12px 4px;
+      font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:800; color:var(--text-light);
     }
-    .search-result-item:hover{ background:var(--surface-2); }
-    .search-result-item + .search-result-item{ border-top:1px solid var(--border-soft); }
+    .search-head button{ border:none; background:none; cursor:pointer; color:var(--primary-dark); font:700 12.5px 'Inter',system-ui,sans-serif; text-transform:none; letter-spacing:0; }
+    .search-result-item{ display:flex; align-items:center; gap:12px; padding:9px 10px; border-radius:16px; cursor:pointer; }
+    .search-result-item:hover, .search-result-item:active{ background:var(--surface-3); }
+    .sr-ico{ width:38px; height:38px; border-radius:12px; flex-shrink:0; background:var(--surface-3); color:var(--primary-dark); display:flex; align-items:center; justify-content:center; }
+    .search-result-item:hover .sr-ico{ background:var(--surface); }
+    .sr-ico svg{ width:18px; height:18px; }
+    .sr-text{ min-width:0; display:flex; flex-direction:column; gap:1px; }
+    .sr-title{ font-weight:600; font-size:15px; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sr-sub{ font-size:12.5px; color:var(--text-light); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
     .fab-btn{
       position:relative;
@@ -238,14 +186,16 @@
       position:fixed !important;
       left:50% !important;
       right:auto !important;
-      bottom:calc(var(--dock-total) + 5px) !important;
+      bottom:calc(var(--dock-total) + 8px) !important;
       transform:translateX(-50%);
-      background:var(--attr-bg) !important;
-      border-radius:8px;
-      font-size:10px;
-      padding:2px 8px;
-      box-shadow:none;
+      max-width:calc(100% - 132px); box-sizing:border-box; text-align:center; white-space:normal; line-height:1.3;
+      background:var(--glass) !important; color:var(--text-light) !important;
+      backdrop-filter:blur(16px) saturate(1.5); -webkit-backdrop-filter:blur(16px) saturate(1.5);
+      border:var(--btn-border); border-radius:16px; box-shadow:var(--btn-shadow);
+      font:600 12.5px 'Inter',system-ui,sans-serif !important; padding:7px 14px !important; margin:0 !important;
     }
+    .leaflet-control-attribution a{ color:var(--primary-dark) !important; text-decoration:none; }
+    .leaflet-control-attribution a:hover{ text-decoration:underline; }
 
     /* ─── Pannello diagnostico provider dati (pressione prolungata su "Aggiorna") ─── */
     #diagBackdrop{
@@ -294,7 +244,7 @@
 
     #status{
       position:fixed;
-      bottom:calc(var(--dock-total) + 24px);
+      bottom:calc(var(--dock-total) + 54px);
       left:50%;
       transform:translateX(-50%) translateY(20px);
       background:rgba(15,23,42,.9);
@@ -493,7 +443,32 @@
       .sheet-body{ padding-bottom:calc(20px + var(--safe-bottom)); }
     }
 
-    /* ─── Menu: righe con icona colorata ─── */
+    /* ─── Finestra di dialogo (aggiornamento dell'app) ─── */
+    .dialog{
+      position:fixed; z-index:3201; left:50%; top:50%; transform:translate(-50%,-50%);
+      width:min(calc(100% - 40px), 400px); max-height:min(80vh, 560px); box-sizing:border-box;
+      display:flex; flex-direction:column; padding:22px 20px 14px; border-radius:28px;
+      background:var(--sheet-bg); color:var(--text-main); font-family:'Inter',system-ui,sans-serif;
+      backdrop-filter:blur(28px) saturate(1.5); -webkit-backdrop-filter:blur(28px) saturate(1.5);
+      border:1px solid rgba(255,255,255,0.35); box-shadow:0 24px 60px rgb(15 23 42 / 0.35);
+      animation:dialogIn .22s var(--ease-pop);
+    }
+    .dialog[hidden]{ display:none; }
+    @keyframes dialogIn{ from{ opacity:0; transform:translate(-50%,-50%) scale(0.92); } to{ opacity:1; transform:translate(-50%,-50%) scale(1); } }
+    .dialog h3{ margin:0 0 10px; font-size:19px; font-weight:800; letter-spacing:-.01em; }
+    .dialog-body{ overflow-y:auto; font-size:14.5px; line-height:1.5; }
+    .dialog-body p{ margin:0 0 10px; }
+    .upd-notes{ white-space:pre-wrap; font-size:13.5px; line-height:1.55; background:var(--surface); border-radius:14px; padding:12px 14px; margin:2px 0 10px; max-height:230px; overflow-y:auto; }
+    .upd-hint{ font-size:12.5px; color:var(--text-light); }
+    .upd-bar{ height:8px; border-radius:4px; background:var(--surface-3); overflow:hidden; margin:14px 0 6px; }
+    .upd-bar i{ display:block; height:100%; width:0; border-radius:4px; background:var(--primary-dark); transition:width .3s ease; }
+    .upd-bar.indeterminate i{ width:35%; animation:updSlide 1.1s ease-in-out infinite; }
+    @keyframes updSlide{ from{ margin-left:-35%; } to{ margin-left:100%; } }
+    .dialog-actions{ display:flex; justify-content:flex-end; gap:8px; padding-top:8px; }
+    .dialog-actions .set-btn{ height:42px; padding:0 18px; border-radius:12px; }
+    .dialog-actions:empty{ display:none; }
+
+    /* ─── Menu: righe con icona ─── */
     .menu-row{
       display:flex; align-items:center; gap:14px; width:100%; min-height:58px; padding:10px 16px; box-sizing:border-box;
       border:none; background:transparent; color:var(--text-main); text-align:left; cursor:pointer;
@@ -501,13 +476,8 @@
     }
     .menu-row + .menu-row{ border-top:1px solid var(--border-soft); }
     .menu-row:active{ background:var(--surface-2); }
-    .menu-ico{ width:36px; height:36px; border-radius:11px; flex-shrink:0; color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.18); }
+    .menu-ico{ width:36px; height:36px; border-radius:11px; flex-shrink:0; background:var(--surface-3); color:var(--primary-dark); display:flex; align-items:center; justify-content:center; }
     .menu-ico svg{ width:19px; height:19px; }
-    .menu-ico.blue{ background:linear-gradient(135deg,#60a5fa,#2563eb); }
-    .menu-ico.green{ background:linear-gradient(135deg,#4ade80,#16a34a); }
-    .menu-ico.orange{ background:linear-gradient(135deg,#fdba74,#ea580c); }
-    .menu-ico.purple{ background:linear-gradient(135deg,#a78bfa,#6d28d9); }
-    .menu-ico.gray{ background:linear-gradient(135deg,#94a3b8,#475569); }
     .menu-text{ display:flex; flex-direction:column; min-width:0; flex:1; gap:1px; }
     .menu-sub{ font-weight:500; font-size:12.5px; color:var(--text-light); }
     .menu-row .chev{ margin-left:auto; }
@@ -622,39 +592,45 @@
 
     @media (max-width:600px){
       :root{ --btn-size:44px; --btn-gap:10px; --dock-h:62px; --fab-right:calc(12px + var(--safe-right)); }
-      #chipBar{ top:calc(var(--safe-top) + 10px + 46px + 8px); width:calc(100% - 20px); }
-      #topbar{ top:calc(10px + var(--safe-top)); width:calc(100% - 20px); gap:8px; }
-      #titleBadge span{ display:none; }
-      #titleBadge{ padding:0; width:46px; justify-content:center; }
-      #searchBtn span.text{ display:none; }
-      #searchBtn{ padding:0; width:36px; height:36px; justify-content:center; margin-left:4px; }
-      #searchBox{ padding-left:12px; padding-right:6px; }
+      #topbar{ top:calc(10px + var(--safe-top)); width:calc(100% - 20px); }
+      #chipBar{ top:calc(var(--safe-top) + 10px + 54px + 10px); width:calc(100% - 20px); }
     }
-    /* ─── Barra filtri (sotto la ricerca) ─── */
+    /* ─── Filtri (sotto la ricerca): chip di vetro, a scorrimento con sfumatura ai bordi ─── */
     #chipBar{
       position:fixed; z-index:999;
-      top:calc(var(--safe-top) + 12px + 46px + 8px);
+      top:calc(var(--safe-top) + 12px + 54px + 10px);
       left:50%; transform:translateX(-50%);
       width:calc(100% - 24px); max-width:600px;
-      display:flex; gap:8px; overflow-x:auto; padding:2px 2px 6px;
+      display:flex; gap:8px; overflow-x:auto; padding:3px 2px 9px;
       scrollbar-width:none; pointer-events:none;
+      -webkit-mask-image:linear-gradient(90deg, var(--ml,#000) 0, #000 28px, #000 calc(100% - 28px), var(--mr,#000) 100%);
+      mask-image:linear-gradient(90deg, var(--ml,#000) 0, #000 28px, #000 calc(100% - 28px), var(--mr,#000) 100%);
     }
+    #chipBar.fade-l{ --ml:transparent; }
+    #chipBar.fade-r{ --mr:transparent; }
     #chipBar::-webkit-scrollbar{ display:none; }
     .chip{
       pointer-events:auto; flex-shrink:0;
-      height:34px; padding:0 12px; border-radius:17px;
-      display:inline-flex; align-items:center; gap:6px; white-space:nowrap; cursor:pointer;
-      background:var(--glass); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+      height:38px; padding:0 14px 0 12px; border-radius:19px;
+      display:inline-flex; align-items:center; gap:7px; white-space:nowrap; cursor:pointer;
+      background:var(--glass);
+      backdrop-filter:blur(18px) saturate(1.5); -webkit-backdrop-filter:blur(18px) saturate(1.5);
       border:var(--btn-border); box-shadow:var(--btn-shadow);
-      font:600 13px 'Inter',system-ui,sans-serif; color:var(--text-main);
-      transition:background .15s ease, color .15s ease, transform .15s ease;
+      font:600 13.5px 'Inter',system-ui,sans-serif; color:var(--text-main);
+      transition:background .18s ease, color .18s ease, box-shadow .18s ease, transform .18s var(--ease-pop);
     }
-    .chip i, .chip svg{ width:15px; height:15px; flex-shrink:0; }
-    .chip:active{ transform:scale(0.96); }
-    .chip.active{ background:var(--primary-dark); color:#fff; border-color:transparent; }
+    .chip i, .chip svg{ width:16px; height:16px; flex-shrink:0; color:var(--text-light); transition:color .18s ease; }
+    .chip:active{ transform:scale(0.95); }
+    .chip.active{ background:var(--primary-dark); color:#fff; border-color:transparent; box-shadow:0 4px 14px rgb(37 99 235 / 0.35); }
+    .chip.active svg, .chip.car svg, .chip.dest svg{ color:#fff; }
     .chip.car{ background:#1d4ed8; color:#fff; border-color:transparent; }
     .chip.car.warn{ background:#d97706; }
     .chip.car.expired{ background:var(--danger); }
+    .chip.reset{ padding:0 10px 0 12px; }
+    .chip.reset .count{
+      min-width:20px; height:20px; padding:0 5px; box-sizing:border-box; border-radius:10px;
+      background:var(--primary-dark); color:#fff; font-size:11.5px; display:inline-flex; align-items:center; justify-content:center;
+    }
     .chip[hidden]{ display:none; }
 
     .fab-btn:disabled{ opacity:.45; cursor:default; transform:none; }
@@ -806,16 +782,14 @@
 
 <body>
   <div id="topbar">
-    <div id="titleBadge" title="Impostazioni" role="button" tabindex="0"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient></defs><rect width="24" height="24" rx="5.5" fill="url(#brandGrad)"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9" transform="translate(12 12) scale(1.32) translate(-12.5 -12)" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> <span>ParkMap</span></div>
-
     <div id="searchBox">
-      <input id="searchInput" type="text" placeholder="Cerca località..." aria-label="Cerca località" />
-      <button id="searchBtn">
-        <i data-lucide="search" style="width: 18px; height: 18px;"></i>
-        <span class="text">Cerca</span>
-      </button>
-      <div id="searchResults"></div>
+      <div id="titleBadge" title="Impostazioni" role="button" tabindex="0"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient></defs><rect width="24" height="24" rx="5.5" fill="url(#brandGrad)"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9" transform="translate(12 12) scale(1.32) translate(-12.5 -12)" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <input id="searchInput" type="text" placeholder="Cerca luogo o indirizzo" aria-label="Cerca luogo o indirizzo" autocomplete="off" enterkeyhint="search" />
+      <button type="button" id="searchClear" aria-label="Cancella ricerca" hidden><i data-lucide="x"></i></button>
+      <button type="button" id="searchBtn" aria-label="Cerca"><i data-lucide="search"></i></button>
     </div>
+    <!-- Fuori dalla pillola: un backdrop-filter dentro un altro non vede la mappa e non sfocherebbe -->
+    <div id="searchResults"></div>
   </div>
 
   <div id="map"></div>
@@ -829,6 +803,7 @@
   <div id="chipBar" role="toolbar" aria-label="Filtri">
     <button type="button" class="chip car" id="carChip" hidden><i data-lucide="car"></i><span id="carChipText">Auto</span></button>
     <button type="button" class="chip dest" id="destChip" hidden><i data-lucide="flag"></i><span id="destChipText"></span><span class="chip-x" id="destChipClose" role="button" aria-label="Chiudi">✕</span></button>
+    <button type="button" class="chip reset" id="chipReset" hidden><i data-lucide="x"></i><span>Azzera filtri</span><span class="count" id="chipResetCount">0</span></button>
     <button type="button" class="chip" data-filter="freeNow" aria-pressed="false"><i data-lucide="clock"></i> Gratis adesso</button>
     <button type="button" class="chip" data-filter="free" aria-pressed="false"><i data-lucide="circle-check"></i> Gratuiti</button>
     <button type="button" class="chip" data-filter="disc" aria-pressed="false"><i data-lucide="timer"></i> Disco orario</button>
@@ -857,6 +832,13 @@
     <button type="button" class="dock-item" id="carBtn" aria-label="La mia auto"><i data-lucide="car"></i><span id="carTabLabel">Auto</span></button>
     <button type="button" class="dock-item" id="moreBtn" aria-label="Menu"><i data-lucide="ellipsis"></i><span>Menu</span><span class="dock-dot" id="moreBadge" hidden></span></button>
   </nav>
+
+  <div id="updateBackdrop" class="sheet-backdrop" style="z-index:3200" hidden></div>
+  <div id="updateDialog" class="dialog" role="dialog" aria-modal="true" aria-labelledby="updTitle" hidden>
+    <h3 id="updTitle"></h3>
+    <div class="dialog-body" id="updBody"></div>
+    <div class="dialog-actions" id="updActions"></div>
+  </div>
 
   <div id="sheetBackdrop" class="sheet-backdrop" hidden></div>
   <section id="menuSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="menuTitle" hidden>
@@ -1003,7 +985,7 @@
           <label class="set-row" id="autoUpdateRow"><span class="set-label"><i data-lucide="bell"></i> Controlla aggiornamenti all'avvio</span><input type="checkbox" class="switch" id="setAutoUpdate"></label>
           <div class="set-actions">
             <button type="button" class="set-btn primary" id="updateCheckBtn"><i data-lucide="github"></i> Controlla su GitHub</button>
-            <button type="button" class="set-btn primary" id="updateInstallBtn" hidden><i data-lucide="download"></i> Scarica e installa</button>
+            <button type="button" class="set-btn primary" id="updateInstallBtn" hidden><i data-lucide="download"></i> Aggiorna</button>
             <a class="set-btn" id="updateNotesLink" target="_blank" rel="noopener" hidden><i data-lucide="file-text"></i> Novità</a>
           </div>
         </div>
@@ -1144,11 +1126,14 @@
     "A {d} da te · circa {n} min a piedi": "{d} from you · about {n} min walk",
     "Accesso": "Access",
     "Accesso limitato": "Restricted access",
+    "Aggiorna": "Update",
     "Aggiorna dati": "Refresh data",
     "Aggiorna dati (tieni premuto per lo stato dei provider)": "Refresh data (long-press for provider status)",
     "Aggiorna ora": "Refresh now",
     "Aggiornamenti": "Updates",
+    "Aggiornamento": "Updating",
     "Aggiornamento dati...": "Updating data...",
+    "Aggiornamento non riuscito": "Update failed",
     "Aggiunto ai preferiti": "Added to favourites",
     "Aiuto e impostazioni": "Help and settings",
     "Allontana": "Zoom out",
@@ -1172,6 +1157,7 @@
     "Automatico": "Automatic",
     "Autorizzato": "Permissive",
     "Avvicina": "Zoom in",
+    "Azzera filtri": "Clear filters",
     "Bancomat / carte di debito": "Debit cards",
     "Banconote": "Notes",
     "Bici": "Bikes",
@@ -1187,6 +1173,8 @@
     "Cache svuotata": "Cache cleared",
     "Cambia": "Change",
     "Cambia foto": "Change photo",
+    "Cancella": "Clear",
+    "Cancella ricerca": "Clear search",
     "Cancella storico": "Clear history",
     "Caricamento parcheggi...": "Loading parking...",
     "Carico/Scarico": "Loading",
@@ -1196,6 +1184,7 @@
     "Cerca": "Search",
     "Cerca località": "Search place or address",
     "Cerca località...": "Search place or address...",
+    "Cerca luogo o indirizzo": "Search place or address",
     "Cerco la tua posizione...": "Finding your location...",
     "Cerco località...": "Searching...",
     "Chiaro": "Light",
@@ -1211,6 +1200,7 @@
     "Condividi posizione": "Share location",
     "Condividi questa posizione": "Share this location",
     "Condizionato:": "Conditional:",
+    "Conferma l'installazione nella finestra di Android.": "Confirm the installation in the Android window.",
     "Contanti": "Cash",
     "Controlla aggiornamenti all'avvio": "Check for updates at startup",
     "Controlla su GitHub": "Check on GitHub",
@@ -1235,6 +1225,8 @@
     "Distanze dalla tua posizione": "Distance from your location",
     "Donne": "Women",
     "Download avviato: al termine apri il file .apk e conferma l'aggiornamento.": "Download started: when it finishes, open the .apk file and confirm the update.",
+    "Download in corso…": "Downloading…",
+    "Download non riuscito ({code})": "Download failed ({code})",
     "Edificio": "Building",
     "Elemento:": "Feature:",
     "Elimina foto": "Delete photo",
@@ -1249,7 +1241,9 @@
     "Fasce orarie": "Times",
     "Ferma-ruote": "Wheel benders",
     "Ferma-ruote a terra": "Ground slots",
+    "File scaricato non valido": "Downloaded file is not valid",
     "Filtri": "Filters",
+    "Firma dell'APK non compatibile con l'app installata": "The APK signature is not compatible with the installed app",
     "Fonte in questa zona": "Source in this area",
     "Foto dell'auto": "Car photo",
     "Foto non salvata": "Photo not saved",
@@ -1267,6 +1261,7 @@
     "Grazie! Segnalazione inviata": "Thanks! Report sent",
     "Guarda questa posizione su ParkMap": "Check out this place on ParkMap",
     "Hai già l'ultima versione.": "You have the latest version.",
+    "Hai la versione {v}.": "You have version {v}.",
     "Ho lasciato il parcheggio": "I left the parking spot",
     "Ho parcheggiato qui": "I parked here",
     "I preferiti restano salvati su questo dispositivo.": "Favourites are saved on this device.",
@@ -1282,13 +1277,19 @@
     "Informale": "Informal",
     "Informazioni": "About",
     "Informazioni sbagliate": "Wrong information",
+    "Installata da F-Droid: gli aggiornamenti arrivano da lì": "Installed from F-Droid: updates come from there",
+    "Installazione non riuscita": "Installation failed",
     "Invia segnalazione": "Send report",
     "Invio in corso…": "Sending…",
     "Invio non riuscito. Controlla la connessione e riprova.": "Sending failed. Check your connection and try again.",
+    "L'APK scaricato non è firmato come questa app: installazione annullata": "The downloaded APK is not signed like this app: installation cancelled",
     "La mia auto": "My car",
     "La mia auto è qui": "My car is here",
     "La mia posizione": "My location",
+    "La prima volta Android ti chiederà di consentire l'installazione di app da ParkMap: attivalo, torna indietro e tocca di nuovo Aggiorna.": "The first time, Android will ask you to allow installing apps from ParkMap: turn it on, go back and tap Update again.",
     "La segnalazione diventa una nota pubblica e anonima su OpenStreetMap: i volontari che curano la mappa la verificano e correggono i dati, per tutti.": "Your report becomes a public, anonymous note on OpenStreetMap: the volunteers who maintain the map check it and fix the data for everyone.",
+    "La versione scaricata è più vecchia di quella installata": "The downloaded version is older than the installed one",
+    "La versione su GitHub non è più recente di quella installata": "The version on GitHub is not newer than the installed one",
     "Le notifiche sono disattivate per ParkMap: abilitale nelle impostazioni di Android per ricevere il promemoria.": "Notifications are off for ParkMap: turn them on in Android settings to get the reminder.",
     "Legenda": "Legend",
     "Limitato/Privato": "Restricted/Private",
@@ -1327,6 +1328,7 @@
     "Note": "Notes",
     "Note e foto": "Notes and photo",
     "Novità": "What's new",
+    "Nuova versione {v}": "New version {v}",
     "Nuova versione {v} disponibile": "New version {v} available",
     "Nuova versione {v}: apri le impostazioni": "New version {v}: open the settings",
     "OSM del {date}": "OSM of {date}",
@@ -1352,6 +1354,7 @@
     "Per salvare la posizione con l'app chiusa serve la posizione «Consenti sempre».": "To save the location while the app is closed, location must be set to \"Allow all the time\".",
     "Permesso posizione negato": "Location permission denied",
     "Piazzola": "Lay-by",
+    "Più tardi": "Later",
     "Polizia": "Police",
     "Portami all'auto": "Take me to the car",
     "Posizione": "Location",
@@ -1382,6 +1385,7 @@
     "Rete": "Network",
     "Ricarica EV": "EV charging",
     "Ricarica rapida": "Fast charging",
+    "Ricerche recenti": "Recent searches",
     "Rimuovi dai preferiti": "Remove from favourites",
     "Riservato residenti": "Residents only",
     "Salva": "Save",
@@ -1426,6 +1430,7 @@
     "Sosta terminata: {d}": "Parking ended: {d}",
     "Sosta: {d}": "Parking: {d}",
     "Sotterraneo": "Underground",
+    "Spazio di archiviazione insufficiente": "Not enough storage space",
     "Stalli speciali": "Special spaces",
     "Stallo speciale": "Special space",
     "Stato provider": "Provider status",
@@ -1813,8 +1818,10 @@
     // margine, occupa molta memoria sui telefoni ad alta densità.
     L.SVG.mergeOptions({ padding: 0.5 });
     // I popup si aprono sotto la barra di ricerca e i filtri, non dietro
-    L.Popup.mergeOptions({ autoPanPaddingTopLeft: L.point(12, 130), autoPanPaddingBottomRight: L.point(70, 118) });
+    L.Popup.mergeOptions({ autoPanPaddingTopLeft: L.point(12, 142), autoPanPaddingBottomRight: L.point(70, 118) });
     var map = L.map('map', { zoomControl: false }).setView(initialView[0], initialView[1]);
+    // Solo il nome della libreria (senza la bandierina di default)
+    map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
     // Zoom con pulsanti propri nella colonna di sinistra (stesse misure di auto ed elenco)
     const zoomInBtnEl = document.getElementById('zoomInBtn');
     const zoomOutBtnEl = document.getElementById('zoomOutBtn');
@@ -3311,23 +3318,45 @@
     }
     const initialLoadTimer = setTimeout(triggerInitialLoad, (hasSharedView || !settings.locateOnStart) ? 0 : 1500);
 
-    function showSearchResults(items) {
+    // Ricerche recenti (in locale): compaiono toccando la barra vuota
+    const RECENT_SEARCH_KEY = 'parkRecentSearches_v1';
+    let recentSearches = [];
+    try { recentSearches = JSON.parse(localStorage.getItem(RECENT_SEARCH_KEY)) || []; } catch (err) { recentSearches = []; }
+    let recentShown = false;
+    function saveRecentSearches() { try { localStorage.setItem(RECENT_SEARCH_KEY, JSON.stringify(recentSearches)); } catch (err) {} }
+    function rememberSearch(r) {
+      const item = { name: r.name, sub: r.sub || '', lat: r.lat, lon: r.lon, place: !!r.place, zoom: r.zoom };
+      recentSearches = [item, ...recentSearches.filter(x => Math.abs(x.lat - r.lat) > 1e-4 || Math.abs(x.lon - r.lon) > 1e-4)].slice(0, 6);
+      saveRecentSearches();
+    }
+
+    function showSearchResults(items, opts) {
       const box = document.getElementById('searchResults');
+      const recent = !!(opts && opts.recent);
+      recentShown = recent && items.length > 0;
       if (!items.length) {
         box.style.display = 'none';
         box.innerHTML = '';
         return;
       }
-
-      box.innerHTML = items.map((r, i) => `<div class="search-result-item" data-i="${i}">${i + 1}) ${escapeHtml(r.display_name)}</div>`).join('');
+      box.innerHTML = (recent ? `<div class="search-head"><span>${t('Ricerche recenti')}</span><button type="button" id="searchRecentClear">${t('Cancella')}</button></div>` : '') +
+        items.map((r, i) => `<div class="search-result-item" data-i="${i}" role="button" tabindex="0">
+          <span class="sr-ico"><i data-lucide="${recent ? 'history' : (r.place ? 'map-pin' : 'flag')}"></i></span>
+          <span class="sr-text"><span class="sr-title">${escapeHtml(r.name || r.display_name)}</span>${r.sub ? `<span class="sr-sub">${escapeHtml(r.sub)}</span>` : ''}</span>
+        </div>`).join('');
       box.style.display = 'block';
+      lucide.createIcons({ root: box });
       box.querySelectorAll('.search-result-item').forEach(el => {
         el.onclick = () => goToSearchResult(items[+el.dataset.i]);
       });
+      const clearBtn = box.querySelector('#searchRecentClear');
+      if (clearBtn) clearBtn.onclick = (e) => { e.stopPropagation(); recentSearches = []; saveRecentSearches(); showSearchResults([]); };
     }
 
     function goToSearchResult(r) {
       showSearchResults([]);
+      rememberSearch(r);
+      document.getElementById('searchInput').blur();
       if (r.place) {
         clearDestination();
         map.setView([r.lat, r.lon], r.zoom || 16);
@@ -3410,6 +3439,7 @@
         return {
           lat: +r.lat, lon: +r.lon,
           name: code, place: true, zoom: 15,
+          sub: [a.city || a.town || a.village || a.county, a.country].filter(Boolean).join(', '),
           display_name: [code, a.city || a.town || a.village || a.county, a.country].filter(Boolean).join(', ')
         };
       }).sort((a, b) => distanceFromView(a.lat, a.lon) - distanceFromView(b.lat, b.lon));
@@ -3452,6 +3482,7 @@
             lat: p.lat,
             lon: p.lon,
             name: p.tags.name, place: true,
+            sub: placeTypeLabels[p.tags.place] ? t(placeTypeLabels[p.tags.place]) : '',
             display_name: p.tags.name + (placeTypeLabels[p.tags.place] ? ` (${t(placeTypeLabels[p.tags.place])})` : '')
           }));
       } catch (err) {
@@ -3480,6 +3511,7 @@
               const label = placeTypeLabels[r.type] || (r.addresstype ? placeTypeLabels[r.addresstype] : null);
               return {
                 lat: +r.lat, lon: +r.lon, name, place: true,
+                sub: [label ? t(label) : '', country].filter(Boolean).join(' · '),
                 zoom: ['city', 'town', 'municipality'].includes(r.type) || r.class === 'boundary' ? 15 : 16,
                 display_name: (label ? `${name} (${t(label)})` : name) + (country ? `, ${country}` : '')
               };
@@ -3488,7 +3520,7 @@
             const name = r.name || street || (r.display_name.split(',')[0] || '').trim();
             const city = a.city || a.town || a.village || a.suburb || a.county;
             const detail = [r.name && street && street !== name ? street : null, city].filter(Boolean).join(', ');
-            return { lat: +r.lat, lon: +r.lon, name, place: false, display_name: name + (detail ? ' · ' + detail : '') + (country ? `, ${country}` : '') };
+            return { lat: +r.lat, lon: +r.lon, name, place: false, sub: [detail, country].filter(Boolean).join(', '), display_name: name + (detail ? ' · ' + detail : '') + (country ? `, ${country}` : '') };
           })
           // Una strada lunga arriva a pezzi con lo stesso nome: se ne tiene uno
           .filter((r, i, all) => all.findIndex(o => o.display_name === r.display_name) === i)
@@ -3589,14 +3621,32 @@
     };
 
     document.getElementById('searchBtn').onclick = () => geocode(document.getElementById('searchInput').value.trim());
-    document.getElementById('searchInput').onkeydown = (e) => {
-      if (e.key === 'Enter') geocode(e.target.value.trim());
+    const searchInputEl = document.getElementById('searchInput');
+    const searchClearEl = document.getElementById('searchClear');
+    searchInputEl.onkeydown = (e) => {
+      if (e.key === 'Enter') { geocode(e.target.value.trim()); searchInputEl.blur(); }
+      else if (e.key === 'Escape') { showSearchResults([]); searchInputEl.blur(); }
+    };
+    function showRecentSearches() {
+      if (!searchInputEl.value && recentSearches.length) showSearchResults(recentSearches, { recent: true });
+    }
+    searchInputEl.addEventListener('focus', showRecentSearches);
+    searchInputEl.addEventListener('input', () => {
+      searchClearEl.hidden = !searchInputEl.value;
+      if (searchInputEl.value) { if (recentShown) showSearchResults([]); } else showRecentSearches();
+    });
+    searchClearEl.onclick = () => {
+      searchInputEl.value = '';
+      searchClearEl.hidden = true;
+      showSearchResults([]);
+      clearDestination();
+      searchInputEl.focus();
     };
 
     document.addEventListener('click', (e) => {
       const box = document.getElementById('searchResults');
       const sb = document.getElementById('searchBox');
-      if (box.style.display === 'block' && !sb.contains(e.target)) showSearchResults([]);
+      if (box.style.display === 'block' && !sb.contains(e.target) && !box.contains(e.target)) showSearchResults([]);
     });
 
     /* ===== Posizione utente: pallino blu pulsante + cerchio di precisione ===== */
@@ -4096,41 +4146,109 @@
     document.getElementById('setProviders').onclick = () => openDiagPanel();
 
     /* ===== Aggiornamenti da GitHub ===== */
-    // L'app Android controlla le Releases del repository: se c'è un APK con un
-    // numero di build più alto lo scarica dal browser di sistema, e Android lo
-    // installa sopra la versione attuale (stessa chiave di firma, vedi
-    // .github/workflows/android.yml). Il sito invece è sempre all'ultima versione.
+    // Come in Capotreno: l'app controlla le Releases del repository e mostra le
+    // novità; "Aggiorna" scarica l'APK con la barra di avanzamento, ne verifica
+    // firma e versione e avvia l'installazione di Android, che chiede conferma.
+    // La prima volta Android chiede di consentire l'installazione da ParkMap.
+    // Se l'app è stata installata da F-Droid gli aggiornamenti restano a quello
+    // store. Il sito invece è sempre all'ultima versione. Vedi ParkMapUpdater.java.
     const UPDATE_CHECK_KEY = 'parkUpdateCheck_v1';
-    const UPDATE_CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000;
+    const UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
     let latestRelease = null;
-    let updateState = 'idle'; // idle | checking | latest | available | error | downloading
+    let updateState = 'idle'; // idle | checking | latest | available | downloading | installing | failed
+    let updateProgress = null, updateError = '', updatePollTimer = null;
+    let updateInfo = { canInstall: true, fdroid: false };
 
     function buildNumber(version) {
       const m = String(version || '').match(/(\d+)\s*$/);
       return m ? parseInt(m[1], 10) : 0;
     }
 
+    async function refreshUpdateInfo() {
+      if (!IS_NATIVE_APP) return;
+      try { updateInfo = await nativeCall('ParkMapNative', 'updateInfo'); } catch (err) {}
+    }
+
     async function fetchLatestAndroidRelease() {
-      const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases?per_page=10`, {
-        headers: { Accept: 'application/vnd.github+json' },
-        cache: 'no-store'
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const release = (await res.json()).find(r => !r.draft && !r.prerelease && /^android-v/.test(r.tag_name));
-      if (!release) return null;
-      const apk = (release.assets || []).find(a => a.name.endsWith('.apk'));
-      return {
-        version: release.tag_name.replace(/^android-v/, ''),
-        apkUrl: apk ? apk.browser_download_url : null,
-        notesUrl: release.html_url,
-        publishedAt: release.published_at
-      };
+      const r = await nativeCall('ParkMapNative', 'checkUpdate');
+      if (!r || !r.version) return null;
+      return { version: r.version, apkUrl: r.apkUrl, notes: r.notes || '', notesUrl: r.page, publishedAt: r.publishedAt || null };
     }
 
     function isUpdateAvailable() {
       return IS_NATIVE_APP && !!latestRelease && !!latestRelease.apkUrl &&
         buildNumber(latestRelease.version) > buildNumber(APP_VERSION);
     }
+
+    // Delle note di rilascio si mostrano le novità (le righe con il punto elenco)
+    function releaseHighlights(notes) {
+      return String(notes || '').split('\n').map(l => l.trim()).filter(l => /^[•*-]\s+/.test(l))
+        .map(l => '• ' + l.replace(/^[•*-]\s+/, '')).join('\n');
+    }
+
+    function updateErrorText(code, detail) {
+      switch (code) {
+        case 'download': return t('Download non riuscito ({code})', { code: detail || '?' });
+        case 'invalid': return t('File scaricato non valido');
+        case 'signature': return t("L'APK scaricato non è firmato come questa app: installazione annullata");
+        case 'notnewer': return t('La versione su GitHub non è più recente di quella installata');
+        case 'downgrade': return t('La versione scaricata è più vecchia di quella installata');
+        case 'storage': return t('Spazio di archiviazione insufficiente');
+        case 'incompatible': return t("Firma dell'APK non compatibile con l'app installata");
+        default: return t('Installazione non riuscita') + (detail ? ' (' + detail + ')' : '');
+      }
+    }
+
+    // ─── Finestra "Nuova versione" ───
+    const updDialogEl = document.getElementById('updateDialog');
+    const updBackdropEl = document.getElementById('updateBackdrop');
+    function openUpdateDialog() {
+      updBackdropEl.hidden = false;
+      updDialogEl.hidden = false;
+      renderUpdateDialog();
+    }
+    function closeUpdateDialog() {
+      updBackdropEl.hidden = true;
+      updDialogEl.hidden = true;
+      if (updateState === 'failed') updateState = isUpdateAvailable() ? 'available' : 'idle';
+      renderUpdateInfo();
+    }
+    function renderUpdateDialog() {
+      if (updDialogEl.hidden) return;
+      let title = '', body = '', actions = [];
+      if (updateState === 'available' && latestRelease) {
+        const notes = releaseHighlights(latestRelease.notes);
+        title = t('Nuova versione {v}', { v: latestRelease.version });
+        body = `<p>${escapeHtml(t('Hai la versione {v}.', { v: APP_VERSION || '—' }))}</p>` +
+          (notes ? `<div class="upd-notes">${escapeHtml(notes)}</div>` : '') +
+          (!updateInfo.canInstall ? `<p class="upd-hint">${escapeHtml(t("La prima volta Android ti chiederà di consentire l'installazione di app da ParkMap: attivalo, torna indietro e tocca di nuovo Aggiorna."))}</p>` : '');
+        actions = [['later', t('Più tardi')], ['go', t('Aggiorna'), true]];
+      } else if (updateState === 'downloading') {
+        const pct = updateProgress != null ? Math.round(updateProgress * 100) : null;
+        title = t('Aggiornamento');
+        body = `<p>${escapeHtml(t('Download in corso…'))}${pct != null ? ' ' + pct + '%' : ''}</p>` +
+          `<div class="upd-bar${pct == null ? ' indeterminate' : ''}"><i style="width:${pct != null ? pct : 35}%"></i></div>`;
+      } else if (updateState === 'installing') {
+        title = t('Aggiornamento');
+        body = `<p>${escapeHtml(t("Conferma l'installazione nella finestra di Android."))}</p>`;
+        actions = [['close', t('Chiudi')]];
+      } else if (updateState === 'failed') {
+        title = t('Aggiornamento non riuscito');
+        body = `<p>${escapeHtml(updateError)}</p>`;
+        actions = [['close', 'OK']];
+      } else {
+        closeUpdateDialog();
+        return;
+      }
+      document.getElementById('updTitle').textContent = title;
+      document.getElementById('updBody').innerHTML = body;
+      const actionsEl = document.getElementById('updActions');
+      actionsEl.innerHTML = actions.map(([id, label, primary]) => `<button type="button" class="set-btn${primary ? ' primary' : ''}" data-upd="${id}">${escapeHtml(label)}</button>`).join('');
+      actionsEl.querySelectorAll('[data-upd]').forEach(b => {
+        b.onclick = () => { if (b.dataset.upd === 'go') startUpdate(); else closeUpdateDialog(); };
+      });
+    }
+    updBackdropEl.onclick = () => { if (updateState === 'available' || updateState === 'failed' || updateState === 'installing') closeUpdateDialog(); };
 
     function renderUpdateInfo() {
       const statusRow = document.getElementById('updateStatusRow');
@@ -4155,12 +4273,22 @@
       }
 
       document.getElementById('setVersion').textContent = APP_VERSION || t('sviluppo');
+      if (updateInfo.fdroid) {
+        statusRow.hidden = false;
+        statusEl2.className = 'set-note';
+        statusEl2.textContent = t('Installata da F-Droid: gli aggiornamenti arrivano da lì');
+        checkBtn.hidden = true; installBtn.hidden = true; notesLink.hidden = true;
+        document.getElementById('autoUpdateRow').hidden = true;
+        return;
+      }
+      const busy = updateState === 'downloading' || updateState === 'installing';
       const messages = {
         idle: null,
         checking: [t('Controllo in corso…'), ''],
         latest: [t("Hai già l'ultima versione."), 'ok'],
-        error: [t('Impossibile contattare GitHub. Riprova più tardi.'), 'warn'],
-        downloading: [t("Download avviato: al termine apri il file .apk e conferma l'aggiornamento."), 'ok']
+        downloading: [t('Download in corso…') + (updateProgress != null ? ' ' + Math.round(updateProgress * 100) + '%' : ''), ''],
+        installing: [t("Conferma l'installazione nella finestra di Android."), 'ok'],
+        failed: [updateError, 'warn']
       };
       let msg = messages[updateState];
       if (updateState === 'available') {
@@ -4169,9 +4297,11 @@
       }
       statusRow.hidden = !msg;
       if (msg) { statusEl2.textContent = msg[0]; statusEl2.className = 'set-note ' + msg[1]; }
-      checkBtn.disabled = updateState === 'checking';
-      installBtn.hidden = !(updateState === 'available' || updateState === 'downloading');
-      notesLink.hidden = !latestRelease || !(updateState === 'available' || updateState === 'downloading');
+      checkBtn.hidden = false;
+      checkBtn.disabled = updateState === 'checking' || busy;
+      installBtn.hidden = !(updateState === 'available' || busy);
+      installBtn.disabled = busy;
+      notesLink.hidden = !latestRelease || !(updateState === 'available' || busy);
       if (latestRelease) notesLink.href = latestRelease.notesUrl;
     }
 
@@ -4180,53 +4310,131 @@
       document.getElementById('moreBadge').hidden = !isUpdateAvailable();
     }
 
-    async function checkForUpdate(silent) {
+    // manual = toccato "Controlla su GitHub": un errore si mostra; all'avvio l'errore è silenzioso
+    async function checkForUpdate(manual) {
+      if (updateState === 'checking' || updateState === 'downloading' || updateState === 'installing') return;
       updateState = 'checking';
       renderUpdateInfo();
       try {
         latestRelease = await fetchLatestAndroidRelease();
         try { localStorage.setItem(UPDATE_CHECK_KEY, String(Date.now())); } catch (err) {}
         updateState = isUpdateAvailable() ? 'available' : 'latest';
+        if (updateState === 'available') openUpdateDialog();
       } catch (err) {
-        console.warn('Controllo aggiornamenti non riuscito:', err.message);
-        updateState = silent ? 'idle' : 'error';
+        console.warn('Controllo aggiornamenti non riuscito:', err && err.message);
+        updateState = manual ? 'failed' : 'idle';
+        updateError = t('Impossibile contattare GitHub. Riprova più tardi.');
+        if (manual) openUpdateDialog();
       }
       renderUpdateInfo();
       setUpdateBadge();
-      if (silent && updateState === 'available') {
-        setStatus(t('Nuova versione {v}: apri le impostazioni', { v: latestRelease.version }));
-        setTimeout(() => setStatus(''), 3500);
+    }
+
+    async function startUpdate() {
+      if (!latestRelease || !latestRelease.apkUrl) return;
+      try {
+        const r = await nativeCall('ParkMapNative', 'startUpdate', { url: latestRelease.apkUrl, version: latestRelease.version });
+        if (r && r.needsPermission) {
+          // Si è aperta la schermata di Android per consentire l'installazione: al ritorno si riprova
+          updateInfo.canInstall = false;
+          renderUpdateDialog();
+          return;
+        }
+        updateState = 'downloading';
+        updateProgress = null;
+        openUpdateDialog();
+        renderUpdateInfo();
+        pollUpdate();
+      } catch (err) {
+        updateState = 'failed';
+        updateError = updateErrorText('failed', err && err.message);
+        openUpdateDialog();
       }
     }
 
-    document.getElementById('updateCheckBtn').onclick = () => checkForUpdate(false);
-    document.getElementById('updateInstallBtn').onclick = () => {
-      if (!latestRelease || !latestRelease.apkUrl) return;
-      // Link esterno: Capacitor lo apre nel browser di sistema, che scarica l'APK
-      window.open(latestRelease.apkUrl, '_blank');
-      updateState = 'downloading';
-      renderUpdateInfo();
-    };
+    // Lo stato di download e installazione si legge a intervalli dal lato nativo
+    function pollUpdate() {
+      clearInterval(updatePollTimer);
+      const tick = async () => {
+        let s;
+        try { s = await nativeCall('ParkMapNative', 'updateStatus'); } catch (err) { return; }
+        if (s.phase === 'downloading') {
+          updateState = 'downloading';
+          updateProgress = s.progress >= 0 ? s.progress : null;
+        } else if (s.phase === 'installing') {
+          updateState = 'installing';
+          updateProgress = null;
+        } else if (s.phase === 'failed') {
+          clearInterval(updatePollTimer);
+          updateState = 'failed';
+          updateError = updateErrorText(s.error, s.detail);
+          openUpdateDialog();
+        } else {
+          // Installazione conclusa o annullata dall'utente
+          clearInterval(updatePollTimer);
+          if (updateState === 'downloading' || updateState === 'installing') updateState = isUpdateAvailable() ? 'available' : 'idle';
+          closeUpdateDialog();
+        }
+        renderUpdateDialog();
+        renderUpdateInfo();
+      };
+      updatePollTimer = setInterval(tick, 400);
+      tick();
+    }
 
-    // Controllo automatico all'avvio dell'app (al massimo ogni 12 ore)
-    if (IS_NATIVE_APP && settings.autoUpdateCheck) {
-      let last = 0;
-      try { last = parseInt(localStorage.getItem(UPDATE_CHECK_KEY), 10) || 0; } catch (err) {}
-      if (Date.now() - last > UPDATE_CHECK_INTERVAL_MS) setTimeout(() => checkForUpdate(true), 4000);
+    document.getElementById('updateCheckBtn').onclick = () => checkForUpdate(true);
+    document.getElementById('updateInstallBtn').onclick = () => { if (updateState === 'available') openUpdateDialog(); };
+
+    if (IS_NATIVE_APP) {
+      // Tornando dalla schermata "installa app sconosciute" si aggiorna il consenso
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) refreshUpdateInfo().then(renderUpdateDialog);
+      });
+      // Controllo automatico all'avvio (al massimo una volta al giorno, mai per F-Droid)
+      refreshUpdateInfo().then(() => {
+        if (updateInfo.fdroid || !settings.autoUpdateCheck) return;
+        let last = 0;
+        try { last = parseInt(localStorage.getItem(UPDATE_CHECK_KEY), 10) || 0; } catch (err) {}
+        if (Date.now() - last > UPDATE_CHECK_INTERVAL_MS) setTimeout(() => checkForUpdate(false), 4000);
+      });
     }
 
     /* ===== Barra filtri ===== */
+    // Sincronizza i chip con i filtri attivi e mostra "Azzera filtri" quando serve
+    const chipBarEl = document.getElementById('chipBar');
+    function updateChipFade() {
+      chipBarEl.classList.toggle('fade-l', chipBarEl.scrollLeft > 8);
+      chipBarEl.classList.toggle('fade-r', chipBarEl.scrollLeft + chipBarEl.clientWidth < chipBarEl.scrollWidth - 8);
+    }
+    function updateChipUi() {
+      document.querySelectorAll('#chipBar [data-filter]').forEach(chip => {
+        const on = activeFilters.has(chip.dataset.filter);
+        chip.classList.toggle('active', on);
+        chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      document.getElementById('chipReset').hidden = !activeFilters.size;
+      document.getElementById('chipResetCount').textContent = activeFilters.size;
+      updateChipFade();
+    }
+    function onFiltersChanged() {
+      updateChipUi();
+      applyLayerVisibility();
+      applyFilters();
+      if (!listSheetEl.hidden) renderList();
+    }
     document.querySelectorAll('#chipBar [data-filter]').forEach(chip => {
       chip.onclick = () => {
         const f = chip.dataset.filter;
         if (activeFilters.has(f)) activeFilters.delete(f); else activeFilters.add(f);
-        chip.classList.toggle('active', activeFilters.has(f));
-        chip.setAttribute('aria-pressed', activeFilters.has(f) ? 'true' : 'false');
-        applyLayerVisibility();
-        applyFilters();
-        if (!listSheetEl.hidden) renderList();
+        onFiltersChanged();
       };
     });
+    document.getElementById('chipReset').onclick = () => { activeFilters.clear(); onFiltersChanged(); };
+    chipBarEl.addEventListener('scroll', updateChipFade, { passive: true });
+    window.addEventListener('resize', updateChipFade);
+    // I chip dell'auto e della destinazione compaiono e scompaiono: la sfumatura va ricalcolata
+    new MutationObserver(updateChipFade).observe(chipBarEl, { subtree: true, attributes: true, attributeFilter: ['hidden'] });
+    updateChipFade();
     // "Gratis adesso" dipende dall'ora: si ricalcola ogni minuto
     setInterval(() => { if (activeFilters.has('freeNow')) applyFilters(); }, 60000);
 

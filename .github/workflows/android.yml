@@ -32,6 +32,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # serve la storia per le note di rilascio
 
       - uses: actions/setup-node@v4
         with:
@@ -80,6 +82,21 @@ jobs:
           "$BT/apksigner" verify "ParkMap-1.0.${{ github.run_number }}.apk"
           rm -f release.p12
 
+      - name: Note di rilascio
+        run: |
+          # Novità = titoli dei commit dall'ultima release Android: le mostra l'app prima di aggiornare
+          PREV=$(git tag --list 'android-v*' --sort=-version:refname | head -1)
+          {
+            echo "Novità"
+            git log --reverse --no-merges --format='• %s' ${PREV:+$PREV..HEAD} | head -20
+            echo
+            echo "Installazione: scarica il file .apk dal telefono e aprilo, oppure aggiorna da Impostazioni → Aggiornamenti"
+            echo "nell'app (Android chiede conferma, e di consentire l'installazione da ParkMap la prima volta)."
+            echo
+            echo "Costruito dal commit ${GITHUB_SHA}. Firma: ${SIGNING}"
+            if [ "$SIGNING" = "temporanea" ]; then echo "Per installare questa versione sopra una precedente bisogna prima disinstallarla."; fi
+          } > release-notes.md
+
       - name: Pubblica nelle Releases
         uses: softprops/action-gh-release@v2
         with:
@@ -87,10 +104,4 @@ jobs:
           name: ParkMap Android 1.0.${{ github.run_number }}
           make_latest: true
           files: ParkMap-1.0.${{ github.run_number }}.apk
-          body: |
-            APK di ParkMap costruito dal commit ${{ github.sha }}.
-
-            Installazione: scarica il file .apk dal telefono e aprilo (Android chiede di
-            consentire l'installazione da questa fonte la prima volta).
-
-            Firma: ${{ env.SIGNING }}${{ env.SIGNING == 'temporanea' && ' — per installare questa versione sopra una precedente bisogna prima disinstallarla.' || '' }}
+          body_path: release-notes.md

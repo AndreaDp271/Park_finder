@@ -32,6 +32,10 @@ import com.getcapacitor.annotation.PermissionCallback;
  *   Capacitor.nativePromise('ParkMapNative', 'setBluetoothCar', { address, name } | { address: null })
  *   Capacitor.nativePromise('ParkMapNative', 'requestAccess', { which: 'bluetooth' | 'location' | 'backgroundLocation' }) -> { granted }
  *   Capacitor.nativePromise('ParkMapNative', 'share', { title, text, url })
+ *   Capacitor.nativePromise('ParkMapNative', 'updateInfo')        -> { canInstall, fdroid }
+ *   Capacitor.nativePromise('ParkMapNative', 'checkUpdate')       -> { version, apkUrl, notes, page, publishedAt }
+ *   Capacitor.nativePromise('ParkMapNative', 'startUpdate', { url, version }) -> { started } | { needsPermission }
+ *   Capacitor.nativePromise('ParkMapNative', 'updateStatus')      -> { phase, progress, error, detail }
  *   Capacitor.nativePromise('ParkMapNative', 'openAppSettings')
  */
 @CapacitorPlugin(
@@ -172,6 +176,55 @@ public class ParkMapNativePlugin extends Plugin {
         Intent chooser = Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         getContext().startActivity(chooser);
         call.resolve();
+    }
+
+    // ─── Aggiornamenti da GitHub (vedi ParkMapUpdater) ───
+
+    @PluginMethod
+    public void updateInfo(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("canInstall", ParkMapUpdater.canInstall(getContext()));
+        result.put("fdroid", ParkMapUpdater.fromFDroid(getContext()));
+        call.resolve(result);
+    }
+
+    @PluginMethod
+    public void checkUpdate(final PluginCall call) {
+        new Thread(() -> {
+            try {
+                call.resolve(JSObject.fromJSONObject(ParkMapUpdater.latest()));
+            } catch (Exception e) {
+                call.reject(e.getMessage() != null ? e.getMessage() : "network");
+            }
+        }, "parkmap-update-check").start();
+    }
+
+    @PluginMethod
+    public void startUpdate(PluginCall call) {
+        Context ctx = getContext();
+        JSObject result = new JSObject();
+        if (!ParkMapUpdater.canInstall(ctx)) {
+            // Android chiede di consentire una volta l'installazione di app da ParkMap
+            Intent intent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + ctx.getPackageName()))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            ctx.startActivity(intent);
+            result.put("needsPermission", true);
+            call.resolve(result);
+            return;
+        }
+        ParkMapUpdater.start(ctx.getApplicationContext(), call.getString("url"), call.getString("version"));
+        result.put("started", true);
+        call.resolve(result);
+    }
+
+    @PluginMethod
+    public void updateStatus(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("phase", ParkMapUpdater.phase);
+        result.put("progress", (double) ParkMapUpdater.progress);
+        result.put("error", ParkMapUpdater.error);
+        result.put("detail", ParkMapUpdater.detail);
+        call.resolve(result);
     }
 
     @PluginMethod

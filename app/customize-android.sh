@@ -27,6 +27,8 @@ perms = '''    <!-- Salvataggio automatico dell'auto via Bluetooth: dispositivi 
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <!-- Aggiornamento dell'app dalle Releases di GitHub (installazione dell'APK scaricato) -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
 
 '''
@@ -43,6 +45,11 @@ block = '''
                 android:name="android.appwidget.provider"
                 android:resource="@xml/parkmap_widget_info" />
         </receiver>
+
+        <!-- Esito dell'installazione dell'aggiornamento (PackageInstaller) -->
+        <receiver
+            android:name=".UpdateReceiver"
+            android:exported="false" />
 
         <!-- Connessione/disconnessione dal Bluetooth dell'auto: le invia lo stack Bluetooth,
              che ha un proprio utente di sistema, quindi exported="true" -->
@@ -63,7 +70,7 @@ b = s.index('</activity>', s.index('android.intent.category.LAUNCHER'))
 s = s[:b] + '    <meta-data android:name="android.app.shortcuts" android:resource="@xml/parkmap_shortcuts" />\n        ' + s[b:]
 open(path, 'w', encoding='utf-8').write(s)
 PY
-for what in ParkMapWidget BluetoothCarReceiver android.app.shortcuts BLUETOOTH_CONNECT; do
+for what in ParkMapWidget BluetoothCarReceiver UpdateReceiver REQUEST_INSTALL_PACKAGES android.app.shortcuts BLUETOOTH_CONNECT; do
   grep -q "$what" "$MANIFEST" || { echo "manifest: $what non inserito" >&2; exit 1; }
 done
 
