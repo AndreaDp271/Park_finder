@@ -118,7 +118,7 @@
       transition:box-shadow .2s ease;
     }
     #searchBox:focus-within{ box-shadow:0 8px 28px rgb(15 23 42 / 0.2), 0 0 0 2px var(--primary); }
-    #titleBadge{ width:34px; height:34px; flex-shrink:0; display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:10px; }
+    #titleBadge{ width:34px; height:34px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:10px; }
     #titleBadge .brand-mark{ width:30px; height:30px; display:block; }
     #searchInput{
       flex:1; min-width:0; height:40px; border:none; background:transparent; outline:none; padding:0;
@@ -415,6 +415,19 @@
     .set-btn:active{ transform:scale(0.97); }
     .set-btn:disabled{ opacity:.6; cursor:default; }
     .set-btn.primary{ background:var(--primary-dark); border-color:var(--primary-dark); color:#fff; }
+    .style-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; width:100%; }
+    .style-grid button{ display:flex; flex-direction:column; align-items:center; gap:5px; padding:5px 2px 6px; border:2px solid transparent; border-radius:14px; background:none; color:var(--text-main); font:600 11.5px 'Inter',system-ui,sans-serif; cursor:pointer; }
+    .style-grid button.active{ border-color:var(--primary-dark); background:var(--primary-light); }
+    .style-grid .sw{ width:100%; height:46px; border-radius:10px; box-shadow:inset 0 0 0 1px rgba(0,0,0,0.12); }
+    .sw-osm{ background:linear-gradient(135deg,#f2efe9 0 40%,#aad3df 40% 55%,#c8facc 55% 75%,#fff 75%); }
+    .sw-hot{ background:linear-gradient(135deg,#f6efe6 0 40%,#a5bfdd 40% 55%,#cfe8c0 55% 75%,#fde9c0 75%); }
+    .sw-cycle{ background:linear-gradient(135deg,#eef3e4 0 40%,#b9d7ee 40% 55%,#f5d27a 55% 70%,#2f6fdd 70% 80%,#eef3e4 80%); }
+    .sw-topo{ background:repeating-radial-gradient(circle at 70% 60%,#e6dcc2 0 6px,#c9b78a 6px 7px,#d9e9c6 7px 13px,#a8c98a 13px 14px); }
+    .sw-gray{ background:linear-gradient(135deg,#f0f0f0 0 40%,#dcdcdc 40% 60%,#fafafa 60%); }
+    .sw-dark{ background:linear-gradient(135deg,#1c2430 0 40%,#0f3a52 40% 55%,#26323f 55% 75%,#3a4757 75%); }
+    .sw-sat{ background:linear-gradient(135deg,#3d5a2a,#6b7f3c 40%,#2a4a5c 60%,#5b4a36); }
+    .sw-hyb{ background:linear-gradient(135deg,#3d5a2a,#6b7f3c 40%,#2a4a5c 60%,#5b4a36); position:relative; }
+    .sw-hyb::after{ content:'Abc'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px; text-shadow:0 0 3px #000; }
     .segmented{ display:flex; background:var(--surface-3); border-radius:12px; padding:3px; gap:3px; }
     .segmented button{
       flex:1; height:36px; border:none; border-radius:9px; background:transparent;
@@ -727,7 +740,7 @@
     }
     html[data-theme="dark"] .leaflet-container{ background:#0f172a; }
     /* Mappa scurita (non per il satellite, che è già un'immagine scura) */
-    html[data-theme="dark"]:not([data-map="satellite"]) .leaflet-tile-pane{
+    html[data-theme="dark"]:not([data-map="satellite"]):not([data-map="hybrid"]):not([data-map="dark"]) .leaflet-tile-pane{
       filter:invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88) saturate(0.8);
     }
     html[data-theme="dark"] .leaflet-popup-content-wrapper,
@@ -766,7 +779,23 @@
       font:600 12px 'Inter',system-ui,sans-serif;
     }
     .cost-chip.active{ background:var(--primary-dark); border-color:var(--primary-dark); color:#fff; }
-    .cost-result{ font-size:13.5px; }
+    .cost-result{ font-size:13px; padding:10px 12px; border-radius:12px; background:var(--surface-3); }
+    .cost-result[hidden]{ display:none; }
+    .cost-big{ display:flex; align-items:baseline; gap:8px; }
+    .cost-big b{ font-size:22px; font-weight:800; color:var(--primary-dark); letter-spacing:-0.3px; }
+    .cost-big span{ font-weight:600; color:var(--text-light); }
+    .cost-big.ok b{ color:#15803d; }
+    .pcx-head{ display:flex; align-items:center; gap:10px; margin-bottom:9px; }
+    .pcx-ico{ width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:var(--surface-3); color:var(--primary-dark); }
+    .pcx-ico svg{ width:17px; height:17px; }
+    .pcx-ico.paid{ background:#dbeafe; color:#1d4ed8; }
+    .pcx-ico.warn{ background:#ffedd5; color:#c2410c; }
+    .pcx-title{ font-weight:700; font-size:14px; line-height:1.25; }
+    .pcx-title small{ display:block; font-weight:500; font-size:12px; color:var(--text-light); margin-top:1px; }
+    .pc-access{ margin:0; padding:11px 16px 4px; border-top:1px solid var(--border-soft); }
+    .pc-access .acc-lines{ margin:0 0 8px 42px; padding:8px 12px; border-radius:12px; background:var(--surface-3); font-size:12.5px; line-height:1.55; font-weight:500; }
+    html[data-theme="dark"] .pcx-ico.paid{ background:#1e3a5f; color:#93c5fd; }
+    html[data-theme="dark"] .pcx-ico.warn{ background:#4a2a12; color:#fdba74; }
     .cost-result small{ display:block; color:var(--text-light); font-weight:500; font-size:12px; margin-top:2px; }
 
     /* ─── Foto dell'auto ─── */
@@ -783,7 +812,7 @@
 <body>
   <div id="topbar">
     <div id="searchBox">
-      <div id="titleBadge" title="Impostazioni" role="button" tabindex="0"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient></defs><rect width="24" height="24" rx="5.5" fill="url(#brandGrad)"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9" transform="translate(12 12) scale(1.32) translate(-12.5 -12)" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div id="titleBadge" aria-hidden="true"><svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient></defs><rect width="24" height="24" rx="5.5" fill="url(#brandGrad)"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9" transform="translate(12 12) scale(1.32) translate(-12.5 -12)" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
       <input id="searchInput" type="text" placeholder="Cerca luogo o indirizzo" aria-label="Cerca luogo o indirizzo" autocomplete="off" enterkeyhint="search" />
       <button type="button" id="searchClear" aria-label="Cancella ricerca" hidden><i data-lucide="x"></i></button>
       <button type="button" id="searchBtn" aria-label="Cerca"><i data-lucide="search"></i></button>
@@ -877,10 +906,15 @@
         <div class="set-title">Stile della mappa</div>
         <div class="set-card">
           <div class="set-row column">
-            <div class="segmented" id="mapStyleControl">
-              <button type="button" data-style="osm">Standard</button>
-              <button type="button" data-style="light">Chiaro</button>
-              <button type="button" data-style="satellite">Satellite</button>
+            <div class="style-grid" id="mapStyleControl">
+              <button type="button" data-style="osm"><span class="sw sw-osm"></span>Standard</button>
+              <button type="button" data-style="light"><span class="sw sw-hot"></span>Umanitario</button>
+              <button type="button" data-style="cycle"><span class="sw sw-cycle"></span>Ciclabile</button>
+              <button type="button" data-style="topo"><span class="sw sw-topo"></span>Rilievo</button>
+              <button type="button" data-style="gray"><span class="sw sw-gray"></span>Grigio</button>
+              <button type="button" data-style="dark"><span class="sw sw-dark"></span>Notte</button>
+              <button type="button" data-style="satellite"><span class="sw sw-sat"></span>Satellite</button>
+              <button type="button" data-style="hybrid"><span class="sw sw-hyb"></span>Ibrida</button>
             </div>
           </div>
         </div>
@@ -970,9 +1004,7 @@
           <div class="set-row"><span class="set-label"><i data-lucide="database"></i> Fonte in questa zona</span><span class="set-value" id="setDataSource">—</span></div>
           <div class="set-row"><span class="set-label"><i data-lucide="hard-drive"></i> Salvati sul dispositivo</span><span class="set-value" id="setCacheInfo">—</span></div>
           <div class="set-actions">
-            <button type="button" class="set-btn" id="setRefreshData"><i data-lucide="refresh-cw"></i> Aggiorna dati</button>
             <button type="button" class="set-btn" id="setClearCache"><i data-lucide="trash-2"></i> Svuota cache</button>
-            <button type="button" class="set-btn" id="setProviders"><i data-lucide="activity"></i> Stato provider</button>
           </div>
         </div>
       </div>
@@ -1189,6 +1221,7 @@
     "Cerco località...": "Searching...",
     "Chiaro": "Light",
     "Chiudi": "Close",
+    "Ciclabile": "Cycling",
     "Circa {cost} fino alle {time}": "About {cost} until {time}",
     "Città": "City",
     "Codice sorgente": "Source code",
@@ -1259,12 +1292,14 @@
     "Gratuito": "Free",
     "Gratuito nei giorni/orari: {c}": "Free on: {c}",
     "Grazie! Segnalazione inviata": "Thanks! Report sent",
+    "Grigio": "Light gray",
     "Guarda questa posizione su ParkMap": "Check out this place on ParkMap",
     "Hai già l'ultima versione.": "You have the latest version.",
     "Hai la versione {v}.": "You have version {v}.",
     "Ho lasciato il parcheggio": "I left the parking spot",
     "Ho parcheggiato qui": "I parked here",
     "I preferiti restano salvati su questo dispositivo.": "Favourites are saved on this device.",
+    "Ibrida": "Hybrid",
     "Il browser non consente le notifiche: vedrai l'avviso solo dentro la pagina.": "The browser does not allow notifications: you will only see the alert inside the page.",
     "Il tempo del parcheggio è finito.": "Your parking time is over.",
     "Il tuo parcheggio scade alle {time}: mancano 10 minuti.": "Your parking expires at {time}: 10 minutes left.",
@@ -1316,6 +1351,7 @@
     "Multipiano": "Multi-storey",
     "Naviga fin qui": "Navigate here",
     "Navigazione": "Navigation",
+    "Nessun costo": "No charge",
     "Nessun dispositivo associato: collega prima il telefono al Bluetooth dell'auto.": "No paired devices: first pair your phone with the car's Bluetooth.",
     "Nessun parcheggio in questa zona con i filtri scelti.": "No parking in this area with the selected filters.",
     "Nessun parcheggio in questa zona. Sposta la mappa o allarga la vista.": "No parking in this area. Move the map or zoom out.",
@@ -1327,6 +1363,7 @@
     "Non specificato": "Not specified",
     "Note": "Notes",
     "Note e foto": "Notes and photo",
+    "Notte": "Night",
     "Novità": "What's new",
     "Nuova versione {v}": "New version {v}",
     "Nuova versione {v} disponibile": "New version {v} available",
@@ -1386,6 +1423,7 @@
     "Ricarica EV": "EV charging",
     "Ricarica rapida": "Fast charging",
     "Ricerche recenti": "Recent searches",
+    "Rilievo": "Terrain",
     "Rimuovi dai preferiti": "Remove from favourites",
     "Riservato residenti": "Residents only",
     "Salva": "Save",
@@ -1456,6 +1494,7 @@
     "Tolto dai preferiti": "Removed from favourites",
     "Type 2 (cavo)": "Type 2 (cable)",
     "Ultime soste": "Recent parking",
+    "Umanitario": "Humanitarian",
     "Usa il centro della mappa": "Use the map centre",
     "Vai a": "Go",
     "Validità: ": "Valid: ",
@@ -1475,6 +1514,7 @@
     "durata {d}": "for {d}",
     "filtri attivi": "filters on",
     "fino a {kw}": "up to {kw}",
+    "fino alle {time}": "until {time}",
     "fuori area (Postpass)": "outside the area (Postpass)",
     "giorni": "days",
     "giorno": "day",
@@ -1842,12 +1882,33 @@
         url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', maxNativeZoom: 19,
         attribution: OSM_ATTRIBUTION + ', ' + t('stile') + ' <a href="https://www.hotosm.org/" target="_blank">Humanitarian OSM Team</a>'
       },
+      cycle: {
+        url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', maxNativeZoom: 20,
+        attribution: OSM_ATTRIBUTION + ', ' + t('stile') + ' <a href="https://www.cyclosm.org" target="_blank">CyclOSM</a>'
+      },
+      topo: {
+        url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', maxNativeZoom: 17,
+        attribution: OSM_ATTRIBUTION + ', SRTM, ' + t('stile') + ' <a href="https://opentopomap.org" target="_blank">OpenTopoMap</a>'
+      },
+      gray: {
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', maxNativeZoom: 16,
+        attribution: t('Mappa') + ' &copy; Esri, HERE, Garmin | ' + OSM_ATTRIBUTION
+      },
+      dark: {
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', maxNativeZoom: 16,
+        attribution: t('Mappa') + ' &copy; Esri, HERE, Garmin | ' + OSM_ATTRIBUTION
+      },
       satellite: {
         url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', maxNativeZoom: 19,
         attribution: t('Immagini') + ' &copy; Esri, Maxar, Earthstar Geographics | ' + OSM_ATTRIBUTION
+      },
+      hybrid: {
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', maxNativeZoom: 19,
+        overlay: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', overlayNative: 17,
+        attribution: t('Immagini') + ' &copy; Esri, Maxar, Earthstar Geographics | ' + OSM_ATTRIBUTION
       }
     };
-    let baseLayer = null;
+    let baseLayer = null, labelLayer = null;
     function applyMapStyle(name) {
       if (!MAP_STYLES[name]) {
         // Stile salvato da una versione precedente e non più disponibile
@@ -1858,12 +1919,16 @@
       const style = MAP_STYLES[name];
       document.documentElement.dataset.map = name;
       if (baseLayer) map.removeLayer(baseLayer);
+      if (labelLayer) { map.removeLayer(labelLayer); labelLayer = null; }
       baseLayer = L.tileLayer(style.url, {
         maxZoom: 20,
         maxNativeZoom: style.maxNativeZoom,
         subdomains: style.subdomains || 'abc',
         attribution: style.attribution
       }).addTo(map);
+      if (style.overlay) {
+        labelLayer = L.tileLayer(style.overlay, { maxZoom: 20, maxNativeZoom: style.overlayNative }).addTo(map);
+      }
     }
     applyMapStyle(settings.mapStyle);
     updateZoomButtons();
@@ -2286,7 +2351,6 @@
         .filter(Boolean).join(' · ');
 
       const chips = [
-        isRestricted(tags) ? pcChip(accessLabel(tags), 'warn', 'lock') : '',
         feeChip(tags) || (!hasDiscRule(tags) && !isRestricted(tags) ? pcChip(t('Costo non indicato'), '', 'circle-help') : ''),
         hasDiscRule(tags) ? pcChip(t('Disco orario'), 'time', 'timer') : '',
         hasMaxstay ? pcChip(t('Max {v}', { v: maxstayValueToItalian(tags.maxstay) }), 'time', 'hourglass') : '',
@@ -2301,13 +2365,22 @@
       const rows = [
         pcRow(t('Fasce orarie'), tags['fee:conditional'] ? lines(formatFeeConditional(tags['fee:conditional']).map(r => r.text)) : ''),
         pcRow(t('Tariffa'), chargeLines(tags)),
-        pcRow(t('Accesso'), tags['access:conditional'] ? lines(formatYesNoConditional(tags['access:conditional'], t('Aperto'), t('Vietato')).map(r => r.text)) : ''),
         pcRow(t('Limitazioni'), lines(limits)),
         pcRow(t('Si paga con'), escapeHtml(paymentText(tags))),
         pcRow(t('Gestore'), escapeHtml(tags.operator || '')),
         pcRow(t('Note'), escapeHtml(tags.note || ''))
       ];
-      return popupCard(tags, lat, lon, osmMeta, { subtitle, chips, rows, extra: costEstimatorHtml(tags, osmMeta) });
+      return popupCard(tags, lat, lon, osmMeta, { subtitle, chips, rows, extra: accessCardHtml(tags) + costEstimatorHtml(tags, osmMeta) });
+    }
+    function accessCardHtml(tags) {
+      const cond = tags['access:conditional'] ? lines(formatYesNoConditional(tags['access:conditional'], t('Aperto'), t('Vietato')).map(r => r.text)) : '';
+      if (!isRestricted(tags) && !cond) return '';
+      const restricted = isRestricted(tags);
+      return `<div class="pc-access">
+          <div class="pcx-head"><span class="pcx-ico ${restricted ? 'warn' : ''}"><i data-lucide="${restricted ? 'lock' : 'door-open'}"></i></span>
+            <span class="pcx-title">${restricted ? escapeHtml(accessLabel(tags)) : t('Accesso')}${restricted ? `<small>${t('Accesso')}</small>` : ''}</span></div>
+          ${cond ? `<div class="acc-lines">${cond}</div>` : ''}
+        </div>`;
     }
 
     function buildParkingMeterPopup(tags, lat, lon, osmMeta) {
@@ -2477,21 +2550,22 @@
       if (!hasCostInfo(tags)) return '';
       const key = osmMeta.type + ':' + osmMeta.id;
       return `<div class="pc-cost">
-          <span class="pc-label">${t('Costo stimato')}</span>
+          <div class="pcx-head"><span class="pcx-ico paid"><i data-lucide="calculator"></i></span><span class="pcx-title">${t('Costo stimato')}<small>${t('Quanto resti? Tocca una durata.')}</small></span></div>
           <div class="cost-chips">${COST_DURATIONS.map(min =>
             `<button type="button" class="cost-chip" data-pm-action="cost" data-key="${key}" data-min="${min}">${min < 60 ? min + ' min' : (min / 60) + ' h'}</button>`).join('')}</div>
-          <div class="cost-result">${t('Quanto resti? Tocca una durata.')}</div>
+          <div class="cost-result" hidden></div>
         </div>`;
     }
     function costResultHtml(tags, minutes) {
       const from = new Date();
       const until = formatClock(from.getTime() + minutes * 60000);
-      if (tags.fee === 'no' && !tags['fee:conditional']) return t('Gratis');
+      const big = (amount, label, tone) => `<div class="cost-big ${tone || ''}"><b>${amount}</b><span>${label}</span></div>`;
+      if (tags.fee === 'no' && !tags['fee:conditional']) return big(t('Gratis'), t('Nessun costo'), 'ok');
       const est = estimateParkingCost(tags, minutes, from);
-      if (!est) return t('A pagamento, ma la tariffa non è indicata su OpenStreetMap.');
-      if (est.total < 0.005) return t('Gratis fino alle {time}', { time: until });
+      if (!est) return `<small>${t('A pagamento, ma la tariffa non è indicata su OpenStreetMap.')}</small>`;
+      if (est.total < 0.005) return big(t('Gratis'), t('fino alle {time}', { time: until }), 'ok');
       const free = est.freeMinutes ? `<small>${t('di cui {d} gratis', { d: formatDuration(est.freeMinutes * 60000) })}</small>` : '';
-      return t('Circa {cost} fino alle {time}', { cost: '<b>' + formatMoney(est.total, est.currency) + '</b>', time: until }) + free +
+      return big('~ ' + formatMoney(est.total, est.currency), t('fino alle {time}', { time: until })) + free +
         `<small>${t('Stima dalle tariffe su OpenStreetMap: controlla sul posto.')}</small>`;
     }
 
@@ -4108,9 +4182,6 @@
     document.addEventListener('focusout', () => setTimeout(() => {
       if (!document.activeElement || !document.activeElement.matches('input:not([type=checkbox]):not([type=file]), textarea')) document.body.classList.remove('typing');
     }, 50));
-    const titleBadgeEl = document.getElementById('titleBadge');
-    titleBadgeEl.onclick = openSettings;
-    titleBadgeEl.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSettings(); } };
     document.querySelectorAll('.sheet .sheet-close').forEach(b => { b.onclick = () => closeSheet(); });
     sheetBackdropEl.onclick = () => closeSheet();
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !diagPanelEl) closeSheet(); });
@@ -4134,7 +4205,6 @@
     document.getElementById('setShowAccuracy').onchange = (e) => { settings.showAccuracy = e.target.checked; saveSettings(); applyAccuracyVisibility(); };
     document.getElementById('setAutoUpdate').onchange = (e) => { settings.autoUpdateCheck = e.target.checked; saveSettings(); };
 
-    document.getElementById('setRefreshData').onclick = () => { closeSheet(); refreshAllData(); };
     document.getElementById('setClearCache').onclick = () => {
       clearPersistedTiles();
       tileStore.clear();
@@ -4143,7 +4213,6 @@
       setTimeout(() => setStatus(''), 1500);
       refreshAllData();
     };
-    document.getElementById('setProviders').onclick = () => openDiagPanel();
 
     /* ===== Aggiornamenti da GitHub ===== */
     // Come in Capotreno: l'app controlla le Releases del repository e mostra le
@@ -4592,7 +4661,9 @@
           const entry = idToLayer.get(btn.dataset.key);
           if (!entry) return;
           btn.parentNode.querySelectorAll('.cost-chip').forEach(b => b.classList.toggle('active', b === btn));
-          btn.closest('.pc-cost').querySelector('.cost-result').innerHTML = costResultHtml(entry.tags, +btn.dataset.min);
+          const res = btn.closest('.pc-cost').querySelector('.cost-result');
+          res.hidden = false;
+          res.innerHTML = costResultHtml(entry.tags, +btn.dataset.min);
           // Il popup cresce: si riposiziona senza rigenerare il contenuto (update() lo farebbe)
           e.popup._updateLayout(); e.popup._updatePosition(); e.popup._adjustPan();
         };
