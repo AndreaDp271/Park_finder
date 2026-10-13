@@ -1891,10 +1891,9 @@
         attribution: OSM_ATTRIBUTION + ', ' + t('stile') + ' <a href="https://www.cyclosm.org" target="_blank">CyclOSM</a>'
       },
       topo: {
-        url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', maxNativeZoom: 17,
-        attribution: OSM_ATTRIBUTION + ', SRTM, ' + t('stile') + ' <a href="https://opentopomap.org" target="_blank">OpenTopoMap</a>'
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', maxNativeZoom: 19,
+        attribution: t('Mappa') + ' &copy; Esri, HERE, Garmin, USGS | ' + OSM_ATTRIBUTION
       },
-      // Stili vettoriali (OpenFreeMap, senza chiave): nitidi a ogni zoom
       gray: { vector: 'positron', attribution: OPENFREEMAP_ATTRIBUTION },
       dark: { vector: 'positron', invert: true, attribution: OPENFREEMAP_ATTRIBUTION },
       satellite: {
