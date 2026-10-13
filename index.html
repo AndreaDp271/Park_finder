@@ -69,9 +69,13 @@
       --safe-bottom:env(safe-area-inset-bottom, 0px);
       --safe-left:env(safe-area-inset-left, 0px);
       --safe-right:env(safe-area-inset-right, 0px);
-      --fab-bottom:calc(16px + var(--safe-bottom));
+      /* Barra in basso (dock): i pulsanti sulla mappa e il messaggio di stato stanno sopra */
+      --dock-h:64px;
+      --dock-bottom:calc(10px + var(--safe-bottom));
+      --dock-total:calc(var(--dock-h) + var(--dock-bottom));
+      --fab-bottom:calc(var(--dock-total) + 14px);
       --fab-right:calc(16px + var(--safe-right));
-      --fab-left:calc(16px + var(--safe-left));
+      --sheet-bg:rgba(241,245,249,0.86);
       /* Superfici e bordi: ridefiniti dal tema scuro (html[data-theme="dark"]) */
       --surface:#fff;
       --surface-2:#f8fafc;
@@ -81,6 +85,7 @@
       --muted:#94a3b8;
       --switch-off:#cbd5e1;
       --attr-bg:rgba(255,255,255,0.75);
+      --ease-pop:cubic-bezier(0.34,1.56,0.64,1);
     }
 
     html,body{
@@ -233,7 +238,7 @@
       position:fixed !important;
       left:50% !important;
       right:auto !important;
-      bottom:calc(4px + var(--safe-bottom)) !important;
+      bottom:calc(var(--dock-total) + 5px) !important;
       transform:translateX(-50%);
       background:var(--attr-bg) !important;
       border-radius:8px;
@@ -289,7 +294,7 @@
 
     #status{
       position:fixed;
-      bottom:calc(30px + var(--safe-bottom));
+      bottom:calc(var(--dock-total) + 24px);
       left:50%;
       transform:translateX(-50%) translateY(20px);
       background:rgba(15,23,42,.9);
@@ -318,6 +323,49 @@
       display:flex; flex-direction:column; gap:var(--btn-gap);
     }
     #fabStack .fab-btn{ position:relative; }
+    .fab-group{
+      display:flex; flex-direction:column; overflow:hidden; border-radius:calc(var(--btn-size) / 2);
+      background:var(--glass); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+      box-shadow:var(--btn-shadow), inset 0 0 0 1px var(--border);
+    }
+    .fab-group .fab-btn{ background:transparent; box-shadow:none; border:none; border-radius:0; backdrop-filter:none; -webkit-backdrop-filter:none; width:var(--btn-size); height:calc(var(--btn-size) - 2px); }
+    .fab-group .fab-btn + .fab-btn{ border-top:1px solid var(--border); }
+    .fab-group .fab-btn:hover{ transform:none; background:var(--surface-3); }
+    .fab-group .fab-btn:active{ transform:none; background:var(--border); }
+
+    /* ─── Barra in basso: Mappa, Vicini, Auto, Menu ─── */
+    #dock{
+      position:fixed; z-index:2700; left:50%; bottom:var(--dock-bottom); transform:translateX(-50%);
+      width:min(calc(100% - 24px), 440px); height:var(--dock-h); box-sizing:border-box; padding:6px; gap:4px;
+      display:flex; background:var(--glass);
+      backdrop-filter:blur(24px) saturate(1.6); -webkit-backdrop-filter:blur(24px) saturate(1.6);
+      border:var(--btn-border); border-radius:28px;
+      box-shadow:0 10px 32px rgb(15 23 42 / 0.2), 0 2px 6px rgb(15 23 42 / 0.1);
+    }
+    body.typing #dock{ display:none; }
+    .dock-item{
+      position:relative; flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+      border:none; border-radius:22px; background:transparent; color:var(--text-light); cursor:pointer;
+      font:600 11px 'Inter',system-ui,sans-serif; white-space:nowrap;
+      transition:background .22s ease, color .22s ease, transform .15s ease;
+    }
+    .dock-item svg{ width:22px; height:22px; transition:transform .3s var(--ease-pop); }
+    .dock-item:active{ transform:scale(0.93); }
+    .dock-item.active{ background:var(--primary-light); color:var(--primary-dark); }
+    .dock-item.active svg{ transform:translateY(-1px) scale(1.1); }
+    .dock-item.filled:not(.active){ color:var(--primary-dark); }
+    .dock-item.filled.warn{ color:#d97706; }
+    .dock-item.filled.expired{ color:var(--danger); }
+    .dock-dot, .menu-badge{ width:9px; height:9px; border-radius:50%; background:var(--danger); flex-shrink:0; }
+    .dock-dot{ position:absolute; top:8px; left:calc(50% + 7px); box-shadow:0 0 0 2px var(--surface); }
+    .dock-dot[hidden], .menu-badge[hidden]{ display:none; }
+    /* Download in corso: una luce scorre sul bordo alto della barra */
+    #dock.loading::after{
+      content:''; position:absolute; left:26px; right:26px; top:-1px; height:2px; border-radius:2px; pointer-events:none;
+      background:linear-gradient(90deg, transparent, var(--primary), transparent) no-repeat; background-size:45% 100%;
+      animation:dockLoad 1.2s ease-in-out infinite;
+    }
+    @keyframes dockLoad{ from{ background-position:-55% 0; } to{ background-position:155% 0; } }
 
     @keyframes slideUp{
       from{ opacity:0; transform:translateY(20px) scale(0.95); }
@@ -347,20 +395,18 @@
       flex-shrink:0;
     }
 
-    /* ─── Impostazioni e Legenda (foglio dal basso su telefono, finestra al centro su desktop) ─── */
-    .fab-badge{
-      position:absolute; top:6px; right:6px; width:10px; height:10px; border-radius:50%;
-      background:var(--danger); box-shadow:0 0 0 2px var(--surface);
-    }
-    .fab-badge[hidden]{ display:none; }
-    .sheet-backdrop{ position:fixed; inset:0; z-index:2500; background:rgba(15,23,42,0.4); animation:fadeIn .2s ease; }
+    /* ─── Fogli dal basso (su telefono) e finestre al centro (su desktop) ─── */
+        .sheet-backdrop{ position:fixed; inset:0; z-index:2500; background:rgba(15,23,42,0.38); animation:fadeIn .2s ease; }
     .sheet{
       position:fixed; z-index:2600; left:50%; bottom:0; transform:translateX(-50%);
       width:min(100%, 480px); max-height:88vh; max-height:88dvh;
       display:flex; flex-direction:column;
-      background:var(--surface-3); border-radius:24px 24px 0 0;
-      box-shadow:0 -10px 40px rgb(15 23 42 / 0.25);
-      animation:sheetUp .28s cubic-bezier(0.16,1,0.3,1);
+      background:var(--sheet-bg); border-radius:30px 30px 0 0;
+      backdrop-filter:blur(28px) saturate(1.5); -webkit-backdrop-filter:blur(28px) saturate(1.5);
+      border:1px solid rgba(255,255,255,0.35); border-bottom:none;
+      box-shadow:0 -12px 44px rgb(15 23 42 / 0.28);
+      transition:transform .22s cubic-bezier(0.16,1,0.3,1);
+      animation:sheetUp .3s cubic-bezier(0.16,1,0.3,1);
       font-family:'Inter',system-ui,sans-serif; color:var(--text-main);
     }
     .sheet-backdrop[hidden], .sheet[hidden]{ display:none; }
@@ -376,17 +422,19 @@
       width:40px; height:4px; border-radius:2px; background:var(--switch-off);
     }
     .sheet-close{
-      width:34px; height:34px; border-radius:50%; border:none; background:var(--border); color:var(--text-main);
+      width:34px; height:34px; border-radius:50%; border:none; background:var(--surface-3); color:var(--text-main);
       display:flex; align-items:center; justify-content:center; cursor:pointer;
     }
     .sheet-close i, .sheet-close svg{ width:18px; height:18px; }
-    .sheet-body{ overflow-y:auto; padding:0 16px calc(20px + var(--safe-bottom)); overscroll-behavior:contain; }
+    /* In fondo il foglio passa sotto la barra: il contenuto ha il margine per non finirci dietro */
+    .sheet-body{ overflow-y:auto; padding:0 16px calc(var(--dock-total) + 18px); overscroll-behavior:contain; }
+    .sheet-header{ touch-action:none; cursor:grab; }
     .set-group{ margin-bottom:18px; }
     .set-title{
       font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:800;
       color:var(--text-light); margin:0 6px 8px;
     }
-    .set-card{ background:var(--surface); border-radius:16px; overflow:hidden; box-shadow:var(--shadow-sm); }
+    .set-card{ background:var(--surface); border-radius:20px; overflow:hidden; box-shadow:var(--shadow-sm); }
     .set-row{
       display:flex; align-items:center; justify-content:space-between; gap:12px;
       min-height:52px; padding:10px 16px; box-sizing:border-box;
@@ -438,9 +486,32 @@
     .legend-card{ padding:14px 16px 6px; }
     .legend-grid{ display:grid; grid-template-columns:1fr 1fr; column-gap:12px; margin-bottom:8px; }
     @media (min-width:700px){
-      .sheet{ top:50%; bottom:auto; transform:translate(-50%,-50%); border-radius:24px; max-height:min(84vh, 760px); animation:fadeIn .2s ease; }
+      .sheet{ top:50%; bottom:auto; transform:translate(-50%,-50%); border-radius:28px; border-bottom:1px solid rgba(255,255,255,0.35);
+        max-height:min(calc(100vh - 2 * var(--dock-total) - 24px), 760px); animation:fadeIn .2s ease; }
       .sheet-header::before{ display:none; }
+      .sheet-header{ cursor:default; }
+      .sheet-body{ padding-bottom:calc(20px + var(--safe-bottom)); }
     }
+
+    /* ─── Menu: righe con icona colorata ─── */
+    .menu-row{
+      display:flex; align-items:center; gap:14px; width:100%; min-height:58px; padding:10px 16px; box-sizing:border-box;
+      border:none; background:transparent; color:var(--text-main); text-align:left; cursor:pointer;
+      font:600 15px 'Inter',system-ui,sans-serif; transition:background .15s ease;
+    }
+    .menu-row + .menu-row{ border-top:1px solid var(--border-soft); }
+    .menu-row:active{ background:var(--surface-2); }
+    .menu-ico{ width:36px; height:36px; border-radius:11px; flex-shrink:0; color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.18); }
+    .menu-ico svg{ width:19px; height:19px; }
+    .menu-ico.blue{ background:linear-gradient(135deg,#60a5fa,#2563eb); }
+    .menu-ico.green{ background:linear-gradient(135deg,#4ade80,#16a34a); }
+    .menu-ico.orange{ background:linear-gradient(135deg,#fdba74,#ea580c); }
+    .menu-ico.purple{ background:linear-gradient(135deg,#a78bfa,#6d28d9); }
+    .menu-ico.gray{ background:linear-gradient(135deg,#94a3b8,#475569); }
+    .menu-text{ display:flex; flex-direction:column; min-width:0; flex:1; gap:1px; }
+    .menu-sub{ font-weight:500; font-size:12.5px; color:var(--text-light); }
+    .menu-row .chev{ margin-left:auto; }
+    .menu-row.loading .menu-ico svg{ animation:diagSpin 1s linear infinite; }
 
     @keyframes popIn{ from{ opacity:0; transform:scale(0.92); } to{ opacity:1; transform:scale(1); } }
     .leaflet-popup-content-wrapper{
@@ -550,7 +621,7 @@
     #refreshBtn.loading svg{ animation:diagSpin 1s linear infinite; }
 
     @media (max-width:600px){
-      :root{ --btn-size:42px; --btn-gap:8px; --fab-bottom:calc(12px + var(--safe-bottom)); --fab-right:calc(12px + var(--safe-right)); --fab-left:calc(12px + var(--safe-left)); }
+      :root{ --btn-size:44px; --btn-gap:10px; --dock-h:62px; --fab-right:calc(12px + var(--safe-right)); }
       #chipBar{ top:calc(var(--safe-top) + 10px + 46px + 8px); width:calc(100% - 20px); }
       #topbar{ top:calc(10px + var(--safe-top)); width:calc(100% - 20px); gap:8px; }
       #titleBadge span{ display:none; }
@@ -586,16 +657,7 @@
     .chip.car.expired{ background:var(--danger); }
     .chip[hidden]{ display:none; }
 
-    /* ─── Pulsanti a sinistra: auto, elenco, zoom (stessa colonna, stesse misure) ─── */
-    #fabStackLeft{
-      position:fixed; z-index:1001;
-      left:var(--fab-left);
-      bottom:var(--fab-bottom);
-      display:flex; flex-direction:column; gap:var(--btn-gap);
-    }
     .fab-btn:disabled{ opacity:.45; cursor:default; transform:none; }
-    .fab-btn.filled{ background:var(--primary-dark); color:#fff; border-color:transparent; }
-    .fab-btn.filled:hover{ color:#fff; }
 
     /* ─── Marcatore dell'auto ─── */
     .car-marker-icon{ background:none; border:none; }
@@ -659,9 +721,12 @@
     .ctx-note{ font-size:13px; line-height:1.4; color:var(--text-main); margin:-2px 2px 4px; }
     .list-dist small{ font-weight:500; font-size:11.5px; }
 
-    /* In orizzontale con poco spazio la colonna di destra va su due colonne */
+    /* In orizzontale con poco spazio la barra si fa più bassa e perde le scritte */
     @media (max-height:520px){
-      #fabStack{ flex-wrap:wrap-reverse; max-height:calc(100vh - var(--safe-top) - 110px); align-content:flex-start; }
+      :root{ --dock-h:50px; }
+      .dock-item{ flex-direction:row; gap:6px; }
+      .dock-item > span:not(.dock-dot){ display:none; }
+      .dock-dot{ left:calc(50% + 9px); top:6px; }
     }
 
     /* ─── Tema scuro ─── */
@@ -681,6 +746,7 @@
       --btn-border:1px solid rgba(255,255,255,0.08);
       --btn-shadow:0 2px 10px rgb(0 0 0 / 0.35),0 1px 2px rgb(0 0 0 / 0.3);
       --attr-bg:rgba(15,23,42,0.72);
+      --sheet-bg:rgba(15,23,42,0.86);
       color-scheme:dark;
     }
     html[data-theme="dark"] .leaflet-container{ background:#0f172a; }
@@ -698,6 +764,7 @@
     html[data-theme="dark"] .pc-chip.ev{ background:#0f3a2e; color:#6ee7b7; }
     html[data-theme="dark"] .pc-icon-btn.fav.on{ background:#3a2a0a; border-color:#92400e; color:#fbbf24; }
     html[data-theme="dark"] input.switch::after{ background:#f8fafc; }
+    html[data-theme="dark"] .sheet{ border-color:rgba(255,255,255,0.08); }
 
     /* ─── Colonnine, destinazione, auto condivisa ─── */
     .ev-marker-icon, .dest-marker-icon{ background:none; border:none; }
@@ -771,36 +838,85 @@
     <button type="button" class="chip" data-filter="bike" aria-pressed="false"><i data-lucide="bike"></i> Bici</button>
   </div>
 
-  <div id="fabStackLeft">
-    <button id="carBtn" class="fab-btn" title="La mia auto" aria-label="La mia auto"><i data-lucide="car"></i></button>
-    <button id="listBtn" class="fab-btn" title="Parcheggi vicini e preferiti" aria-label="Parcheggi vicini e preferiti"><i data-lucide="list"></i></button>
-    <button id="zoomInBtn" class="fab-btn" title="Avvicina" aria-label="Avvicina"><i data-lucide="plus"></i></button>
-    <button id="zoomOutBtn" class="fab-btn" title="Allontana" aria-label="Allontana"><i data-lucide="minus"></i></button>
-  </div>
-
   <div id="fabStack">
-    <button id="shareBtn" class="fab-btn" title="Condividi questa posizione">
-      <i data-lucide="share-2"></i>
-    </button>
-    <button id="gpsBtn" class="fab-btn" title="La mia posizione">
+    <button id="gpsBtn" class="fab-btn" title="La mia posizione" aria-label="La mia posizione">
       <i data-lucide="locate-fixed"></i>
     </button>
-    <button id="refreshBtn" class="fab-btn" title="Aggiorna dati (tieni premuto per lo stato dei provider)">
-      <i data-lucide="refresh-cw"></i>
+    <button id="layersBtn" class="fab-btn" title="Livelli" aria-label="Livelli">
+      <i data-lucide="layers"></i>
     </button>
-    <button id="fullscreenBtn" class="fab-btn" title="Schermo intero">
-      <i data-lucide="maximize-2"></i>
-    </button>
-    <button id="legendBtn" class="fab-btn" title="Legenda" aria-label="Legenda">
-      <i data-lucide="info"></i>
-    </button>
-    <button id="settingsBtn" class="fab-btn" title="Impostazioni" aria-label="Impostazioni">
-      <i data-lucide="settings"></i>
-      <span class="fab-badge" id="settingsBadge" hidden></span>
-    </button>
+    <div class="fab-group">
+      <button id="zoomInBtn" class="fab-btn" title="Avvicina" aria-label="Avvicina"><i data-lucide="plus"></i></button>
+      <button id="zoomOutBtn" class="fab-btn" title="Allontana" aria-label="Allontana"><i data-lucide="minus"></i></button>
+    </div>
   </div>
 
+  <nav id="dock" aria-label="Navigazione">
+    <button type="button" class="dock-item active" id="tabMap" aria-current="page"><i data-lucide="map"></i><span>Mappa</span></button>
+    <button type="button" class="dock-item" id="listBtn" aria-label="Parcheggi vicini e preferiti"><i data-lucide="list"></i><span>Vicini</span></button>
+    <button type="button" class="dock-item" id="carBtn" aria-label="La mia auto"><i data-lucide="car"></i><span id="carTabLabel">Auto</span></button>
+    <button type="button" class="dock-item" id="moreBtn" aria-label="Menu"><i data-lucide="ellipsis"></i><span>Menu</span><span class="dock-dot" id="moreBadge" hidden></span></button>
+  </nav>
+
   <div id="sheetBackdrop" class="sheet-backdrop" hidden></div>
+  <section id="menuSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="menuTitle" hidden>
+    <header class="sheet-header">
+      <h2 id="menuTitle">Menu</h2>
+      <button type="button" class="sheet-close" aria-label="Chiudi"><i data-lucide="x"></i></button>
+    </header>
+    <div class="sheet-body">
+      <div class="set-group">
+        <div class="set-title">Strumenti</div>
+        <div class="set-card">
+          <button type="button" class="menu-row" id="refreshBtn"><span class="menu-ico green"><i data-lucide="refresh-cw"></i></span><span class="menu-text"><span>Aggiorna dati</span><span class="menu-sub">Scarica di nuovo i parcheggi di questa zona</span></span></button>
+          <button type="button" class="menu-row" id="shareBtn"><span class="menu-ico blue"><i data-lucide="share-2"></i></span><span class="menu-text"><span>Condividi posizione</span><span class="menu-sub">Manda il link di questa zona della mappa</span></span></button>
+          <button type="button" class="menu-row" id="reportMissingBtn"><span class="menu-ico orange"><i data-lucide="map-pin-plus"></i></span><span class="menu-text"><span>Segnala parcheggio mancante</span></span></button>
+          <button type="button" class="menu-row" id="fullscreenBtn"></button>
+        </div>
+      </div>
+      <div class="set-group">
+        <div class="set-title">Aiuto e impostazioni</div>
+        <div class="set-card">
+          <button type="button" class="menu-row" id="legendBtn"><span class="menu-ico purple"><i data-lucide="info"></i></span><span class="menu-text"><span>Legenda</span></span><i data-lucide="chevron-right" class="chev"></i></button>
+          <button type="button" class="menu-row" id="menuProviders"><span class="menu-ico gray"><i data-lucide="activity"></i></span><span class="menu-text"><span>Stato provider</span></span><i data-lucide="chevron-right" class="chev"></i></button>
+          <button type="button" class="menu-row" id="settingsBtn"><span class="menu-ico gray"><i data-lucide="settings"></i></span><span class="menu-text"><span>Impostazioni</span></span><span class="menu-badge" id="settingsBadge" hidden></span><i data-lucide="chevron-right" class="chev"></i></button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="layersSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="layersTitle" hidden>
+    <header class="sheet-header">
+      <h2 id="layersTitle">Livelli</h2>
+      <button type="button" class="sheet-close" aria-label="Chiudi"><i data-lucide="x"></i></button>
+    </header>
+    <div class="sheet-body">
+      <div class="set-group">
+        <div class="set-title">Stile della mappa</div>
+        <div class="set-card">
+          <div class="set-row column">
+            <div class="segmented" id="mapStyleControl">
+              <button type="button" data-style="osm">Standard</button>
+              <button type="button" data-style="light">Chiaro</button>
+              <button type="button" data-style="satellite">Satellite</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="set-group">
+        <div class="set-title">Livelli visibili</div>
+        <div class="set-card">
+          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#60a5fa; border-color:#1d4ed8"></span> Aree di sosta</span><input type="checkbox" class="switch" data-layer="areas"></label>
+          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#fde047; border-color:#eab308"></span> Stalli speciali</span><input type="checkbox" class="switch" data-layer="spaces"></label>
+          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:var(--meter-fill); border-color:var(--meter-stroke); border-radius:50%"></span> Parcometri</span><input type="checkbox" class="switch" data-layer="meters"></label>
+          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#059669; border-color:#fff; border-radius:50%; box-shadow:0 0 0 1px #059669"></span> Colonnine di ricarica</span><input type="checkbox" class="switch" data-layer="charging"></label>
+          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#fca5a5; border-color:#b91c1c; border-radius:50%"></span> Parcheggi moto</span><input type="checkbox" class="switch" data-layer="moto"></label>
+          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#bef264; border-color:#4d7c0f; border-radius:50%"></span> Parcheggi bici</span><input type="checkbox" class="switch" data-layer="bikes"></label>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="settingsSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
     <header class="sheet-header">
       <h2 id="settingsTitle">Impostazioni</h2>
@@ -808,16 +924,8 @@
     </header>
     <div class="sheet-body">
       <div class="set-group">
-        <div class="set-title">Mappa</div>
+        <div class="set-title">Aspetto</div>
         <div class="set-card">
-          <div class="set-row column">
-            <span class="set-label"><i data-lucide="palette"></i> Stile della mappa</span>
-            <div class="segmented" id="mapStyleControl">
-              <button type="button" data-style="osm">Standard</button>
-              <button type="button" data-style="light">Chiaro</button>
-              <button type="button" data-style="satellite">Satellite</button>
-            </div>
-          </div>
           <div class="set-row column">
             <span class="set-label"><i data-lucide="sun-moon"></i> Tema</span>
             <div class="segmented" id="themeControl">
@@ -848,18 +956,6 @@
               <button type="button" data-nav="system">Predefinita</button>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div class="set-group">
-        <div class="set-title">Livelli visibili</div>
-        <div class="set-card">
-          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#60a5fa; border-color:#1d4ed8"></span> Aree di sosta</span><input type="checkbox" class="switch" data-layer="areas"></label>
-          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#fde047; border-color:#eab308"></span> Stalli speciali</span><input type="checkbox" class="switch" data-layer="spaces"></label>
-          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:var(--meter-fill); border-color:var(--meter-stroke); border-radius:50%"></span> Parcometri</span><input type="checkbox" class="switch" data-layer="meters"></label>
-          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#059669; border-color:#fff; border-radius:50%; box-shadow:0 0 0 1px #059669"></span> Colonnine di ricarica</span><input type="checkbox" class="switch" data-layer="charging"></label>
-          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#fca5a5; border-color:#b91c1c; border-radius:50%"></span> Parcheggi moto</span><input type="checkbox" class="switch" data-layer="moto"></label>
-          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#bef264; border-color:#4d7c0f; border-radius:50%"></span> Parcheggi bici</span><input type="checkbox" class="switch" data-layer="bikes"></label>
         </div>
       </div>
 
@@ -1054,6 +1150,7 @@
     "Aggiornamenti": "Updates",
     "Aggiornamento dati...": "Updating data...",
     "Aggiunto ai preferiti": "Added to favourites",
+    "Aiuto e impostazioni": "Help and settings",
     "Allontana": "Zoom out",
     "Altri servizi": "Other services",
     "Altro": "Other",
@@ -1064,6 +1161,7 @@
     "Area di sosta": "Parking area",
     "Aree di sosta": "Parking areas",
     "Armadietti": "Lockers",
+    "Aspetto": "Appearance",
     "Attivo: quando ti scolleghi da {name} salvo da solo dove hai lasciato l'auto.": "On: when you disconnect from {name} I'll save where you left the car.",
     "Attivo: quando ti scolleghi da {name} salvo dove hai lasciato l'auto, quando ti ricolleghi chiudo la sosta.": "On: when you disconnect from {name} I'll save where you left the car, and when you reconnect I'll end the parking.",
     "Auto": "Car",
@@ -1110,6 +1208,7 @@
     "Comune": "Town",
     "Concedi la posizione": "Allow location",
     "Condividi": "Share",
+    "Condividi posizione": "Share location",
     "Condividi questa posizione": "Share this location",
     "Condizionato:": "Conditional:",
     "Contanti": "Cash",
@@ -1144,6 +1243,7 @@
     "Es. il parcheggio è stato chiuso per lavori / trasformato in area pedonale.": "E.g. the car park was closed for works / turned into a pedestrian area.",
     "Es. parcheggio gratuito con circa 20 posti, ingresso da via Roma.": "E.g. free parking with about 20 spaces, entrance from Main Street.",
     "Es. piano -2, colonna B14": "E.g. level -2, pillar B14",
+    "Esci da schermo intero": "Exit full screen",
     "Famiglie": "Families",
     "Famiglie/Rosa": "Families/Women",
     "Fasce orarie": "Times",
@@ -1195,10 +1295,12 @@
     "Limitazioni": "Restrictions",
     "Lingua": "Language",
     "Link copiato negli appunti": "Link copied to clipboard",
+    "Livelli": "Layers",
     "Livelli visibili": "Visible layers",
     "Località": "Locality",
     "Lungo la strada": "On street",
     "Manca il permesso «Dispositivi nelle vicinanze»: senza, ParkMap non sa quando ti scolleghi.": "The \"Nearby devices\" permission is missing: without it ParkMap cannot tell when you disconnect.",
+    "Manda il link di questa zona della mappa": "Send a link to this part of the map",
     "Mappa": "Map",
     "Max {v}": "Max {v}",
     "Metodi di pagamento": "Payment methods",
@@ -1293,7 +1395,9 @@
     "Salvato": "Saved",
     "Salvato nei preferiti": "Saved to favourites",
     "Scade alle {time} · tra {d}": "Expires at {time} · in {d}",
+    "Scaduta": "Expired",
     "Scaduta alle {time} ({d} fa)": "Expired at {time} ({d} ago)",
+    "Scarica di nuovo i parcheggi di questa zona": "Download parking for this area again",
     "Scarica e installa": "Download and install",
     "Scarica l'app Android": "Download the Android app",
     "Scatta una foto": "Take a photo",
@@ -1327,6 +1431,7 @@
     "Stato provider": "Provider status",
     "Stile della mappa": "Map style",
     "Stima dalle tariffe su OpenStreetMap: controlla sul posto.": "Estimated from OpenStreetMap rates: check on site.",
+    "Strumenti": "Tools",
     "Su Android puoi installare l'app: si apre subito e usa il GPS del telefono.": "On Android you can install the app: it opens instantly and uses the phone GPS.",
     "Su due livelli": "Two-tier",
     "Sul sito l'avviso arriva solo con la pagina aperta; con l'app Android anche a telefono bloccato.": "On the website the alert only works with the page open; with the Android app it also works with the phone locked.",
@@ -1708,7 +1813,7 @@
     // margine, occupa molta memoria sui telefoni ad alta densità.
     L.SVG.mergeOptions({ padding: 0.5 });
     // I popup si aprono sotto la barra di ricerca e i filtri, non dietro
-    L.Popup.mergeOptions({ autoPanPaddingTopLeft: L.point(12, 130), autoPanPaddingBottomRight: L.point(70, 24) });
+    L.Popup.mergeOptions({ autoPanPaddingTopLeft: L.point(12, 130), autoPanPaddingBottomRight: L.point(70, 118) });
     var map = L.map('map', { zoomControl: false }).setView(initialView[0], initialView[1]);
     // Zoom con pulsanti propri nella colonna di sinistra (stesse misure di auto ed elenco)
     const zoomInBtnEl = document.getElementById('zoomInBtn');
@@ -2986,6 +3091,7 @@
     function updateLoadingUi() {
       const loading = activeBlocks + activeStaticCells > 0;
       document.getElementById('refreshBtn').classList.toggle('loading', loading);
+      document.getElementById('dock').classList.toggle('loading', loading);
       if (loading && (loadingStatusShown || !getTile(centerTileKey()))) {
         if (!loadingStatusShown) { setStatus(t('Caricamento parcheggi...')); loadingStatusShown = true; }
       } else if (loadingStatusShown) {
@@ -3645,7 +3751,7 @@
       return shareLink(t('Guarda questa posizione su ParkMap'), buildShareUrl());
     }
 
-    document.getElementById('shareBtn').onclick = shareCurrentView;
+    document.getElementById('shareBtn').onclick = () => { closeSheet(); shareCurrentView(); };
 
 
     function refreshAllData() {
@@ -3780,6 +3886,7 @@
 
     refreshBtnEl.addEventListener('click', () => {
       if (refreshLongPressed) { refreshLongPressed = false; return; }
+      closeSheet();
       refreshAllData();
     });
 
@@ -3788,11 +3895,8 @@
     function updateFullscreenIcon() {
       const btn = document.getElementById('fullscreenBtn');
       const isFs = !!document.fullscreenElement;
-
-      btn.innerHTML = isFs
-        ? '<i data-lucide="minimize-2"></i>'
-        : '<i data-lucide="maximize-2"></i>';
-
+      btn.innerHTML = `<span class="menu-ico purple"><i data-lucide="${isFs ? 'minimize-2' : 'maximize-2'}"></i></span>` +
+        `<span class="menu-text"><span>${isFs ? t('Esci da schermo intero') : t('Schermo intero')}</span></span>`;
       lucide.createIcons({ root: btn });
     }
 
@@ -3811,7 +3915,7 @@
       }
     }
 
-    document.getElementById('fullscreenBtn').onclick = toggleFullscreen;
+    document.getElementById('fullscreenBtn').onclick = () => { closeSheet(); toggleFullscreen(); };
 
     // Su iOS Safari la Fullscreen API non è supportata: nascondiamo il pulsante
     // invece di mostrarlo senza che faccia nulla.
@@ -3861,7 +3965,7 @@
 
     function refreshSettingsUI() {
       document.querySelectorAll('#mapStyleControl button').forEach(b => b.classList.toggle('active', b.dataset.style === settings.mapStyle));
-      document.querySelectorAll('#settingsSheet input[data-layer]').forEach(i => { i.checked = !!settings.layers[i.dataset.layer]; });
+      document.querySelectorAll('#layersSheet input[data-layer]').forEach(i => { i.checked = !!settings.layers[i.dataset.layer]; });
       document.getElementById('setLocateOnStart').checked = settings.locateOnStart;
       document.getElementById('setShowAccuracy').checked = settings.showAccuracy;
       document.getElementById('setAutoUpdate').checked = settings.autoUpdateCheck;
@@ -3869,16 +3973,28 @@
       renderUpdateInfo();
     }
 
-    // Fogli dal basso (Impostazioni, Legenda): uno solo aperto alla volta
+    // Fogli dal basso: uno solo aperto alla volta. La barra in basso resta visibile
+    // sopra al foglio e ne evidenzia la voce (Vicini, Auto, Menu).
+    const TAB_OF_SHEET = { listSheet: 'listBtn', carSheet: 'carBtn', menuSheet: 'moreBtn', settingsSheet: 'moreBtn', legendSheet: 'moreBtn' };
+    function syncDock() {
+      const active = openSheetEl ? (TAB_OF_SHEET[openSheetEl.id] || 'tabMap') : 'tabMap';
+      document.querySelectorAll('#dock .dock-item').forEach(b => {
+        b.classList.toggle('active', b.id === active);
+        if (b.id === active) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+      });
+    }
     function openSheet(sheet) {
       if (openSheetEl === sheet) return;
-      if (openSheetEl) closeSheet(true);
+      const replacing = !!openSheetEl;
+      if (replacing) closeSheet(true);
       openSheetEl = sheet;
       sheetBackdropEl.hidden = false;
       sheet.hidden = false;
       sheet.querySelector('.sheet-body').scrollTop = 0;
       // Il tasto "indietro" di Android (e del browser) chiude il foglio invece di uscire
-      history.pushState({ sheet: sheet.id }, '');
+      if (replacing) history.replaceState({ sheet: sheet.id }, '');
+      else history.pushState({ sheet: sheet.id }, '');
+      syncDock();
     }
 
     function closeSheet(fromHistory) {
@@ -3886,7 +4002,12 @@
       openSheetEl.hidden = true;
       sheetBackdropEl.hidden = true;
       openSheetEl = null;
+      syncDock();
       if (!fromHistory && history.state && history.state.sheet) history.back();
+    }
+    // Tocco sulla voce già aperta = chiude il foglio
+    function toggleSheet(sheet, open) {
+      if (openSheetEl === sheet) closeSheet(); else open();
     }
 
     function openSettings() {
@@ -3898,6 +4019,45 @@
     window.addEventListener('popstate', () => closeSheet(true));
     document.getElementById('settingsBtn').onclick = openSettings;
     document.getElementById('legendBtn').onclick = () => openSheet(legendSheetEl);
+    document.getElementById('menuProviders').onclick = () => openDiagPanel();
+    document.getElementById('reportMissingBtn').onclick = () => { const c = map.getCenter(); openReport({ lat: c.lat, lon: c.lng, type: 'missing' }); };
+    const menuSheetEl = document.getElementById('menuSheet');
+    const layersSheetEl = document.getElementById('layersSheet');
+    document.getElementById('tabMap').onclick = () => { closeSheet(); map.closePopup(); };
+    document.getElementById('moreBtn').onclick = () => toggleSheet(menuSheetEl, () => openSheet(menuSheetEl));
+    document.getElementById('layersBtn').onclick = () => toggleSheet(layersSheetEl, () => { refreshSettingsUI(); openSheet(layersSheetEl); });
+
+    // Trascinando l'intestazione verso il basso il foglio si chiude (solo telefono)
+    document.querySelectorAll('.sheet-header').forEach(header => {
+      let startY = null, dy = 0, sheet = null;
+      header.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.sheet-close') || window.matchMedia('(min-width:700px)').matches) return;
+        sheet = header.closest('.sheet'); startY = e.clientY; dy = 0;
+        header.setPointerCapture(e.pointerId);
+        sheet.style.transition = 'none';
+      });
+      header.addEventListener('pointermove', (e) => {
+        if (startY == null) return;
+        dy = Math.max(0, e.clientY - startY);
+        sheet.style.transform = `translate(-50%, ${dy}px)`;
+      });
+      const end = () => {
+        if (startY == null) return;
+        sheet.style.transition = '';
+        sheet.style.transform = '';
+        const close = dy > 90;
+        startY = null; dy = 0;
+        if (close) closeSheet();
+      };
+      header.addEventListener('pointerup', end);
+      header.addEventListener('pointercancel', end);
+    });
+
+    // Con la tastiera aperta la barra in basso si nasconde (non deve salire sopra i campi)
+    document.addEventListener('focusin', (e) => { if (e.target.matches('input:not([type=checkbox]):not([type=file]), textarea')) document.body.classList.add('typing'); });
+    document.addEventListener('focusout', () => setTimeout(() => {
+      if (!document.activeElement || !document.activeElement.matches('input:not([type=checkbox]):not([type=file]), textarea')) document.body.classList.remove('typing');
+    }, 50));
     const titleBadgeEl = document.getElementById('titleBadge');
     titleBadgeEl.onclick = openSettings;
     titleBadgeEl.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSettings(); } };
@@ -3913,7 +4073,7 @@
         refreshSettingsUI();
       };
     });
-    document.querySelectorAll('#settingsSheet input[data-layer]').forEach(input => {
+    document.querySelectorAll('#layersSheet input[data-layer]').forEach(input => {
       input.onchange = () => {
         settings.layers[input.dataset.layer] = input.checked;
         saveSettings();
@@ -4017,6 +4177,7 @@
 
     function setUpdateBadge() {
       document.getElementById('settingsBadge').hidden = !isUpdateAvailable();
+      document.getElementById('moreBadge').hidden = !isUpdateAvailable();
     }
 
     async function checkForUpdate(silent) {
@@ -4174,7 +4335,7 @@
     }
 
     document.querySelectorAll('#listTabs button').forEach(b => { b.onclick = () => { listTab = b.dataset.tab; renderList(); }; });
-    document.getElementById('listBtn').onclick = () => { renderList(); openSheet(listSheetEl); };
+    document.getElementById('listBtn').onclick = () => toggleSheet(listSheetEl, () => { renderList(); openSheet(listSheetEl); });
 
     /* ===== Pulsanti nel popup: preferito e segnalazione ===== */
     function favButtonHtml(osmMeta, lat, lon) {
@@ -4468,8 +4629,16 @@
     function updateCarChip() {
       const chip = document.getElementById('carChip');
       const btn = document.getElementById('carBtn');
+      const tabLabel = document.getElementById('carTabLabel');
       btn.classList.toggle('filled', !!car);
+      btn.classList.remove('warn', 'expired');
+      tabLabel.textContent = t('Auto');
       if (!car) { chip.hidden = true; return; }
+      if (car.expiry) {
+        const left = car.expiry - Date.now();
+        if (left <= 0) { tabLabel.textContent = t('Scaduta'); btn.classList.add('expired'); }
+        else { tabLabel.textContent = formatDuration(left); if (left <= CAR_WARNING_MS) btn.classList.add('warn'); }
+      }
       chip.hidden = false;
       chip.classList.remove('warn', 'expired');
       let text = t('Auto');
@@ -4842,7 +5011,7 @@
       renderCarSheet();
       openSheet(carSheetEl);
     }
-    document.getElementById('carBtn').onclick = openCarSheet;
+    document.getElementById('carBtn').onclick = () => toggleSheet(carSheetEl, openCarSheet);
     document.getElementById('carChip').onclick = openCarSheet;
 
     // Aggiornamenti periodici: tempo residuo e distanza (la posizione cambia)
