@@ -5,7 +5,10 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.app.NotificationManager;
 import android.location.Location;
+import android.os.Build;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
@@ -24,6 +27,12 @@ public final class ParkMapState {
     private static final String KEY_PENDING = "pending_action";
     // Auto salvata dal lato nativo (Bluetooth) che la pagina non ha ancora letto
     private static final String KEY_PENDING_CAR = "pending_car";
+    // Soste chiuse ricollegandosi al Bluetooth, che la pagina non ha ancora letto
+    private static final String KEY_ENDED = "ended_parkings";
+    // Riconnessione subito dopo il salvataggio: era un falso distacco (es. motore riacceso)
+    private static final long FALSE_ALARM_MS = 3 * 60 * 1000;
+    // Promemoria della sosta programmati dalla pagina (LocalNotifications, vedi index.html)
+    private static final int[] REMINDER_IDS = { 7101, 7102 };
     private static final String KEY_BT_ADDRESS = "bt_address";
     private static final String KEY_BT_NAME = "bt_name";
 
@@ -72,6 +81,55 @@ public final class ParkMapState {
             prefs(ctx).edit().putString(KEY_PENDING_CAR, json).apply();
             setCarJson(ctx, json);
         } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * Ricollegato al Bluetooth dell'auto: la sosta è finita. L'auto va tolta
+     * (widget compreso) e i promemoria annullati anche se l'app è chiusa; la
+     * pagina la sposta nello storico con takeEndedParkings.
+     * @return la durata della sosta in ms, oppure -1 se non c'era un'auto
+     */
+    public static long endParkingFromBluetooth(Context ctx) {
+        JSONObject car = getCar(ctx);
+        if (car == null) return -1;
+        long now = System.currentTimeMillis();
+        long ts = car.optLong("ts", now);
+        try {
+            JSONObject item = new JSONObject();
+            item.put("car", car);
+            item.put("end", now);
+            if ("bluetooth".equals(car.optString("source")) && now - ts < FALSE_ALARM_MS) item.put("discard", true);
+            JSONArray list = new JSONArray(prefs(ctx).getString(KEY_ENDED, "[]"));
+            list.put(item);
+            prefs(ctx).edit().putString(KEY_ENDED, list.toString()).remove(KEY_PENDING_CAR).apply();
+        } catch (Exception ignored) {
+        }
+        cancelReminders(ctx);
+        setCarJson(ctx, null);
+        return now - ts;
+    }
+
+    public static String takeEndedParkings(Context ctx) {
+        SharedPreferences p = prefs(ctx);
+        String json = p.getString(KEY_ENDED, null);
+        if (json != null) p.edit().remove(KEY_ENDED).apply();
+        return json;
+    }
+
+    /** Annulla gli allarmi dei promemoria come fa il plugin LocalNotifications (stesso intent e request code). */
+    private static void cancelReminders(Context ctx) {
+        AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+        NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        int flags = PendingIntent.FLAG_NO_CREATE | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0);
+        for (int id : REMINDER_IDS) {
+            Intent intent = new Intent().setClassName(ctx, "com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher");
+            PendingIntent pi = PendingIntent.getBroadcast(ctx, id, intent, flags);
+            if (pi != null && am != null) {
+                am.cancel(pi);
+                pi.cancel();
+            }
+            if (nm != null) nm.cancel(id);
         }
     }
 

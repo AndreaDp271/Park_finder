@@ -20,10 +20,11 @@ import java.util.Date;
 /**
  * Salvataggio automatico dell'auto: quando il telefono si scollega dal
  * Bluetooth dell'auto scelta nelle Impostazioni, legge la posizione e la
- * salva come "La mia auto", con una notifica.
+ * salva come "La mia auto", con una notifica. Quando si ricollega la sosta
+ * finisce: auto tolta, promemoria annullati, sosta nello storico.
  *
- * ACTION_ACL_DISCONNECTED è tra le trasmissioni di sistema che arrivano anche
- * ai receiver dichiarati nel manifest con l'app chiusa. Per leggere la
+ * ACTION_ACL_CONNECTED/DISCONNECTED sono tra le trasmissioni di sistema che
+ * arrivano anche ai receiver dichiarati nel manifest con l'app chiusa. Per leggere la
  * posizione con l'app in background serve il permesso "Consenti sempre".
  */
 public class BluetoothCarReceiver extends BroadcastReceiver {
@@ -36,10 +37,20 @@ public class BluetoothCarReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (!BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(intent.getAction())) return;
+        String action = intent.getAction();
+        boolean connected = BluetoothDevice.ACTION_ACL_CONNECTED.equals(action);
+        if (!connected && !BluetoothDevice.ACTION_ACL_DISCONNECTED.equals(action)) return;
         BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
         String target = ParkMapState.getBluetoothAddress(context);
         if (device == null || target == null || !target.equalsIgnoreCase(device.getAddress())) return;
+
+        if (connected) {
+            // Di nuovo in auto: la sosta è finita
+            ParkMapState.endParkingFromBluetooth(context.getApplicationContext());
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) nm.cancel(NOTIFICATION_ID); // "Auto salvata qui" non serve più
+            return;
+        }
 
         final Context ctx = context.getApplicationContext();
         final String deviceName = ParkMapState.getBluetoothName(ctx);

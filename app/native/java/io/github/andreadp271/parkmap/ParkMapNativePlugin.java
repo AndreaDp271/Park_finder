@@ -25,7 +25,8 @@ import com.getcapacitor.annotation.PermissionCallback;
  * Ponte tra la pagina e il codice nativo. Dalla pagina:
  *   Capacitor.nativePromise('ParkMapNative', 'setCar', { car: '<json>' | null })
  *   Capacitor.nativePromise('ParkMapNative', 'takePendingAction') -> { action: 'saveCar' | 'showCar' | 'nearby' | null }
- *   Capacitor.nativePromise('ParkMapNative', 'takePendingCar')    -> { car: '<json>' | null }  (salvata via Bluetooth)
+ *   Capacitor.nativePromise('ParkMapNative', 'takePendingCar')    -> { car: '<json>' | null, ended: '[{car, end, discard?}]' | null }
+ *       (auto salvata scollegandosi dal Bluetooth, soste chiuse ricollegandosi)
  *   Capacitor.nativePromise('ParkMapNative', 'bluetoothStatus')   -> { supported, device, permissions }
  *   Capacitor.nativePromise('ParkMapNative', 'listBluetoothDevices') -> { devices: [{ address, name, car }] }
  *   Capacitor.nativePromise('ParkMapNative', 'setBluetoothCar', { address, name } | { address: null })
@@ -60,6 +61,7 @@ public class ParkMapNativePlugin extends Plugin {
     public void takePendingCar(PluginCall call) {
         JSObject result = new JSObject();
         result.put("car", ParkMapState.takePendingCar(getContext()));
+        result.put("ended", ParkMapState.takeEndedParkings(getContext()));
         call.resolve(result);
     }
 

@@ -883,7 +883,7 @@
             <button type="button" class="set-btn" id="btOpenSettings"><i data-lucide="settings"></i> Impostazioni di Android</button>
           </div>
         </div>
-        <p class="set-hint">Quando il telefono si scollega dal Bluetooth dell'auto, ParkMap salva da solo dove l'hai lasciata e ti avvisa con una notifica.</p>
+        <p class="set-hint">Quando il telefono si scollega dal Bluetooth dell'auto, ParkMap salva da solo dove l'hai lasciata e ti avvisa con una notifica. Quando ti ricolleghi la sosta finisce da sola: l'auto va nello storico e i promemoria vengono annullati.</p>
       </div>
 
       <div class="set-group">
@@ -1065,6 +1065,7 @@
     "Aree di sosta": "Parking areas",
     "Armadietti": "Lockers",
     "Attivo: quando ti scolleghi da {name} salvo da solo dove hai lasciato l'auto.": "On: when you disconnect from {name} I'll save where you left the car.",
+    "Attivo: quando ti scolleghi da {name} salvo dove hai lasciato l'auto, quando ti ricolleghi chiudo la sosta.": "On: when you disconnect from {name} I'll save where you left the car, and when you reconnect I'll end the parking.",
     "Auto": "Car",
     "Auto a {d}": "Car {d} away",
     "Auto condivisa": "Shared car",
@@ -1272,6 +1273,7 @@
     "Pubblico": "Public",
     "Puoi anche tenere premuto un punto della mappa e scegliere \"Ho parcheggiato qui\".": "You can also long-press a point on the map and choose \"I parked here\".",
     "Quando il telefono si scollega dal Bluetooth dell'auto, ParkMap salva da solo dove l'hai lasciata e ti avvisa con una notifica.": "When your phone disconnects from the car's Bluetooth, ParkMap saves where you left it and lets you know with a notification.",
+    "Quando il telefono si scollega dal Bluetooth dell'auto, ParkMap salva da solo dove l'hai lasciata e ti avvisa con una notifica. Quando ti ricolleghi la sosta finisce da sola: l'auto va nello storico e i promemoria vengono annullati.": "When your phone disconnects from the car's Bluetooth, ParkMap saves where you left it and lets you know with a notification. When you reconnect, the parking ends by itself: the car goes into the history and reminders are cancelled.",
     "Quanto resti? Tocca una durata.": "How long are you staying? Tap a duration.",
     "Quartiere": "Neighbourhood",
     "Rastrelliera": "Rack",
@@ -1317,6 +1319,7 @@
     "Sosta in scadenza": "Parking about to expire",
     "Sosta scaduta": "Parking expired",
     "Sosta scaduta da {d}": "Parking expired {d} ago",
+    "Sosta terminata: {d}": "Parking ended: {d}",
     "Sosta: {d}": "Parking: {d}",
     "Sotterraneo": "Underground",
     "Stalli speciali": "Special spaces",
@@ -4329,12 +4332,16 @@
       pushCarToNative();
     }
 
+    function addToHistory(c, endTs) {
+      carHistory.unshift({ lat: c.lat, lon: c.lon, ts: c.ts, end: endTs || Date.now(), address: c.address || '', note: c.note || '' });
+      carHistory.sort((a, b) => b.ts - a.ts);
+      carHistory = carHistory.slice(0, CAR_HISTORY_MAX);
+      try { localStorage.setItem(CAR_HISTORY_KEY, JSON.stringify(carHistory)); } catch (err) {}
+    }
     // La sosta finita (auto spostata o "Ho lasciato il parcheggio") va nello storico
     function archiveCar(endTs) {
       if (!car) return;
-      carHistory.unshift({ lat: car.lat, lon: car.lon, ts: car.ts, end: endTs || Date.now(), address: car.address || '', note: car.note || '' });
-      carHistory = carHistory.slice(0, CAR_HISTORY_MAX);
-      try { localStorage.setItem(CAR_HISTORY_KEY, JSON.stringify(carHistory)); } catch (err) {}
+      addToHistory(car, endTs);
       if (car.photo) setCarPhoto(null);
     }
 
@@ -4345,28 +4352,49 @@
       nativeCall('ParkMapNative', 'setCar', { car: car ? JSON.stringify(car) : null }).catch(() => {});
     }
 
-    // Auto salvata dall'app chiusa alla disconnessione dal Bluetooth
-    // (BluetoothCarReceiver): la pagina la adotta, la precedente va nello storico
+    // Eventi del Bluetooth dell'auto avvenuti con l'app chiusa (BluetoothCarReceiver):
+    // - ricollegato: sosta finita, va nello storico (se l'auto era stata salvata
+    //   da meno di 3 minuti era un falso distacco e si scarta e basta);
+    // - scollegato: auto salvata da sola, la pagina la adotta.
+    // Restituisce true se l'auto è cambiata (ed è già stata ripassata al lato nativo).
     async function adoptNativeCar() {
       if (!IS_NATIVE_APP) return false;
+      let res;
+      try { res = await nativeCall('ParkMapNative', 'takePendingCar'); } catch (err) { return false; }
+      if (!res) return false;
+      let changed = false, endedMsg = '';
       try {
-        const res = await nativeCall('ParkMapNative', 'takePendingCar');
-        if (!res || !res.car) return false;
-        const fromNative = JSON.parse(res.car);
-        if (car && car.ts >= fromNative.ts) return false;
-        if (car) archiveCar(fromNative.ts);
-        car = fromNative;
-        carNotifyWarning = '';
-        saveCar();
-        scheduleCarNotifications();
-        renderCarOnMap();
-        updateCarChip();
-        if (!carSheetEl.hidden) renderCarSheet();
-        lookupCarAddress();
-        return true;
-      } catch (err) {
-        return false;
-      }
+        (res.ended ? JSON.parse(res.ended) : []).forEach(item => {
+          const c = item.car || {};
+          if (car && Math.abs(car.ts - c.ts) < 1000) {
+            if (item.discard) { if (car.photo) setCarPhoto(null); }
+            else { archiveCar(item.end); endedMsg = t('Sosta terminata: {d}', { d: formatDuration(item.end - c.ts) }); }
+            car = null;
+            changed = true;
+          } else if (!item.discard && c.lat != null && (!car || c.ts < car.ts)) {
+            addToHistory(c, item.end); // auto salvata e chiusa senza aprire l'app
+          }
+        });
+      } catch (err) {}
+      try {
+        const fromNative = res.car ? JSON.parse(res.car) : null;
+        if (fromNative && (!car || car.ts < fromNative.ts)) {
+          if (car) archiveCar(fromNative.ts);
+          car = fromNative;
+          changed = true;
+          endedMsg = '';
+        }
+      } catch (err) {}
+      if (!changed) return false;
+      carNotifyWarning = '';
+      saveCar();
+      scheduleCarNotifications();
+      renderCarOnMap();
+      updateCarChip();
+      if (!carSheetEl.hidden) renderCarSheet();
+      if (car) lookupCarAddress();
+      if (endedMsg) { setStatus(endedMsg); setTimeout(() => setStatus(''), 3000); }
+      return true;
     }
 
     // Azioni chieste da widget, scorciatoie dell'icona e notifiche
@@ -4940,7 +4968,7 @@
         btActionsEl.hidden = false;
         btGrantEl.hidden = false;
       } else if (dev) {
-        btNote(t("Attivo: quando ti scolleghi da {name} salvo da solo dove hai lasciato l'auto.", { name: dev.name || dev.address }), 'ok');
+        btNote(t("Attivo: quando ti scolleghi da {name} salvo dove hai lasciato l'auto, quando ti ricolleghi chiudo la sosta.", { name: dev.name || dev.address }), 'ok');
       } else if (btPickerEl.hidden) {
         btNote('');
       }

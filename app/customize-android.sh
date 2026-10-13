@@ -44,12 +44,13 @@ block = '''
                 android:resource="@xml/parkmap_widget_info" />
         </receiver>
 
-        <!-- Disconnessione dal Bluetooth dell'auto: la invia lo stack Bluetooth,
+        <!-- Connessione/disconnessione dal Bluetooth dell'auto: le invia lo stack Bluetooth,
              che ha un proprio utente di sistema, quindi exported="true" -->
         <receiver
             android:name=".BluetoothCarReceiver"
             android:exported="true">
             <intent-filter>
+                <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
                 <action android:name="android.bluetooth.device.action.ACL_DISCONNECTED" />
             </intent-filter>
         </receiver>
