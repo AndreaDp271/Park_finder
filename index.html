@@ -345,6 +345,20 @@
       flex-shrink:0;
     }
 
+    /* ─── Invito a scaricare l'app Android (solo dal browser di un telefono Android) ─── */
+    #apkBanner{
+      position:fixed; z-index:2650; left:50%; bottom:calc(var(--dock-total) + 12px); transform:translateX(-50%);
+      width:min(calc(100% - 24px), 440px); box-sizing:border-box; display:flex; align-items:center; gap:10px;
+      padding:9px 9px 9px 16px; border-radius:22px; background:var(--glass);
+      backdrop-filter:blur(24px) saturate(1.6); -webkit-backdrop-filter:blur(24px) saturate(1.6);
+      border:var(--btn-border); box-shadow:0 10px 32px rgb(15 23 42 / 0.2); color:var(--text-main);
+      font:600 13.5px 'Inter',system-ui,sans-serif; animation:sheetUp .3s cubic-bezier(0.16,1,0.3,1);
+    }
+    #apkBanner span{ flex:1; min-width:0; }
+    #apkBanner a{ flex-shrink:0; background:var(--primary-dark); color:#fff; border-radius:999px; padding:9px 16px; text-decoration:none; font-weight:700; }
+    #apkBanner button{ flex-shrink:0; width:30px; height:30px; border:none; border-radius:50%; background:var(--surface-3); color:var(--text-light); cursor:pointer; font-size:13px; }
+    #apkBanner[hidden]{ display:none; }
+
     /* ─── Fogli dal basso (su telefono) e finestre al centro (su desktop) ─── */
         .sheet-backdrop{ position:fixed; inset:0; z-index:2500; background:rgba(15,23,42,0.38); animation:fadeIn .2s ease; }
     .sheet{
@@ -1142,6 +1156,8 @@
   <script>
     window.PARKMAP_EN = {
     "(segnalato con l'app ParkMap)": "(reported with the ParkMap app)",
+    "Scarica l'app Android": "Get the Android app",
+    "Scarica": "Download",
     "(solo)": "(only)",
     "1 anno": "1 year",
     "1 giorno": "1 day",
@@ -5546,6 +5562,27 @@
     }
     window.addEventListener('offline', () => { setStatus(t('Sei offline: mostro i dati salvati')); setTimeout(() => setStatus(''), 3000); });
     window.addEventListener('online', () => { setStatus(t('Di nuovo online')); setTimeout(() => setStatus(''), 1500); loadVisibleTiles(); });
+
+    /* ===== App Android nativa ===== */
+    // Dal browser di un telefono Android si propone l'app vera (widget, Bluetooth, promemoria
+    // affidabili). Su computer e iPhone/iPad resta il sito, che è la versione completa per loro.
+    const ANDROID_APK_URL = 'https://github.com/AndreaDp271/Park_finder-APK/releases/latest';
+    const APK_BANNER_KEY = 'parkApkBannerDismissed_v1';
+    function showApkBanner() {
+      try { if (localStorage.getItem(APK_BANNER_KEY) === '1') return; } catch (err) {}
+      if (document.getElementById('apkBanner')) return;
+      const el = document.createElement('div');
+      el.id = 'apkBanner';
+      el.innerHTML = `<span>${t("Scarica l'app Android")}</span>` +
+        `<a href="${ANDROID_APK_URL}" target="_blank" rel="noopener">${t('Scarica')}</a>` +
+        `<button type="button" aria-label="${t('Chiudi')}">✕</button>`;
+      el.querySelector('button').onclick = () => {
+        try { localStorage.setItem(APK_BANNER_KEY, '1'); } catch (err) {}
+        el.remove();
+      };
+      document.body.appendChild(el);
+    }
+    if (IS_ANDROID && !IS_NATIVE_APP) setTimeout(showApkBanner, 4000);
 
     updateFullscreenIcon();
   </script>
