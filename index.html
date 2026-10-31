@@ -784,6 +784,21 @@
     .dest-marker svg{ width:34px; height:42px; display:block; }
     .car-marker.shared{ background:#7c3aed; }
     .chip.dest{ background:#be123c; color:#fff; border-color:transparent; }
+    .chip.ztl{ color:#dc2626; border-color:rgba(220,38,38,.5); font-weight:700; }
+    .chip.ztl svg{ color:#dc2626; }
+    .chip.ztl.off, .chip.ztl.off svg{ color:#16a34a; border-color:rgba(22,163,74,.5); }
+    .pc-chip.ztl-on{ background:#fee2e2; color:#b91c1c; }
+    html[data-theme="dark"] .pc-chip.ztl-on{ background:#4c1515; color:#fca5a5; }
+    .pc-ztl.off .pcx-ico{ background:#dcfce7; color:#166534; }
+    .pc-ztl.off .pcx-title{ color:#166534; }
+    html[data-theme="dark"] .pc-ztl.off .pcx-ico{ background:#123a22; color:#86efac; }
+    html[data-theme="dark"] .pc-ztl.off .pcx-title{ color:#86efac; }
+    .pc-ztl{ margin:0; padding:11px 16px; border-top:1px solid var(--border-soft); }
+    .pc-ztl .pcx-ico{ background:#fee2e2; color:#b91c1c; }
+    .pc-ztl .pcx-title{ color:#b91c1c; }
+    html[data-theme="dark"] .pc-ztl .pcx-ico{ background:#4c1515; color:#fca5a5; }
+    html[data-theme="dark"] .pc-ztl .pcx-title{ color:#fca5a5; }
+    .ztl-badge{ font-weight:800; font-size:12px; color:#fff; }
     .chip .chip-x{ margin-left:2px; margin-right:-4px; width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.22); font-size:11px; }
     .list-badge{ font-size:11px; font-weight:700; color:var(--primary-dark); background:var(--primary-light); border-radius:8px; padding:2px 7px; margin-left:6px; }
 
@@ -848,6 +863,7 @@
   <div id="chipBar" role="toolbar" aria-label="Filtri">
     <button type="button" class="chip car" id="carChip" hidden><i data-lucide="car"></i><span id="carChipText">Auto</span></button>
     <button type="button" class="chip dest" id="destChip" hidden><i data-lucide="flag"></i><span id="destChipText"></span><span class="chip-x" id="destChipClose" role="button" aria-label="Chiudi">✕</span></button>
+    <button type="button" class="chip ztl" id="ztlChip" hidden><i data-lucide="lock"></i><span>Destinazione in ZTL</span></button>
     <button type="button" class="chip reset" id="chipReset" hidden><i data-lucide="x"></i><span>Azzera filtri</span><span class="count" id="chipResetCount">0</span></button>
     <button type="button" class="chip" data-filter="freeNow" aria-pressed="false"><i data-lucide="clock"></i> Gratis adesso</button>
     <button type="button" class="chip" data-filter="free" aria-pressed="false"><i data-lucide="circle-check"></i> Gratuiti</button>
@@ -898,6 +914,7 @@
           <button type="button" class="menu-row" id="refreshBtn"><span class="menu-ico green"><i data-lucide="refresh-cw"></i></span><span class="menu-text"><span>Aggiorna dati</span><span class="menu-sub">Scarica di nuovo i parcheggi di questa zona</span></span></button>
           <button type="button" class="menu-row" id="shareBtn"><span class="menu-ico blue"><i data-lucide="share-2"></i></span><span class="menu-text"><span>Condividi posizione</span><span class="menu-sub">Manda il link di questa zona della mappa</span></span></button>
           <button type="button" class="menu-row" id="reportMissingBtn"><span class="menu-ico orange"><i data-lucide="map-pin-plus"></i></span><span class="menu-text"><span>Segnala parcheggio mancante</span></span></button>
+          <button type="button" class="menu-row" id="reportZtlBtn"><span class="menu-ico red"><i data-lucide="ban"></i></span><span class="menu-text"><span>Segnala ZTL mancante</span><span class="menu-sub">Al centro della mappa: spostala dentro la zona</span></span></button>
           <button type="button" class="menu-row" id="fullscreenBtn"></button>
         </div>
       </div>
@@ -944,6 +961,7 @@
           <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#059669; border-color:#fff; border-radius:50%; box-shadow:0 0 0 1px #059669"></span> Colonnine di ricarica</span><input type="checkbox" class="switch" data-layer="charging"></label>
           <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#fca5a5; border-color:#b91c1c; border-radius:50%"></span> Parcheggi moto</span><input type="checkbox" class="switch" data-layer="moto"></label>
           <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:#bef264; border-color:#4d7c0f; border-radius:50%"></span> Parcheggi bici</span><input type="checkbox" class="switch" data-layer="bikes"></label>
+          <label class="set-row"><span class="set-label"><span class="layer-dot" style="background:rgba(220,38,38,.25); border-color:#dc2626"></span> <span>Zone a traffico limitato (ZTL)<small style="display:block; color:var(--text-light); font-size:12px; font-weight:500">Solo quelle mappate su OpenStreetMap</small></span></span><input type="checkbox" class="switch" data-layer="ztl"></label>
         </div>
       </div>
     </div>
@@ -1076,6 +1094,11 @@
           <div class="legend-section-title">Parcometri</div>
           <div class="legend-grid">
             <div class="legend-item"><div class="legend-color" style="background:var(--meter-fill); border:1px solid var(--meter-stroke);"></div>Parcometro (ticket)</div>
+          </div>
+          <div class="legend-section-title">ZTL</div>
+          <div class="legend-grid">
+            <div class="legend-item"><div class="legend-color" style="background:rgba(220,38,38,.25); border:1px dashed #dc2626;"></div>Attiva adesso</div>
+            <div class="legend-item"><div class="legend-color" style="background:rgba(22,163,74,.25); border:1px dashed #16a34a;"></div>Non attiva adesso</div>
           </div>
           <div class="legend-section-title">Altri servizi</div>
           <div class="legend-grid">
@@ -1559,7 +1582,42 @@
     "{n} posti": "{n} spaces",
     "{n} prese": "{n} sockets",
     "{n} settimane": "{n} weeks",
-    "{n} zone": "{n} areas"
+    "{n} zone": "{n} areas",
+    "Zone a traffico limitato (ZTL)": "Limited traffic zones (ZTL)",
+    "Solo quelle mappate su OpenStreetMap": "Only those mapped on OpenStreetMap",
+    "Destinazione in ZTL": "Destination in a ZTL",
+    "Dentro la ZTL «{name}»": "Inside the ZTL “{name}”",
+    "Dentro una ZTL": "Inside a ZTL",
+    "Su una strada a traffico limitato": "On a limited traffic street",
+    "Per arrivarci in auto può servire il permesso: controlla orari e cartelli.": "Driving in may require a permit: check hours and signs.",
+    "Zona a traffico limitato": "Limited traffic zone",
+    "Strada a traffico limitato": "Limited traffic street",
+    "Orari e permessi non sono indicati su OpenStreetMap.": "Hours and permits are not listed on OpenStreetMap.",
+    "Dati da OpenStreetMap, possono essere incompleti: fanno fede i cartelli all'ingresso della zona.": "Data from OpenStreetMap, may be incomplete: the signs at the zone entrance prevail.",
+    "Sito del Comune": "Town website",
+    "Tutti": "Everyone",
+    "Veicoli": "Vehicles",
+    "Veicoli a motore": "Motor vehicles",
+    "Merci": "Goods",
+    "solo con permesso": "permit only",
+    "vietato": "no entry",
+    "consentito": "allowed",
+    "solo per chi è diretto lì": "destination only",
+    "privato": "private",
+    "carico e scarico": "deliveries",
+    "solo clienti": "customers only",
+    "Attiva adesso": "Active now",
+    "Non attiva adesso": "Not active now",
+    "Orari non indicati: considerala attiva": "Hours not listed: assume it is active",
+    "Adesso non è attiva secondo OpenStreetMap: controlla comunque i cartelli.": "Not active now according to OpenStreetMap: check the signs anyway.",
+    "Destinazione in ZTL (non attiva)": "Destination in a ZTL (not active)",
+    "Segnala ZTL mancante": "Report missing ZTL",
+    "Al centro della mappa: spostala dentro la zona": "At the map center: move it inside the zone",
+    "ZTL mancante": "Missing ZTL",
+    "Orari o confini sbagliati": "Wrong hours or boundaries",
+    "Es. ZTL del centro storico, varchi in via Roma e piazza Garibaldi, attiva lun-ven 8-20. Sito del Comune: ...": "E.g. old town ZTL, gates in Via Roma and Piazza Garibaldi, active Mon-Fri 8-20. Town website: ...",
+    "Cosa non è corretto? Es. d'estate è attiva anche di sera, 20-24.": "What is wrong? E.g. in summer it is also active in the evening, 20-24.",
+    "Es. la ZTL è stata abolita / i varchi sono spenti.": "E.g. the ZTL was abolished / the gates are switched off."
     };
   </script>
 
@@ -1580,7 +1638,7 @@
     const SETTINGS_KEY = 'parkSettings_v1';
     const DEFAULT_SETTINGS = {
       mapStyle: 'osm',
-      layers: { areas: true, spaces: true, meters: true, charging: true, moto: true, bikes: false },
+      layers: { areas: true, spaces: true, meters: true, charging: true, moto: true, bikes: false, ztl: true },
       locateOnStart: true,
       showAccuracy: true,
       autoUpdateCheck: true,
@@ -2035,13 +2093,17 @@
     var chargingLayer = L.layerGroup().addTo(map);
     var motoLayer = L.layerGroup().addTo(map);
     var bikesLayer = L.layerGroup().addTo(map);
+    // ZTL sotto tutti i parcheggi: il tocco arriva alla zona solo se non c'è un parcheggio sopra
+    map.createPane('ztlPane');
+    map.getPane('ztlPane').style.zIndex = 405;
+    var ztlLayer = L.layerGroup().addTo(map);
 	var loadedIds = new Set();
 	var idToLayer = new Map(); // uniqueId -> { layer, group, lat, lon }
 
     // Livelli accesi/spenti dalla pagina Impostazioni
     const LAYER_GROUPS = {
       areas: parkingAreasLayer, spaces: parkingSpacesLayer, meters: parkometersLayer,
-      charging: chargingLayer, moto: motoLayer, bikes: bikesLayer
+      charging: chargingLayer, moto: motoLayer, bikes: bikesLayer, ztl: ztlLayer
     };
     // Un filtro attivo mostra il suo livello anche se spento (es. "Bici")
     const LAYER_FILTERS = { charging: 'ev', moto: 'moto', bikes: 'bike' };
@@ -2346,6 +2408,7 @@
         </div>
         ${chips.length ? `<div class="pc-chips">${chips.join('')}</div>` : ''}
         ${rows.length ? `<div class="pc-rows">${rows.join('')}</div>` : ''}
+        ${ztlWarningHtml(lat, lon)}
         ${extra || ''}
         <div class="pc-actions">
           <a class="pc-go" href="${buildNavUrl(lat, lon, 'driving')}" target="_blank" rel="noopener"><i data-lucide="navigation"></i> ${t('Vai a')}</a>
@@ -3431,9 +3494,273 @@
       } catch (err) {}
     }
 
+    // ─── ZTL ───
+    // Da OpenStreetMap via Postpass: le zone (boundary=limited_traffic_zone) e, dove la ZTL è mappata strada per
+    // strada (es. Bassano), le strade con accesso solo con permesso o vietato a certe ore. A celle da 0,5° (~50 km),
+    // scaricate una volta per sessione; dove nessuno le ha mappate non c'è nulla.
+    const ZTL_CELL = 0.5, ZTL_MIN_ZOOM = 11, ZTL_RETRY_MS = 60000;
+    const ZTL_KEYS = ['motor_vehicle', 'vehicle', 'motorcar', 'access'];
+    const ZTL_SKIP_HIGHWAYS = "'footway','path','cycleway','steps','pedestrian','track','service','bridleway','corridor','platform','construction','proposed'";
+    const ztlCells = new Map();      // chiave cella -> elenco ZTL
+    const ztlFailed = new Map();     // chiave cella -> ora dell'errore
+    const ztlInflight = new Set();
+    const ztlDrawn = new Map();      // id -> layer Leaflet
+    let ztlZones = [];
+
+    function ztlRestricts(tags) {
+      return ZTL_KEYS.some(k => tags[k] === 'permit' ||
+        (tags[k + ':conditional'] || '').split(/;\s*(?![^()]*\))/).some(c => /^\s*(permit|no)\s*@/.test(c) && !/\b(19|20)\d\d\b/.test(c)));
+    }
+    function ztlSql(s, w, n, e) {
+      const streetCond = ZTL_KEYS.map(k => `tags->>'${k}' = 'permit' OR tags->>'${k}:conditional' ~ '^\\s*(permit|no)\\s*@'`).join(' OR ');
+      return `SELECT osm_type, osm_id, tags, geom FROM postpass_pointlinepolygon WHERE (tags->>'boundary' = 'limited_traffic_zone' OR ` +
+        `(tags ? 'highway' AND tags->>'highway' NOT IN (${ZTL_SKIP_HIGHWAYS}) AND (${streetCond}))) ` +
+        `AND geom && ST_MakeEnvelope(${w},${s},${e},${n},4326)`;
+    }
+    // Postpass restituisce ogni relazione due volte (area e contorno) più le way che la compongono:
+    // si tengono le aree, le way chiuse, le way aperte con un nome e le strade con restrizioni.
+    function ztlParse(fc) {
+      const out = new Map();
+      const ring = (a) => a.map(c => [c[1], c[0]]);
+      (fc.features || []).forEach(f => {
+        const p = f.properties || {}, g = f.geometry;
+        if (!g || p.osm_type === 'N') return;
+        const type = p.osm_type === 'R' ? 'relation' : 'way';
+        const id = type + '/' + p.osm_id;
+        const tags = p.tags || {};
+        if (g.type === 'MultiPolygon') out.set(id, { id, tags, rings: g.coordinates.map(poly => ring(poly[0])), area: true });
+        else if (g.type === 'Polygon') out.set(id, { id, tags, rings: [ring(g.coordinates[0])], area: true });
+        else if (g.type === 'MultiLineString' || g.type === 'LineString') {
+          if (type === 'relation' || out.has(id)) return;
+          const rings = (g.type === 'LineString' ? [g.coordinates] : g.coordinates).map(ring).filter(r => r.length >= 2);
+          if (!rings.length) return;
+          if (tags.highway && tags.boundary !== 'limited_traffic_zone') {
+            if (ztlRestricts(tags)) out.set(id, { id, tags, rings, area: false, street: true });
+            return;
+          }
+          const closed = rings.every(r => r.length >= 4 && r[0][0] === r[r.length - 1][0] && r[0][1] === r[r.length - 1][1]);
+          if (closed || tags.name) out.set(id, { id, tags, rings, area: closed });
+        }
+      });
+      return [...out.values()];
+    }
+    function ztlCellKey(lat, lon) { return Math.floor(lat / ZTL_CELL) + '_' + Math.floor(lon / ZTL_CELL); }
+    function ztlViewKeys() {
+      const b = map.getBounds(), keys = new Set();
+      [b.getSouth(), b.getNorth()].forEach(lat => [b.getWest(), b.getEast()].forEach(lon => keys.add(ztlCellKey(lat, lon))));
+      return [...keys];
+    }
+    async function ztlFetch(key) {
+      ztlInflight.add(key);
+      const [i, j] = key.split('_').map(Number);
+      const s = i * ZTL_CELL, w = j * ZTL_CELL;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 20000);
+      try {
+        const fc = await fetchPostpass(ztlSql(s, w, s + ZTL_CELL, w + ZTL_CELL), controller.signal);
+        ztlCells.set(key, ztlParse(fc));
+        ztlFailed.delete(key);
+        ztlRender();
+      } catch (err) {
+        ztlFailed.set(key, Date.now()); // si riprova al prossimo spostamento, dopo un minuto
+      } finally {
+        clearTimeout(timer);
+        ztlInflight.delete(key);
+      }
+    }
+    function ztlLoad() {
+      if (map.getZoom() < ZTL_MIN_ZOOM) { ztlRender(); return; }
+      const now = Date.now();
+      ztlViewKeys().forEach(k => {
+        if (!ztlCells.has(k) && !ztlInflight.has(k) && !(ztlFailed.has(k) && now - ztlFailed.get(k) < ZTL_RETRY_MS)) ztlFetch(k);
+      });
+      ztlRender();
+    }
+    function ztlRender() {
+      const seen = new Set();
+      ztlZones = map.getZoom() < ZTL_MIN_ZOOM ? [] : ztlViewKeys().flatMap(k => ztlCells.get(k) || []).filter(z => !seen.has(z.id) && seen.add(z.id));
+      // Le strade dentro una zona già disegnata non aggiungono nulla e coprirebbero la mappa
+      const areas = ztlZones.filter(z => z.area);
+      ztlZones = ztlZones.filter(z => {
+        if (!z.street) return true;
+        const r = z.rings[0], mid = r[Math.floor(r.length / 2)];
+        return !areas.some(a => ztlContains(a, mid[0], mid[1]));
+      });
+      const keep = new Set(ztlZones.map(z => z.id));
+      ztlDrawn.forEach((layer, id) => { if (!keep.has(id)) { ztlLayer.removeLayer(layer); ztlDrawn.delete(id); } });
+      ztlZones.forEach(z => {
+        if (ztlDrawn.has(z.id)) return;
+        const layer = z.area
+          ? L.polygon(z.rings, { pane: 'ztlPane', weight: 2.5, opacity: 0.8, dashArray: '8 5', fillOpacity: 0.15, ...ztlStyle(z) })
+          : L.polyline(z.rings, { pane: 'ztlPane', weight: 6, opacity: 0.6, lineCap: 'round', ...ztlStyle(z) });
+        layer.bindPopup(() => buildZtlPopup(z));
+        ztlLayer.addLayer(layer);
+        ztlDrawn.set(z.id, layer);
+      });
+      updateDestChip();
+    }
+
+    function ztlName(z) { return z.tags.name || z.tags.official_name || z.tags.alt_name || ''; }
+    function ztlContains(z, lat, lon) {
+      if (!z.area) return false;
+      let c = false;
+      z.rings.forEach(r => {
+        for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+          const yi = r[i][0], xi = r[i][1], yj = r[j][0], xj = r[j][1];
+          if ((yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) c = !c;
+        }
+      });
+      return c;
+    }
+    function ztlSize(z) {
+      if (z._size == null) {
+        const pts = z.rings.flat();
+        const lats = pts.map(p => p[0]), lons = pts.map(p => p[1]);
+        z._size = (Math.max(...lats) - Math.min(...lats)) * (Math.max(...lons) - Math.min(...lons));
+      }
+      return z._size;
+    }
+    function ztlDistanceM(z, lat, lon) {
+      if (z.area) return Infinity;
+      const p = map.project([lat, lon], 18);
+      let best = Infinity;
+      z.rings.forEach(r => {
+        for (let i = 0; i < r.length - 1; i++) {
+          const d = L.LineUtil.pointToSegmentDistance(p, map.project(r[i], 18), map.project(r[i + 1], 18));
+          if (d < best) best = d;
+        }
+      });
+      // pixel a zoom 18 → metri
+      return best * 40075016.686 * Math.cos(lat * Math.PI / 180) / Math.pow(2, 18 + 8);
+    }
+    // La zona più piccola che contiene il punto o, se non c'è, la strada a traffico limitato più vicina entro maxM metri
+    function ztlAt(lat, lon, maxM) {
+      const inside = ztlZones.filter(z => ztlContains(z, lat, lon)).sort((a, b) => ztlSize(a) - ztlSize(b))[0];
+      if (inside || !maxM) return inside || null;
+      let best = null, bestD = maxM;
+      ztlZones.forEach(z => { if (z.street || !z.area) { const d = ztlDistanceM(z, lat, lon); if (d <= bestD) { best = z; bestD = d; } } });
+      return best;
+    }
+
+    // La ZTL è attiva adesso per le auto? null se OSM non dice né chi può entrare né quando (va trattata come attiva).
+    // Si valutano access → vehicle → motor_vehicle → motorcar: vince la chiave più specifica che ha un valore adesso.
+    const ZTL_HIERARCHY = ['access', 'vehicle', 'motor_vehicle', 'motorcar'];
+    const ZTL_BLOCKING = ['permit', 'no', 'private', 'destination', 'delivery', 'customers', 'agricultural', 'forestry'];
+    const ZTL_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const ZTL_MONTH_RE = new RegExp('^((?:M)(?:\\s*-\\s*(?:M))?(?:\\s*,\\s*(?:M)(?:\\s*-\\s*(?:M))?)*)\\s*:?\\s*(.*)$'.replace(/M/g, ZTL_MONTHS.join('|')));
+    // Orario OSM come "Apr-Oct: Mo-Fr 20:30-24:00; Su": i mesi davanti si controllano qui, il resto con osmConditionMatches
+    function ztlTimeMatches(w, date) {
+      return w.split(';').some(raw => {
+        const part = raw.trim();
+        const m = part.match(ZTL_MONTH_RE);
+        if (!m) return osmConditionMatches(part, date);
+        const month = date.getMonth();
+        const inMonths = m[1].split(',').some(seg => {
+          const [a, b] = seg.split('-').map(x => ZTL_MONTHS.indexOf(x.trim()));
+          const e = b == null ? a : b;
+          if (a < 0 || e < 0) return false;
+          return a <= e ? month >= a && month <= e : month >= a || month <= e;
+        });
+        return inMonths && (!m[2].trim() || osmConditionMatches(m[2], date));
+      });
+    }
+    function ztlActiveAt(z, date) {
+      let known = false, effective = null;
+      ZTL_HIERARCHY.forEach(k => {
+        const base = z.tags[k], cond = z.tags[k + ':conditional'];
+        if (base == null && cond == null) return;
+        known = true;
+        let v = base;
+        if (cond) cond.split(/;\s*(?![^()]*\))/).forEach(rule => {
+          const at = rule.indexOf('@');
+          if (at < 0) return;
+          const w = rule.slice(at + 1).trim().replace(/^\(|\)$/g, '');
+          if (w && ztlTimeMatches(w, date)) v = rule.slice(0, at).trim();
+        });
+        if (v != null) effective = v;
+      });
+      return known ? ZTL_BLOCKING.includes(effective) : null;
+    }
+    const ZTL_ON = '#dc2626', ZTL_OFF = '#16a34a';
+    function ztlStyle(z) {
+      const c = ztlActiveAt(z, new Date()) === false ? ZTL_OFF : ZTL_ON;
+      return z.area ? { color: c, fillColor: c } : { color: c };
+    }
+    // I colori seguono l'ora: si ricontrollano ogni minuto
+    setInterval(() => { ztlDrawn.forEach((layer, id) => { const z = ztlZones.find(x => x.id === id); if (z) layer.setStyle(ztlStyle(z)); }); updateDestChip(); }, 60000);
+
+    const ZTL_RULE_KEYS = [['access', 'Tutti'], ['vehicle', 'Veicoli'], ['motor_vehicle', 'Veicoli a motore'], ['motorcar', 'Auto'],
+      ['motorcycle', 'Moto'], ['goods', 'Merci'], ['hgv', 'Mezzi pesanti']];
+    const ZTL_VALUES = { permit: 'solo con permesso', no: 'vietato', yes: 'consentito', destination: 'solo per chi è diretto lì',
+      private: 'privato', delivery: 'carico e scarico', designated: 'consentito', customers: 'solo clienti' };
+    const ZTL_DAYS = { Mo: 'lun', Tu: 'mar', We: 'mer', Th: 'gio', Fr: 'ven', Sa: 'sab', Su: 'dom', PH: 'festivi',
+      Jan: 'gen', Feb: 'feb', Mar: 'mar', Apr: 'apr', May: 'mag', Jun: 'giu', Jul: 'lug', Aug: 'ago', Sep: 'set', Oct: 'ott', Nov: 'nov', Dec: 'dic' };
+    // "permit @ (Apr-Oct: Mo-Fr 20:30-24:00)" → "Solo con permesso: apr-ott: lun-ven 20:30-24:00"
+    function ztlHumanize(v) {
+      return v.split(/;\s*(?![^()]*\))/).map(part => {
+        const value = part.split('@')[0].trim();
+        let cond = part.includes('@') ? part.slice(part.indexOf('@') + 1).trim().replace(/^\(|\)$/g, '') : '';
+        cond = cond.replace(/;\s*/g, '\n').replace(/,(?=\S)/g, ', ');
+        if (LANG === 'it') cond = cond.replace(/\b(PH|[A-Z][a-z]{1,2})\b/g, m => ZTL_DAYS[m] || m);
+        const word = ZTL_VALUES[value] ? t(ZTL_VALUES[value]) : value;
+        const out = cond ? word + ': ' + cond : word;
+        return out.charAt(0).toUpperCase() + out.slice(1);
+      }).join('\n');
+    }
+    function ztlRules(z) {
+      const out = [];
+      ZTL_RULE_KEYS.forEach(([k, label]) => {
+        const v = z.tags[k], c = z.tags[k + ':conditional'];
+        if (v && (v !== 'yes' || !c)) out.push([label, ztlHumanize(v)]);
+        if (c) out.push([label, ztlHumanize(c)]);
+      });
+      return out;
+    }
+    function buildZtlPopup(z) {
+      const name = ztlName(z);
+      const kindText = z.area ? t('Zona a traffico limitato') : t('Strada a traffico limitato');
+      const rules = ztlRules(z);
+      const site = z.tags.website || z.tags['source:url'] || '';
+      const [type, id] = z.id.split('/');
+      const state = ztlActiveAt(z, new Date());
+      const stateChip = state === true ? pcChip(t('Attiva adesso'), 'ztl-on', 'lock')
+        : state === false ? pcChip(t('Non attiva adesso'), 'ok', 'lock-open') : pcChip(t('Orari non indicati: considerala attiva'), '', 'lock');
+      return `<div class="pc" style="${state === false ? '--pc1:#22c55e; --pc2:#15803d' : '--pc1:#ef4444; --pc2:#b91c1c'}">
+        <div class="pc-head">
+          <div class="pc-icon"><span class="ztl-badge">ZTL</span></div>
+          <div class="pc-titles">
+            <div class="pc-title">${escapeHtml(name || kindText)}</div>
+            ${name ? `<div class="pc-sub">${escapeHtml(kindText)}</div>` : ''}
+          </div>
+        </div>
+        <div class="pc-chips">${stateChip}</div>
+        ${rules.length ? `<div class="pc-rows">${rules.map(([label, v]) => pcRow(t(label), escapeHtml(v).replace(/\n/g, '<br>'))).join('')}</div>`
+          : `<div class="pc-muted">${t('Orari e permessi non sono indicati su OpenStreetMap.')}</div>`}
+        ${z.tags.description ? `<div class="pc-muted">${escapeHtml(z.tags.description)}</div>` : ''}
+        <div class="pc-muted">${t("Dati da OpenStreetMap, possono essere incompleti: fanno fede i cartelli all'ingresso della zona.")}</div>
+        <div class="pc-actions">
+          ${/^https?:\/\//.test(site) ? `<a class="pc-go" href="${escapeHtml(site)}" target="_blank" rel="noopener"><i data-lucide="external-link"></i> ${t('Sito del Comune')}</a>` : ''}
+          <a class="pc-icon-btn" href="https://www.openstreetmap.org/${type}/${id}" target="_blank" rel="noopener" title="${t('Modifica su OpenStreetMap')}" aria-label="${t('Modifica su OpenStreetMap')}"><i data-lucide="pencil"></i></a>
+          <button type="button" class="pc-icon-btn" onclick="openZtlReport('${z.id}')" title="${t('Segnala un errore')}" aria-label="${t('Segnala un errore')}"><i data-lucide="flag"></i></button>
+        </div>
+      </div>`;
+    }
+    function ztlWarningHtml(lat, lon) {
+      const z = ztlAt(lat, lon, 30);
+      if (!z) return '';
+      const name = ztlName(z);
+      const title = z.street ? t('Su una strada a traffico limitato') : name ? t('Dentro la ZTL «{name}»', { name }) : t('Dentro una ZTL');
+      const on = ztlActiveAt(z, new Date()) !== false;
+      const note = on ? t('Per arrivarci in auto può servire il permesso: controlla orari e cartelli.')
+        : t('Adesso non è attiva secondo OpenStreetMap: controlla comunque i cartelli.');
+      return `<div class="pc-ztl ${on ? '' : 'off'}"><div class="pcx-head"><span class="pcx-ico"><i data-lucide="${on ? 'lock' : 'lock-open'}"></i></span>
+        <span class="pcx-title">${escapeHtml(title)}<small>${note}</small></span></div></div>`;
+    }
+
     var fetchTimeout = null;
     map.on('moveend', () => {
       saveLastView();
+      ztlLoad();
       showCachedForView(); // istantaneo, dalla cache
       if (fetchTimeout) clearTimeout(fetchTimeout);
       fetchTimeout = setTimeout(loadVisibleTiles, 100);
@@ -3462,6 +3789,7 @@
       initialLoadDone = true;
       clearTimeout(initialLoadTimer);
       loadVisibleTiles();
+      ztlLoad();
     }
     const initialLoadTimer = setTimeout(triggerInitialLoad, (hasSharedView || !settings.locateOnStart) ? 0 : 1500);
 
@@ -3719,6 +4047,15 @@
       const chip = document.getElementById('destChip');
       chip.hidden = !destination;
       if (destination) document.getElementById('destChipText').textContent = t('Vicino a {name}', { name: destination.name });
+      const z = destination && settings.layers.ztl ? ztlAt(destination.lat, destination.lon, 40) : null;
+      const ztlChip = document.getElementById('ztlChip');
+      ztlChip.hidden = !z;
+      const off = !!z && ztlActiveAt(z, new Date()) === false;
+      ztlChip.classList.toggle('off', off);
+      ztlChip.querySelector('span').textContent = off ? t('Destinazione in ZTL (non attiva)') : t('Destinazione in ZTL');
+      ztlChip.querySelector('svg, i').outerHTML = `<i data-lucide="${off ? 'lock-open' : 'lock'}"></i>`;
+      lucide.createIcons({ root: ztlChip });
+      ztlChip.onclick = z ? () => { const l = ztlDrawn.get(z.id); if (l) l.openPopup(l.getBounds ? l.getBounds().getCenter() : undefined); } : null;
     }
 
     function setDestination(r) {
@@ -4218,6 +4555,7 @@
     document.getElementById('legendBtn').onclick = () => openSheet(legendSheetEl);
     document.getElementById('menuProviders').onclick = () => openDiagPanel();
     document.getElementById('reportMissingBtn').onclick = () => { const c = map.getCenter(); openReport({ lat: c.lat, lon: c.lng, type: 'missing' }); };
+    document.getElementById('reportZtlBtn').onclick = () => { const c = map.getCenter(); openReport({ lat: c.lat, lon: c.lng, type: 'missing', ztl: true }); };
     const menuSheetEl = document.getElementById('menuSheet');
     const layersSheetEl = document.getElementById('layersSheet');
     document.getElementById('tabMap').onclick = () => { closeSheet(); map.closePopup(); };
@@ -4761,12 +5099,30 @@
       gone: { label: t('Non esiste più'), placeholder: t('Es. il parcheggio è stato chiuso per lavori / trasformato in area pedonale.') },
       other: { label: t('Altro'), placeholder: t('Descrivi la situazione.') }
     };
+    const ZTL_REPORT_TYPES = {
+      missing: { label: t('ZTL mancante'), placeholder: t('Es. ZTL del centro storico, varchi in via Roma e piazza Garibaldi, attiva lun-ven 8-20. Sito del Comune: ...') },
+      wrong: { label: t('Orari o confini sbagliati'), placeholder: t("Cosa non è corretto? Es. d'estate è attiva anche di sera, 20-24.") },
+      gone: { label: t('Non esiste più'), placeholder: t('Es. la ZTL è stata abolita / i varchi sono spenti.') },
+      other: { label: t('Altro'), placeholder: t('Descrivi la situazione.') }
+    };
     const reportSheetEl = document.getElementById('reportSheet');
     let reportCtx = null;
+    const reportTypes = () => reportCtx && reportCtx.ztl ? ZTL_REPORT_TYPES : REPORT_TYPES;
 
     function renderReportType() {
-      document.querySelectorAll('#reportTypes .opt-chip').forEach(c => c.classList.toggle('active', c.dataset.type === reportCtx.type));
-      document.getElementById('reportText').placeholder = REPORT_TYPES[reportCtx.type].placeholder;
+      document.querySelectorAll('#reportTypes .opt-chip').forEach(c => {
+        c.classList.toggle('active', c.dataset.type === reportCtx.type);
+        c.textContent = reportTypes()[c.dataset.type].label;
+      });
+      document.getElementById('reportText').placeholder = reportTypes()[reportCtx.type].placeholder;
+    }
+    // Dalla scheda di una ZTL: "orari o confini sbagliati", con il link all'elemento
+    function openZtlReport(id) {
+      const z = ztlZones.find(x => x.id === id);
+      if (!z) return;
+      const b = L.latLngBounds(z.rings.flat()).getCenter();
+      map.closePopup();
+      openReport({ lat: b.lat, lon: b.lng, osmRef: z.id, title: ztlName(z) || 'ZTL', type: 'wrong', ztl: true });
     }
 
     function openReport(ctx) {
@@ -4795,11 +5151,11 @@
         return;
       }
       const body = [
-        REPORT_TYPES[reportCtx.type].label + ' ' + t("(segnalato con l'app ParkMap)"),
+        reportTypes()[reportCtx.type].label + ' ' + t("(segnalato con l'app ParkMap)"),
         '',
         text,
         reportCtx.osmRef ? '\n' + t('Elemento:') + ` https://www.openstreetmap.org/${reportCtx.osmRef}` : '',
-        '#ParkMap'
+        reportCtx.ztl ? '#ParkMap #ZTL' : '#ParkMap'
       ].join('\n');
       sendBtn.disabled = true;
       resultRow.hidden = false;
@@ -5422,6 +5778,7 @@
         <button type="button" class="set-btn" data-ctx="car"><i data-lucide="car"></i> ${t('Ho parcheggiato qui')}</button>
         <button type="button" class="set-btn" data-ctx="dest"><i data-lucide="flag"></i> ${t('Parcheggi vicino a questo punto')}</button>
         <button type="button" class="set-btn" data-ctx="report"><i data-lucide="map-pin-plus"></i> ${t('Segnala parcheggio mancante')}</button>
+        <button type="button" class="set-btn" data-ctx="reportZtl"><i data-lucide="ban"></i> ${t('Segnala ZTL mancante')}</button>
         <a class="set-btn" href="${buildNavUrl(lat, lng, 'driving')}" target="_blank" rel="noopener"><i data-lucide="navigation"></i> ${t('Naviga fin qui')}</a>
       </div>`;
       const popup = L.popup({ className: 'ctx-popup', autoPanPadding: [20, 80] }).setLatLng(e.latlng).setContent(html).openOn(map);
@@ -5430,6 +5787,7 @@
       root.querySelector('[data-ctx="car"]').onclick = () => { map.closePopup(); saveCarAt(lat, lng, 'map'); openCarSheet(); };
       root.querySelector('[data-ctx="dest"]').onclick = () => { map.closePopup(); setDestination({ lat, lon: lng, name: t('punto scelto') }); };
       root.querySelector('[data-ctx="report"]').onclick = () => { map.closePopup(); openReport({ lat, lon: lng, type: 'missing' }); };
+      root.querySelector('[data-ctx="reportZtl"]').onclick = () => { map.closePopup(); openReport({ lat, lon: lng, type: 'missing', ztl: true }); };
     });
 
     /* ===== Impostazioni aggiuntive: tema, app di navigazione, lingua ===== */
